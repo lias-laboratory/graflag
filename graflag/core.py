@@ -1,17 +1,20 @@
 """Core GraFlag functionality."""
 
-import os
-import sys
+import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 
 from .config import GraflagConfig
 from .ssh import SSHManager
 from .docker_ops import DockerManager
 from .utils import load_method_env
+from .models import (
+    ClusterInfo, MethodInfo, DatasetInfo, ExperimentInfo,
+    ExperimentResults, EvaluationResults,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +25,11 @@ class GraFlagError(Exception):
 
 
 class GraFlag:
-    """Main GraFlag orchestration class."""
+    """Main GraFlag orchestration class.
+
+    All public methods return structured data. No direct printing to stdout
+    (except follow_logs which streams in real time).
+    """
 
     def __init__(self, config_file: str = ".env"):
         """Initialize GraFlag with configuration."""
@@ -30,272 +37,348 @@ class GraFlag:
             self.config = GraflagConfig(config_file)
         except ValueError as e:
             raise GraFlagError(str(e))
-        
-        # Initialize SSH manager
+
         self.ssh = SSHManager(
             manager_ip=self.config.manager_ip,
             ssh_port=self.config.ssh_port,
             ssh_key=self.config.ssh_key
         )
-        
-        # Initialize Docker manager
-        self.docker = DockerManager(self.ssh, self.config)
+        self.docker = DockerManager(self.ssh, self.config, hosts_file=self.config.hosts_file)
 
-    def _load_method_env(self, method_name: str) -> Dict[str, str]:
-        """Load method environment variables."""
-        return load_method_env(self.ssh, self.config.remote_shared_dir, method_name)
-
-    def _create_experiment_dir(self, exp_name: str):
-        """Create experiment directory."""
-        exp_dir_path = f"experiments/{exp_name}"
-        self.ssh.mkdir(self.config.remote_shared_dir, exp_dir_path)
-        return exp_dir_path
-
-    def _write_status(self, exp_dir: str, status: str, error: str = None):
-        """Write status.json to an experiment directory on the remote."""
-        import json
-        data = {"status": status, "timestamp": datetime.now().isoformat()}
-        if error:
-            data["error"] = error
-        status_data = json.dumps(data)
-        status_path = f"{self.config.remote_shared_dir}/{exp_dir}/status.json"
-        # Use heredoc to avoid quote escaping issues with SSH
-        self.ssh.execute(f"cat > {status_path} << 'STATUSEOF'\n{status_data}\nSTATUSEOF")
-
-    def copy_files(self, source_paths, dest_path: str, recursive: bool = False, from_remote: bool = False):
-        """
-        Copy files/directories bidirectionally.
-        
-        Args:
-            source_paths: Source path(s)
-            dest_path: Destination path
-            recursive: Include recursive flag
-            from_remote: If True, copy from remote to local; if False, copy from local to remote
-        """
-        if from_remote:
-            # When copying from remote, source paths should be relative to remote_shared_dir
-            remote_sources = []
-            for src in (source_paths if isinstance(source_paths, list) else [source_paths]):
-                clean_src = src.lstrip('/')
-                remote_sources.append(f"{self.config.remote_shared_dir}/{clean_src}")
-            return self.ssh.copy_files(remote_sources, dest_path, recursive, from_remote=True)
-        else:
-            # When copying to remote, dest is relative to remote_shared_dir
-            clean_dest = dest_path.lstrip('/')
-            remote_dest = f"{self.config.remote_shared_dir}/{clean_dest}"
-            return self.ssh.copy_files(source_paths, remote_dest, recursive, from_remote=False)
-
-    def mount_nfs(self, shared_dir: str):
-        """Mount NFS share on local machine."""
-        logger.info("[INFO] Mounting NFS share on local machine...")
-
-        # Create mount directory
-        mount_dir = Path(shared_dir).expanduser()
-        try:
-            mount_dir.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            logger.warning("[WARN] Stale NFS mount detected, cleaning up...")
-            subprocess.run(
-                f"sudo umount -l {mount_dir}", shell=True, capture_output=True
-            )
-            mount_dir.mkdir(parents=True, exist_ok=True)
-
-        # Check if already mounted
-        result = subprocess.run(f"mountpoint -q {mount_dir}", shell=True)
-        if result.returncode == 0:
-            logger.info(f"[OK] NFS already mounted at {mount_dir}")
-            return
-
-        # Mount NFS
-        mount_cmd = f"sudo mount -t nfs -o addr={self.config.manager_ip},port={self.config.nfs_port},vers=3,hard,intr,rsize=8192,wsize=8192,timeo=30,retrans=3 {self.config.manager_ip}:/tmp/shared {mount_dir}"
-
-        result = subprocess.run(mount_cmd, shell=True)
-        if result.returncode == 0:
-            logger.info(f"[OK] NFS mounted at {mount_dir}")
-        else:
-            raise GraFlagError(f"Failed to mount NFS at {mount_dir}")
+    # ========================================================================
+    # Cluster Management
+    # ========================================================================
 
     def setup(self):
         """Setup GraFlag cluster: initialize swarm and setup workers."""
         logger.info("[SETUP] Setting up GraFlag cluster...")
+        self.docker.setup_swarm_manager()
+        token = self.docker.get_swarm_token()
+        self.docker.setup_workers(token)
+        self.docker.setup_local_registry()
+        logger.info("[OK] GraFlag cluster setup completed!")
 
-        try:
-            # Setup swarm
-            self.docker.setup_swarm_manager()
-            token = self.docker.get_swarm_token()
-            self.docker.setup_workers(token)
-            self.docker.setup_local_registry()
+    def status(self) -> ClusterInfo:
+        """Get cluster status.
 
-            logger.info("[OK] GraFlag cluster setup completed!")
-
-            # Show cluster status
-            self.status()
-
-        except Exception as e:
-            logger.error(f"[ERROR] Setup failed: {e}")
-            sys.exit(1)
-
-    def status(self):
-        """Show cluster status."""
-        # Show Docker cluster status
-        self.docker.get_cluster_status()
-
-        # Show shared directory via SSH
-        print(f"\n[INFO] Shared Directory: {self.config.remote_shared_dir}")
-        shared_contents = self.ssh.list_dir(self.config.remote_shared_dir, "")
-        if shared_contents:
-            print("   Contents:")
-            for item in shared_contents:
-                print(f"     - {item}")
-        else:
-            print("   Status: [ERROR] Cannot access shared directory")
-
-    def benchmark(
-        self, method_name: str, dataset: str, tag: str = "latest", build: bool = False, 
-        gpu: bool = True, method_params: dict = None
-    ):
-        """Run benchmark experiment.
-        
-        Args:
-            method_name: Name of the method to run
-            dataset: Name of the dataset to use
-            tag: Docker image tag
-            build: Whether to build the image before running
-            gpu: Whether to enable GPU support
-            method_params: Dictionary of method-specific parameters (excluding DATA and EXP)
+        Returns:
+            ClusterInfo with nodes, services, and shared directory info.
         """
-        # Make parameters case-insensitive
+        try:
+            cluster = self.docker.get_cluster_status()
+            shared_contents = self.ssh.list_dir(self.config.remote_shared_dir, "")
+
+            nodes = cluster.get('nodes', [])
+            worker_nodes = [
+                {
+                    'hostname': n['hostname'],
+                    'status': n['status'],
+                    'availability': n['availability'],
+                    'is_manager': n['is_manager'],
+                }
+                for n in nodes
+            ]
+
+            return ClusterInfo(
+                manager_ip=self.config.manager_ip,
+                is_connected=True,
+                swarm_initialized=cluster.get('swarm_active', False),
+                worker_nodes=worker_nodes,
+                shared_dir=self.config.remote_shared_dir,
+                shared_contents=shared_contents,
+                services=cluster.get('services', []),
+            )
+        except Exception as e:
+            return ClusterInfo(
+                manager_ip=self.config.manager_ip,
+                is_connected=False,
+                swarm_initialized=False,
+                error=str(e),
+            )
+
+    # ========================================================================
+    # Run
+    # ========================================================================
+
+    def run(
+        self, method_name: str, dataset: str, tag: str = "latest",
+        build: bool = False, gpu: bool = True, method_params: dict = None
+    ) -> str:
+        """Run experiment.
+
+        Returns:
+            Experiment name.
+
+        Raises:
+            GraFlagError: If run fails.
+        """
         method_name = method_name.lower()
         dataset = dataset.lower()
         tag = tag.lower()
         method_params = method_params or {}
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         exp_name = f"exp__{method_name}__{dataset}__{timestamp}"
 
-        logger.info(f"[RUN] Running benchmark: {exp_name}")
+        logger.info(f"[RUN] Starting run: {exp_name}")
+
+        # Validate method exists
+        if not self.ssh.path_exists(self.config.remote_shared_dir, f"methods/{method_name}"):
+            raise GraFlagError(
+                f"Method {method_name} not found in {self.config.remote_shared_dir}/methods/{method_name}"
+            )
+
+        # Validate dataset exists
+        if not self.ssh.path_exists(self.config.remote_shared_dir, f"datasets/{dataset}"):
+            raise GraFlagError(
+                f"Dataset {dataset} not found in {self.config.remote_shared_dir}/datasets/{dataset}"
+            )
+
+        # Create experiment directory
+        exp_dir = f"experiments/{exp_name}"
+        self.ssh.mkdir(self.config.remote_shared_dir, exp_dir)
+        logger.info(f"[INFO] Experiment directory: {self.config.remote_shared_dir}/{exp_dir}")
+
+        # Build image if requested
+        if build:
+            self._write_status(exp_dir, "building")
+            try:
+                build_log = self.docker.build_method_image(method_name, tag)
+            except Exception as e:
+                self._write_status(exp_dir, "failed", error=f"Build failed: {e}")
+                raise GraFlagError(f"Build failed: {e}")
+            # Save build log
+            build_log_path = f"{self.config.remote_shared_dir}/{exp_dir}/build.log"
+            self.ssh.execute(f"cat > {build_log_path} << 'BUILDEOF'\n{build_log}\nBUILDEOF")
+
+        # Create service
+        self.docker.create_service(exp_name, method_name, dataset, tag, gpu, method_params)
+
+        # Follow logs (streams to stdout)
+        self.docker.follow_service_logs(exp_name)
+
+        logger.info(f"[INFO] View logs later: graflag logs -e {exp_name}")
+        return exp_name
+
+    def evaluate(self, experiment_name: str):
+        """Evaluate an experiment: compute metrics and generate plots.
+
+        Raises:
+            GraFlagError: If evaluation fails.
+        """
+        logger.info(f"[INFO] Evaluating experiment: {experiment_name}")
+
+        if not self.ssh.path_exists(self.config.remote_shared_dir, f"experiments/{experiment_name}"):
+            raise GraFlagError(f"Experiment {experiment_name} not found")
+
+        if not self.ssh.path_exists(self.config.remote_shared_dir, f"experiments/{experiment_name}/results.json"):
+            raise GraFlagError(f"results.json not found in experiment {experiment_name}")
 
         try:
-            # Validate method exists
-            method_path = f"methods/{method_name}"
-            if not self.ssh.path_exists(self.config.remote_shared_dir, method_path):
-                raise GraFlagError(
-                    f"Method {method_name} not found in {self.config.remote_shared_dir}/{method_path}"
-                )
+            eval_service_name = self.docker.create_evaluation_service(experiment_name)
+            self.docker.follow_service_logs(eval_service_name)
+            self.docker.remove_evaluation_service(experiment_name)
 
-            # Validate dataset exists
-            dataset_path = f"datasets/{dataset}"
-            if not self.ssh.path_exists(self.config.remote_shared_dir, dataset_path):
-                raise GraFlagError(
-                    f"Dataset {dataset} not found in {self.config.remote_shared_dir}/{dataset_path}"
-                )
-
-            # Create experiment directory early so build logs can be saved
-            exp_dir = self._create_experiment_dir(exp_name)
-            logger.info(f"[INFO] Experiment directory: {self.config.remote_shared_dir}/{exp_dir}")
-
-            # Build image if requested
-            if build:
-                self._write_status(exp_dir, "building")
-                try:
-                    build_log = self.docker.build_method_image(method_name, tag)
-                except Exception as e:
-                    self._write_status(exp_dir, "failed", error=f"Build failed: {e}")
-                    raise
-                # Save build log to experiment directory
-                build_log_path = f"{self.config.remote_shared_dir}/{exp_dir}/build.log"
-                self.ssh.execute(f"cat > {build_log_path} << 'BUILDEOF'\n{build_log}\nBUILDEOF")
-
-            # Load method environment
-            method_env = self._load_method_env(method_name)
-
-            # Create service with GPU setting and method parameters
-            self.docker.create_service(exp_name, method_name, dataset, tag, gpu, method_params)
-
-            # Follow logs
-            self.docker.follow_service_logs(exp_name)
-
-            logger.info(f"[INFO] View logs later: graflag logs -e {exp_name}")
-
-            return exp_name
-
+            eval_dir = f"{self.config.remote_shared_dir}/experiments/{experiment_name}/eval"
+            logger.info(f"[INFO] Evaluation results saved to: {eval_dir}")
         except Exception as e:
-            logger.error(f"[ERROR] Benchmark failed: {e}")
-            sys.exit(1)
+            raise GraFlagError(f"Evaluation failed: {e}")
 
-    def list_methods(self):
-        """List available methods."""
-        if not self.ssh.path_exists(self.config.remote_shared_dir, "methods"):
-            logger.info("No methods directory found")
-            return
+    # ========================================================================
+    # Resource Discovery
+    # ========================================================================
 
-        logger.info("[INFO] Available Methods:")
-        methods = self.ssh.list_dir(self.config.remote_shared_dir, "methods")
-        for method_name in methods:
-            if self.ssh.path_exists(self.config.remote_shared_dir, f"methods/{method_name}/.env"):
-                env_vars = self._load_method_env(method_name)
-                supported_data = env_vars.get("SUPPORTED_DATA", "Unknown")
-                print(f"  - {method_name} (Supports: {supported_data})")
-            else:
-                print(f"  - {method_name} (No .env file)")
+    def list_methods(self) -> List[MethodInfo]:
+        """List available methods.
 
-    def list_datasets(self):
-        """List available datasets."""
-        if not self.ssh.path_exists(self.config.remote_shared_dir, "datasets"):
-            logger.info("No datasets directory found")
-            return
+        Returns:
+            List of MethodInfo objects.
+        """
+        methods_dir = f"{self.config.remote_shared_dir}/methods"
 
-        logger.info("[INFO] Available Datasets:")
-        datasets = self.ssh.list_dir(self.config.remote_shared_dir, "datasets")
-        for dataset_name in datasets:
-            print(f"  - {dataset_name}")
-
-    def list_experiments(self):
-        """List experiments with status."""
-        if not self.ssh.path_exists(self.config.remote_shared_dir, "experiments"):
-            logger.info("No experiments directory found")
-            return
-
-        logger.info("[INFO] Recent Experiments:")
-        # Get experiments and read their status.json in one SSH call
-        result = self.ssh.execute(
-            f'for d in $(ls -1t {self.config.remote_shared_dir}/experiments/ 2>/dev/null | head -20); do '
-            f'  status=$(cat {self.config.remote_shared_dir}/experiments/$d/status.json 2>/dev/null | '
-            f'    python3 -c "import sys,json; print(json.load(sys.stdin).get(\'status\',\'\'))" 2>/dev/null); '
-            f'  has_results=$(test -f {self.config.remote_shared_dir}/experiments/$d/results.json && echo 1 || echo 0); '
-            f'  has_eval=$(test -f {self.config.remote_shared_dir}/experiments/$d/eval/evaluation.json && echo 1 || echo 0); '
-            f'  echo "$d|$status|$has_results|$has_eval"; '
+        # Single SSH call: list dirs, check files, and cat all .env files
+        cmd = (
+            f'for d in {methods_dir}/*/; do '
+            f'  name=$(basename "$d"); '
+            f'  has_env=$( [ -f "$d/.env" ] && echo 1 || echo 0 ); '
+            f'  has_dockerfile=$( [ -f "$d/Dockerfile" ] && echo 1 || echo 0 ); '
+            f'  echo "METHOD:$name:$has_env:$has_dockerfile"; '
+            f'  if [ "$has_env" = "1" ]; then '
+            f'    while IFS= read -r line || [ -n "$line" ]; do '
+            f'      case "$line" in ""|\\#*) continue;; esac; '
+            f'      echo "ENV:$name:$line"; '
+            f'    done < "$d/.env"; '
+            f'  fi; '
             f'done'
         )
-        if result.returncode == 0 and result.stdout.strip():
-            for line in result.stdout.strip().split("\n"):
-                if not line.strip():
-                    continue
-                parts = line.split("|")
-                exp_name = parts[0]
-                status = parts[1] if len(parts) > 1 and parts[1] else "unknown"
-                has_results = parts[2] == "1" if len(parts) > 2 else False
-                has_eval = parts[3] == "1" if len(parts) > 3 else False
+        result = self.ssh.execute(cmd)
+        if result.returncode != 0:
+            return []
 
-                # Build status display
-                tags = f"[{status}]"
-                if has_results:
-                    tags += " [results]"
-                if has_eval:
-                    tags += " [eval]"
-                print(f"  - {exp_name}  {tags}")
-        else:
-            logger.info("No experiments found")
-    
-    def list_services(self):
-        """List running services/experiments."""
-        self.docker.get_running_services()
+        # Parse output
+        method_meta = {}  # name -> {has_env, has_dockerfile}
+        method_envs = {}  # name -> {key: value}
 
-    def logs(self, experiment_name: str, follow: bool = False, tee_file: str = None):
-        """Show logs for an experiment/service.
+        for line in result.stdout.strip().split('\n'):
+            if not line:
+                continue
+            if line.startswith('METHOD:'):
+                parts = line.split(':', 3)
+                if len(parts) == 4:
+                    name = parts[1]
+                    method_meta[name] = {
+                        'has_env': parts[2] == '1',
+                        'has_dockerfile': parts[3] == '1',
+                    }
+                    method_envs.setdefault(name, {})
+            elif line.startswith('ENV:'):
+                parts = line.split(':', 2)
+                if len(parts) == 3:
+                    name = parts[1]
+                    env_line = parts[2].strip()
+                    if '=' in env_line:
+                        key, _, value = env_line.partition('=')
+                        method_envs.setdefault(name, {})[key.strip()] = value.strip()
+
+        methods = []
+        for name in sorted(method_meta.keys()):
+            meta = method_meta[name]
+            env_vars = method_envs.get(name, {})
+            parameters = {k: v for k, v in env_vars.items() if k.startswith('_')}
+
+            methods.append(MethodInfo(
+                name=name,
+                description=env_vars.get("DESCRIPTION", ""),
+                source_code=env_vars.get("SOURCE_CODE", ""),
+                supported_data=env_vars.get("SUPPORTED_DATASETS", "Unknown"),
+                parameters=parameters,
+                has_dockerfile=meta['has_dockerfile'],
+                has_env=meta['has_env'],
+            ))
+
+        return methods
+
+    def list_datasets(self) -> List[DatasetInfo]:
+        """List available datasets.
+
+        Returns:
+            List of DatasetInfo objects.
+        """
+        datasets_dir = f"{self.config.remote_shared_dir}/datasets"
+
+        # Single SSH call: list all datasets with size and file count
+        cmd = (
+            f'for d in {datasets_dir}/*/; do '
+            f'  [ -d "$d" ] || continue; '
+            f'  name=$(basename "$d"); '
+            f'  size=$(du -sm "$d" 2>/dev/null | cut -f1 || echo 0); '
+            f'  count=$(find "$d" -type f 2>/dev/null | wc -l); '
+            f'  echo "$name:$size:$count"; '
+            f'done'
+        )
+        result = self.ssh.execute(cmd)
+        if result.returncode != 0:
+            return []
+
+        datasets = []
+        for line in result.stdout.strip().split('\n'):
+            if not line or ':' not in line:
+                continue
+            parts = line.split(':')
+            if len(parts) >= 3:
+                name = parts[0]
+                try:
+                    size_mb = float(parts[1])
+                except (ValueError, IndexError):
+                    size_mb = 0.0
+                try:
+                    file_count = int(parts[2])
+                except (ValueError, IndexError):
+                    file_count = 0
+
+                datasets.append(DatasetInfo(
+                    name=name,
+                    path=f"{datasets_dir}/{name}",
+                    size_mb=size_mb,
+                    file_count=file_count,
+                ))
+
+        return sorted(datasets, key=lambda d: d.name)
+
+    def list_experiments(self, limit: int = 50) -> List[ExperimentInfo]:
+        """List recent experiments.
+
+        Returns:
+            List of ExperimentInfo (most recent first).
+        """
+        if not self.ssh.path_exists(self.config.remote_shared_dir, "experiments"):
+            return []
+
+        result = self.ssh.execute(
+            f"ls -1 {self.config.remote_shared_dir}/experiments/ 2>/dev/null || true"
+        )
+
+        if result.returncode != 0 or not result.stdout.strip():
+            return []
+
+        exp_names = [e.strip() for e in result.stdout.strip().split("\n") if e.strip()]
+
+        # Fetch running services once
+        try:
+            running_services = self.docker.get_service_names()
+        except Exception:
+            running_services = set()
+
+        experiments = []
+        for name in exp_names:
+            info = self._get_experiment_info(name, running_services)
+            if info:
+                experiments.append(info)
+
+        # Sort by timestamp (most recent first)
+        experiments.sort(key=lambda e: e.timestamp or "", reverse=True)
+        return experiments[:limit]
+
+    def list_services(self) -> List[Dict]:
+        """List running Docker services.
+
+        Returns:
+            List of service dicts with name, replicas, image, status.
+        """
+        return self.docker.list_services()
+
+    # ========================================================================
+    # Logs
+    # ========================================================================
+
+    def get_logs(self, experiment_name: str, tail: int = 100) -> List[str]:
+        """Get experiment logs (non-streaming).
+
+        Tries Docker service logs first, then falls back to method_output.txt.
+
+        Returns:
+            List of log lines.
+        """
+        # Try Docker service logs
+        logs = self.docker.get_service_logs(experiment_name, tail=tail)
+        if logs:
+            return logs
+
+        # Fall back to saved output
+        output_path = f"experiments/{experiment_name}/method_output.txt"
+        if self.ssh.path_exists(self.config.remote_shared_dir, output_path):
+            content = self.ssh.read_file(self.config.remote_shared_dir, output_path)
+            if content.strip():
+                lines = content.strip().split('\n')
+                return lines[-tail:] if len(lines) > tail else lines
+
+        return []
+
+    def follow_logs(self, experiment_name: str, tee_file: str = None):
+        """Follow logs for an experiment (streams to stdout).
 
         Shows build log (if exists) + service logs.
-        Falls back to reading method_output.txt if the Docker service no longer exists.
+        Falls back to method_output.txt if the service is gone.
         """
         exp_base = f"experiments/{experiment_name}"
         output_parts = []
@@ -307,37 +390,72 @@ class GraFlag:
             if build_content.strip():
                 output_parts.append(build_content)
 
-        # Try Docker service logs first
-        try:
+        # Try Docker service logs (follow mode)
+        if self.docker.service_exists(experiment_name):
             if output_parts:
                 print("\n".join(output_parts))
                 print("\n" + "=" * 60)
                 print("=== SERVICE LOGS ===")
                 print("=" * 60 + "\n")
-            self.docker.get_service_logs(experiment_name, follow, tee_file)
+            self.docker.follow_service_logs(experiment_name)
+            self._save_tee(tee_file, output_parts)
             return
-        except ValueError:
-            pass
 
         # Service no longer exists -- fall back to method_output.txt
         output_path = f"{exp_base}/method_output.txt"
         if self.ssh.path_exists(self.config.remote_shared_dir, output_path):
-            logger.info(f"[INFO] Service removed. Showing saved output:")
+            logger.info("[INFO] Service removed. Showing saved output:")
             content = self.ssh.read_file(self.config.remote_shared_dir, output_path)
             output_parts.append(content)
             print("\n".join(output_parts))
-            if tee_file:
-                tee_path = Path(tee_file).expanduser().resolve()
-                tee_path.parent.mkdir(parents=True, exist_ok=True)
-                tee_path.write_text("\n".join(output_parts))
-                logger.info(f"[INFO] Saved to {tee_path}")
+            self._save_tee(tee_file, output_parts)
         elif output_parts:
-            # Only build log available
             print("\n".join(output_parts))
+            self._save_tee(tee_file, output_parts)
         else:
-            raise GraFlagError(
-                f"No logs found for experiment '{experiment_name}'"
-            )
+            raise GraFlagError(f"No logs found for experiment '{experiment_name}'")
+
+    def show_logs(self, experiment_name: str, tee_file: str = None):
+        """Show logs (non-follow mode) — prints to stdout."""
+        exp_base = f"experiments/{experiment_name}"
+        output_parts = []
+
+        # Show build log if it exists
+        build_log_path = f"{exp_base}/build.log"
+        if self.ssh.path_exists(self.config.remote_shared_dir, build_log_path):
+            build_content = self.ssh.read_file(self.config.remote_shared_dir, build_log_path)
+            if build_content.strip():
+                output_parts.append(build_content)
+
+        # Try Docker service logs (non-follow)
+        logs = self.docker.get_service_logs(experiment_name)
+        if logs:
+            if output_parts:
+                output_parts.append("\n" + "=" * 60)
+                output_parts.append("=== SERVICE LOGS ===")
+                output_parts.append("=" * 60 + "\n")
+            output_parts.extend(logs)
+            print("\n".join(output_parts))
+            self._save_tee(tee_file, output_parts)
+            return
+
+        # Fall back to method_output.txt
+        output_path = f"{exp_base}/method_output.txt"
+        if self.ssh.path_exists(self.config.remote_shared_dir, output_path):
+            logger.info("[INFO] Service removed. Showing saved output:")
+            content = self.ssh.read_file(self.config.remote_shared_dir, output_path)
+            output_parts.append(content)
+            print("\n".join(output_parts))
+            self._save_tee(tee_file, output_parts)
+        elif output_parts:
+            print("\n".join(output_parts))
+            self._save_tee(tee_file, output_parts)
+        else:
+            raise GraFlagError(f"No logs found for experiment '{experiment_name}'")
+
+    # ========================================================================
+    # Service Control
+    # ========================================================================
 
     def stop(self, experiment_name: str, remove: bool = False):
         """Stop a running experiment/service.
@@ -358,76 +476,125 @@ class GraFlag:
             if self.ssh.path_exists(self.config.remote_shared_dir, f"experiments/{experiment_name}"):
                 self.ssh.execute(f"rm -rf {exp_path}")
                 logger.info(f"[INFO] Deleted experiment directory: {exp_path}")
-            else:
-                logger.info(f"[INFO] Experiment directory not found: {exp_path}")
-    
-    def evaluate(self, experiment_name: str):
-        """
-        Evaluate an experiment: compute metrics and generate plots.
-        Uses Docker service for consistent execution model.
-        
-        Args:
-            experiment_name: Name of the experiment to evaluate
-        """
-        logger.info(f"[INFO] Evaluating experiment: {experiment_name}")
-        
-        # Check if experiment exists
-        if not self.ssh.path_exists(self.config.remote_shared_dir, f"experiments/{experiment_name}"):
-            raise GraFlagError(f"Experiment {experiment_name} not found")
-        
-        # Check if results.json exists
-        if not self.ssh.path_exists(self.config.remote_shared_dir, f"experiments/{experiment_name}/results.json"):
-            raise GraFlagError(f"results.json not found in experiment {experiment_name}")
-        
+
+    # ========================================================================
+    # Results
+    # ========================================================================
+
+    def get_experiment_results(self, experiment_name: str) -> Optional[ExperimentResults]:
+        """Get experiment results from results.json."""
+        results_path = f"{self.config.remote_shared_dir}/experiments/{experiment_name}/results.json"
+        result = self.ssh.execute(f"cat {results_path} 2>/dev/null")
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+
         try:
-            # Create evaluation service (handles image building automatically)
-            eval_service_name = self.docker.create_evaluation_service(experiment_name)
-            
-            # Follow logs of the evaluation service
-            self.docker.follow_service_logs(eval_service_name)
-            
-            # Clean up evaluation service after completion
-            self.docker.remove_evaluation_service(experiment_name)
-            
-            # Show where results are saved
-            eval_dir = f"{self.config.remote_shared_dir}/experiments/{experiment_name}/eval"
-            logger.info(f"[INFO] Evaluation results saved to: {eval_dir}")
-            logger.info(f"   - evaluation.json - Computed metrics")
-            logger.info(f"   - roc_curve.png - ROC curve plot")
-            logger.info(f"   - pr_curve.png - Precision-Recall curve")
-            logger.info(f"   - score_distribution.png - Score histogram")
-            logger.info(f"   - spot_curves.png - Spot metrics (if available)")
-            print(f"   - Copy to local: graflag.py copy --from-remote -s experiments/{experiment_name}/eval -d ./eval_{experiment_name}")
-            print(f"   - View on remote: ssh to {self.config.manager_ip}")
-            print(f"   - View logs later: graflag.py logs {eval_service_name}")
-        
-        except Exception as e:
-            logger.error(f"[ERROR] Evaluation failed: {e}")
-            raise GraFlagError(str(e))
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            return None
+
+        metadata = data.get("metadata", {})
+        return ExperimentResults(
+            experiment_name=experiment_name,
+            method_name=metadata.get("method_name", ""),
+            dataset=metadata.get("dataset", ""),
+            metadata=metadata,
+            execution_time_ms=metadata.get("exec_time_ms"),
+            peak_memory_mb=metadata.get("peak_memory_mb"),
+            peak_gpu_memory_mb=metadata.get("peak_gpu_mb"),
+            result_type=data.get("result_type"),
+            scores_available="scores" in data or "scores_file" in data,
+        )
+
+    def get_evaluation_results(self, experiment_name: str) -> Optional[EvaluationResults]:
+        """Get evaluation results from eval/evaluation.json."""
+        eval_path = f"{self.config.remote_shared_dir}/experiments/{experiment_name}/eval"
+        eval_json = f"{eval_path}/evaluation.json"
+
+        result = self.ssh.execute(f"cat {eval_json} 2>/dev/null")
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+
+        try:
+            data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            return None
+
+        # List plot files
+        plots = []
+        result = self.ssh.execute(f"ls -1 {eval_path}/*.png 2>/dev/null || true")
+        if result.returncode == 0 and result.stdout.strip():
+            for line in result.stdout.strip().split('\n'):
+                if line.strip():
+                    plots.append(line.strip().split('/')[-1])
+
+        return EvaluationResults(
+            experiment_name=experiment_name,
+            metrics=data.get("metrics", {}),
+            plots_available=plots,
+            evaluation_path=eval_path,
+        )
+
+    # ========================================================================
+    # File Operations
+    # ========================================================================
+
+    def copy_files(self, source_paths, dest_path: str, recursive: bool = False, from_remote: bool = False):
+        """Copy files/directories bidirectionally."""
+        if from_remote:
+            remote_sources = []
+            for src in (source_paths if isinstance(source_paths, list) else [source_paths]):
+                clean_src = src.lstrip('/')
+                remote_sources.append(f"{self.config.remote_shared_dir}/{clean_src}")
+            return self.ssh.copy_files(remote_sources, dest_path, recursive, from_remote=True)
+        else:
+            clean_dest = dest_path.lstrip('/')
+            remote_dest = f"{self.config.remote_shared_dir}/{clean_dest}"
+            return self.ssh.copy_files(source_paths, remote_dest, recursive, from_remote=False)
+
+    def mount_nfs(self, shared_dir: str):
+        """Mount NFS share on local machine."""
+        mount_dir = Path(shared_dir).expanduser()
+        try:
+            mount_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            logger.warning("[WARN] Stale NFS mount detected, cleaning up...")
+            subprocess.run(f"sudo umount -l {mount_dir}", shell=True, capture_output=True)
+            mount_dir.mkdir(parents=True, exist_ok=True)
+
+        result = subprocess.run(f"mountpoint -q {mount_dir}", shell=True)
+        if result.returncode == 0:
+            logger.info(f"[OK] NFS already mounted at {mount_dir}")
+            return
+
+        mount_cmd = (
+            f"sudo mount -t nfs "
+            f"-o addr={self.config.manager_ip},port={self.config.nfs_port},"
+            f"vers=3,hard,intr,rsize=8192,wsize=8192,timeo=30,retrans=3 "
+            f"{self.config.manager_ip}:/tmp/shared {mount_dir}"
+        )
+
+        result = subprocess.run(mount_cmd, shell=True)
+        if result.returncode == 0:
+            logger.info(f"[OK] NFS mounted at {mount_dir}")
+        else:
+            raise GraFlagError(f"Failed to mount NFS at {mount_dir}")
 
     def sync(self, local_path: str, is_lib: bool = False):
-        """
-        Sync a local method or library directory to the remote shared storage.
-
-        Args:
-            local_path: Local directory path (must contain .env for methods)
-            is_lib: If True, sync as a shared library to libs/ instead of methods/
-        """
+        """Sync a local method or library directory to remote shared storage."""
         local_dir = Path(local_path).resolve()
 
         if not local_dir.is_dir():
             raise GraFlagError(f"Path is not a directory: {local_dir}")
 
         if is_lib:
-            # For libs, use the directory name
             lib_name = local_dir.name
             remote_dest = f"{self.config.remote_shared_dir}/libs/{lib_name}"
             logger.info(f"Syncing library '{lib_name}' to remote...")
         else:
-            # For methods, read METHOD_NAME from .env
             env_file = local_dir / ".env"
             if not env_file.exists():
-                raise GraFlagError(f"No .env file found in {local_dir}. Methods must have a .env file with METHOD_NAME.")
+                raise GraFlagError(f"No .env file found in {local_dir}.")
 
             method_name = None
             with open(env_file, 'r') as f:
@@ -443,14 +610,126 @@ class GraFlag:
             remote_dest = f"{self.config.remote_shared_dir}/methods/{method_name}"
             logger.info(f"Syncing method '{method_name}' to remote...")
 
-        # Use rsync via ssh.copy_files (add trailing slash to sync contents)
         self.ssh.copy_files(
             source_paths=[f"{local_dir}/"],
             dest_path=f"{remote_dest}/",
             recursive=True,
-            from_remote=False
+            from_remote=False,
         )
 
         target_type = "library" if is_lib else "method"
         target_name = lib_name if is_lib else method_name
         logger.info(f"Synced {target_type} '{target_name}' to {remote_dest}")
+
+    # ========================================================================
+    # Internal Helpers
+    # ========================================================================
+
+    def _write_status(self, exp_dir: str, status: str, error: str = None):
+        """Write status.json to an experiment directory on the remote."""
+        data = {"status": status, "timestamp": datetime.now().isoformat()}
+        if error:
+            data["error"] = error
+        status_data = json.dumps(data)
+        status_path = f"{self.config.remote_shared_dir}/{exp_dir}/status.json"
+        self.ssh.execute(f"cat > {status_path} << 'STATUSEOF'\n{status_data}\nSTATUSEOF")
+
+    def _get_experiment_info(self, exp_name: str, running_services: set = None) -> Optional[ExperimentInfo]:
+        """Get experiment information."""
+        full_exp_path = f"{self.config.remote_shared_dir}/experiments/{exp_name}"
+
+        # Single SSH call to check all files and read status.json
+        check_cmd = (
+            f'echo "EXISTS:$(test -d {full_exp_path} && echo 1 || echo 0)"\n'
+            f'echo "RESULTS:$(test -f {full_exp_path}/results.json && echo 1 || echo 0)"\n'
+            f'echo "EVAL:$(test -f {full_exp_path}/eval/evaluation.json && echo 1 || echo 0)"\n'
+            f'echo "BUILD_LOG:$(test -f {full_exp_path}/build.log && echo 1 || echo 0)"\n'
+            f'echo "STATUS_JSON:$(cat {full_exp_path}/status.json 2>/dev/null || echo \'\')"'
+        )
+        result = self.ssh.execute(check_cmd)
+        if result.returncode != 0:
+            return None
+
+        checks = {}
+        status_json_raw = ""
+        for line in result.stdout.strip().split('\n'):
+            if line.startswith('STATUS_JSON:'):
+                status_json_raw = line[len('STATUS_JSON:'):]
+            elif ':' in line:
+                key, val = line.split(':', 1)
+                checks[key] = val.strip() == '1'
+
+        if not checks.get('EXISTS', False):
+            return None
+
+        has_results = checks.get('RESULTS', False)
+        has_evaluation = checks.get('EVAL', False)
+        has_build_log = checks.get('BUILD_LOG', False)
+
+        # Parse status.json
+        runner_status = None
+        if status_json_raw.strip():
+            try:
+                status_data = json.loads(status_json_raw)
+                runner_status = status_data.get("status")
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # Parse experiment name
+        parts = exp_name.split("__")
+        method = parts[1] if len(parts) > 1 else "unknown"
+        dataset = parts[2] if len(parts) > 2 else "unknown"
+        timestamp = parts[3] if len(parts) > 3 else ""
+
+        # Check if service exists
+        if running_services is not None:
+            service_exists = exp_name in running_services
+        else:
+            service_exists = self.docker.service_exists(exp_name)
+
+        # Check if service tasks all failed
+        service_failed = service_exists and self.docker.is_service_failed(exp_name)
+
+        # Determine status
+        if runner_status in ("completed", "failed"):
+            status = runner_status
+        elif service_failed:
+            status = "failed"
+        elif runner_status == "building":
+            # During build: service doesn't exist yet (expected).
+            # Only mark failed if build finished (build.log exists) but no service was created.
+            if service_exists:
+                status = "building"
+            elif has_build_log:
+                status = "failed"  # build finished but service never created
+            else:
+                status = "building"  # still building, no service yet
+        elif runner_status == "running":
+            status = "running" if service_exists else "stopped"
+        elif service_exists:
+            status = "running"
+        elif has_results or has_evaluation:
+            status = "completed"
+        else:
+            status = "unknown"
+
+        return ExperimentInfo(
+            name=exp_name,
+            method=method,
+            dataset=dataset,
+            timestamp=timestamp,
+            status=status,
+            has_results=has_results,
+            has_evaluation=has_evaluation,
+            results_path=f"{full_exp_path}/results.json" if has_results else None,
+            evaluation_path=f"{full_exp_path}/eval" if has_evaluation else None,
+            service_name=exp_name if service_exists else None,
+        )
+
+    def _save_tee(self, tee_file: str, output_parts: List[str]):
+        """Save output to file if tee_file is specified."""
+        if tee_file:
+            tee_path = Path(tee_file).expanduser().resolve()
+            tee_path.parent.mkdir(parents=True, exist_ok=True)
+            tee_path.write_text("\n".join(output_parts))
+            logger.info(f"[INFO] Saved to {tee_path}")

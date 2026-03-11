@@ -1,0 +1,107 @@
+# Dockerfile.manager
+FROM ghcr.io/extrality/nvidia-dind
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssh-server \
+    bash \
+    rsync \
+    curl \
+    nfs-kernel-server \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Docker's official GPG key and repository
+RUN install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "Types: deb\nURIs: https://download.docker.com/linux/ubuntu\nSuites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")\nComponents: stable\nSigned-By: /etc/apt/keyrings/docker.asc" > /etc/apt/sources.list.d/docker.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-compose-plugin && \
+    rm -rf /var/lib/apt/lists/*
+
+# Setup SSH server
+RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh && \
+    mkdir -p /run/sshd && \
+    ssh-keygen -A
+
+# Manager generic keypair for manager -> workers
+ARG MANAGER_PRIVKEY
+ARG MANAGER_PUBKEY
+COPY ${MANAGER_PRIVKEY} /root/.ssh/id_ed25519
+COPY ${MANAGER_PUBKEY} /root/.ssh/id_ed25519.pub
+
+# Host public key for host -> manager SSH
+ARG HOST_PUBKEY
+COPY ${HOST_PUBKEY} /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+
+# SSH server config
+# Configure sshd to allow public key auth and disable password login
+RUN echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config && \
+    echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
+
+# Copy setup scripts
+COPY setup-nfs.sh /usr/local/bin/setup-nfs.sh
+COPY nvidia-setup.sh /usr/local/bin/nvidia-setup.sh
+COPY registry-setup.sh /usr/local/bin/registry-setup.sh
+RUN chmod +x /usr/local/bin/setup-nfs.sh /usr/local/bin/nvidia-setup.sh /usr/local/bin/registry-setup.sh
+
+EXPOSE 22 2049 20048 111
+
+# Pass MANAGER_IP as environment variable for runtime configuration
+ARG MANAGER_IP
+ENV MANAGER_IP=${MANAGER_IP}
+
+# Create a custom entrypoint that starts dockerd, NFS, and sshd
+COPY <<EOF /usr/local/bin/manager-entrypoint.sh
+#!/bin/bash
+set -e
+
+# Start dockerd in background using the official entrypoint
+dockerd-entrypoint.sh &
+
+# Wait for docker daemon to be ready
+while ! docker info >/dev/null 2>&1; do
+    echo "Waiting for docker daemon..."
+    sleep 1
+done
+
+echo "Docker daemon is ready, setting up registry configuration..."
+# Setup Docker registry configuration
+/usr/local/bin/registry-setup.sh ${MANAGER_IP}
+
+echo "Setting up NFS server..."
+# Setup NFS server and wait for it to be ready
+/usr/local/bin/setup-nfs.sh
+
+echo "Setting up NVIDIA Container Toolkit..."
+# Setup NVIDIA Container Toolkit for GPU support
+/usr/local/bin/nvidia-setup.sh
+
+# Restart Docker daemon to apply all configurations
+echo "Restarting Docker daemon to apply configurations..."
+pkill dockerd || true
+sleep 3
+
+# Start dockerd again with new configuration
+dockerd-entrypoint.sh &
+
+# Wait for docker daemon to be ready again
+while ! docker info >/dev/null 2>&1; do
+    echo "Waiting for docker daemon with updated config..."
+    sleep 1
+done
+
+echo "Docker daemon restarted with full configuration"
+
+echo "Starting SSH server..."
+# Ensure SSH directory exists
+mkdir -p /run/sshd
+# Start SSH daemon in foreground
+exec /usr/sbin/sshd -D
+EOF
+
+RUN chmod +x /usr/local/bin/manager-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/manager-entrypoint.sh"]

@@ -1,0 +1,710 @@
+# GraFlag Architecture
+
+Technical architecture reference for the GraFlag distributed benchmarking platform for Graph Anomaly Detection (GAD).
+
+---
+
+## Table of Contents
+
+1. [System Overview](#system-overview)
+2. [Design Principles](#design-principles)
+3. [Component Diagram](#component-diagram)
+4. [Component Descriptions](#component-descriptions)
+5. [Execution Flow](#execution-flow)
+6. [Shared Libraries](#shared-libraries)
+7. [Data Flow](#data-flow)
+8. [Experiment Lifecycle](#experiment-lifecycle)
+9. [Docker Swarm Service Model](#docker-swarm-service-model)
+10. [Configuration](#configuration)
+11. [Experiment Output Structure](#experiment-output-structure)
+
+---
+
+## System Overview
+
+GraFlag is a distributed benchmarking platform that runs Graph Anomaly Detection methods across a Docker Swarm cluster. The platform provides:
+
+- **Distributed execution** of GAD methods on GPU-equipped worker nodes via Docker Swarm.
+- **Standardized result collection** through the `graflag_runner` library, which wraps method execution with resource monitoring and result serialization.
+- **Automated evaluation** via `graflag_evaluator`, which computes metrics (AUC-ROC, AUC-PR, etc.) and generates plots.
+- **Multiple client interfaces**: a CLI for scripting, a Python API for programmatic use, and a web GUI for interactive management.
+- **NFS-based shared storage** for methods, datasets, experiments, and shared libraries, accessible by all cluster nodes.
+
+---
+
+## Design Principles
+
+- **Container isolation**: Each method runs in its own Docker container with a defined Dockerfile, ensuring reproducibility and dependency isolation.
+- **One-shot execution**: Services use `--restart-condition none`, meaning each experiment runs exactly once. There is no automatic retry on failure.
+- **Environment variable injection**: Method parameters flow from the CLI through Docker environment variables into the container, using an underscore prefix convention (`_PARAM_NAME=value`).
+- **Result standardization**: All methods produce a `results.json` file conforming to a fixed schema, enabling uniform evaluation across heterogeneous methods.
+- **Separation of concerns**: The orchestration layer (CLI/API) never executes method code directly. It builds images, deploys services, and reads results from shared storage.
+- **Shared storage as the integration point**: NFS provides a single namespace (`/shared` or configurable) visible to all nodes, used for datasets, method source, experiment output, and shared libraries.
+
+---
+
+## Component Diagram
+
+```
+                          +-------------------------------------------+
+                          |              Client Machine                |
+                          |                                            |
+                          |  +--------+  +----------+  +-----------+  |
+                          |  |  CLI   |  |   GUI    |  | Python    |  |
+                          |  | cli.py |  | Flask +  |  | API       |  |
+                          |  |        |  | Vue.js   |  | api.py    |  |
+                          |  +---+----+  +----+-----+  +-----+-----+  |
+                          |      |            |              |         |
+                          |      v            v              v         |
+                          |  +--------------------------------------+  |
+                          |  |          GraFlag Core (core.py)      |  |
+                          |  |         returns dataclasses          |  |
+                          |  +--+-------------------------------+---+  |
+                          |     |                               |      |
+                          |  +--v-----------+  +----------------v--+   |
+                          |  | SSHManager   |  | DockerManager     |   |
+                          |  | (ssh.py)     |  | (docker_ops.py)   |   |
+                          |  | file ops,    |  | Docker SDK via    |   |
+                          |  | rsync, build |  | SSH tunnel        |   |
+                          |  +------+-------+  +--------+----------+   |
+                          +---------|-------------------|---------------+
+                                    |                   |
+                              SSH / rsync          SSH tunnel to
+                                    |            Docker socket
+                                    |                   |
+                    +---------------------------v-----------------------------+
+                    |                    Manager Node                         |
+                    |                                                         |
+                    |  +----------------+   +-----------------------------+   |
+                    |  | Docker Swarm   |   |  Local Registry             |   |
+                    |  | Manager        |   |  (registry:2 on port 5000)  |   |
+                    |  +-------+--------+   +-----------------------------+   |
+                    |          |                                               |
+                    |          |  NFS Export: /shared                          |
+                    |          |  +---------------------------------------+   |
+                    |          |  | methods/ | datasets/ | experiments/   |   |
+                    |          |  | libs/    |           |                |   |
+                    |          |  +---------------------------------------+   |
+                    +----------|----------------------------------------------+
+                               |
+                  Docker Swarm scheduling
+                               |
+          +--------------------+---------------------+
+          |                    |                      |
+    +-----v------+     +------v-----+     +----------v--+
+    | Worker 1   |     | Worker 2   |     | Worker N    |
+    |            |     |            |     |             |
+    | GPU(s)     |     | GPU(s)     |     | GPU(s)      |
+    | NFS mount  |     | NFS mount  |     | NFS mount   |
+    | /shared    |     | /shared    |     | /shared     |
+    +------------+     +------------+     +-------------+
+```
+
+---
+
+## Component Descriptions
+
+### graflag (CLI, GUI, DevCluster, and Orchestration)
+
+The main Python package located in `graflag/graflag/`. It provides the command-line interface, core orchestration logic, a Python API, a web GUI, and a development cluster tool -- all installable as a single package via `pip install -e .` and accessible through the `graflag` command.
+
+#### cli.py -- Command Line Interface
+
+Entry point for all user-facing commands. Uses `argparse` with the following commands:
+
+| Command      | Description                                      |
+|--------------|--------------------------------------------------|
+| `setup`      | Initialize Docker Swarm and join worker nodes    |
+| `run`        | Build image and deploy experiment service        |
+| `status`     | Show cluster status and shared directory contents|
+| `list`       | List methods, datasets, experiments, or services |
+| `logs`       | View experiment logs (supports `--follow`, `--tee`) |
+| `stop`       | Stop a running experiment (optional `--rm`)      |
+| `evaluate`   | Run evaluation on a completed experiment         |
+| `copy`       | Transfer files between local and remote (rsync)  |
+| `sync`       | Sync a method or library directory to remote     |
+| `gui`        | Start the web dashboard                          |
+| `devcluster` | Deploy a local Docker Compose development cluster|
+
+Key flags for `run`:
+- `--from-config CONFIG_FILE`: Replay an experiment from a saved `service_config.json`.
+- `--params KEY=VALUE`: Override method parameters at runtime.
+- `--no-gpu`: Disable GPU resource reservation.
+- `--build`: Build (or rebuild) the Docker image before deploying.
+
+#### core.py -- GraFlag Orchestration Class
+
+Central orchestration class (`GraFlag`) that coordinates all operations. All public methods return structured data (dataclasses from `models.py`) rather than printing to stdout. The CLI formats the returned data for terminal display.
+
+Key responsibilities:
+
+- **Initialization**: Loads `GraflagConfig`, creates `SSHManager` and `DockerManager` instances.
+- **`status()`**: Returns a `ClusterInfo` dataclass with nodes, services, and shared directory contents.
+- **`run()`**: Validates method and dataset existence on remote, creates experiment directory, optionally builds the Docker image, deploys the Docker Swarm service, follows logs, and returns the experiment name.
+- **`list_methods()`**: Returns `List[MethodInfo]` with method metadata parsed from `.env` files.
+- **`list_datasets()`**: Returns `List[DatasetInfo]` with size and file count.
+- **`list_experiments()`**: Returns `List[ExperimentInfo]` with status, sorted by timestamp.
+- **`get_experiment_results()`**: Returns `ExperimentResults` parsed from `results.json`.
+- **`get_evaluation_results()`**: Returns `EvaluationResults` parsed from `eval/evaluation.json`.
+- **`evaluate()`**: Deploys a `graflag-evaluator` service against a completed experiment.
+- **`copy_files()`**: Bidirectional file transfer using rsync over SSH.
+- **`sync()`**: Sync a local method or library directory to the remote shared storage.
+- **Status management**: Writes `status.json` to experiment directories during build and on failure.
+
+#### models.py -- Data Models
+
+Shared dataclass definitions used by core, api, and GUI:
+
+| Dataclass           | Description                                      |
+|---------------------|--------------------------------------------------|
+| `ClusterInfo`       | Cluster status, nodes, services, shared dir      |
+| `MethodInfo`        | Method name, description, parameters, files      |
+| `DatasetInfo`       | Dataset name, path, size, file count             |
+| `ExperimentInfo`    | Experiment status, results/eval availability     |
+| `ExperimentResults` | Parsed results.json with execution metrics       |
+| `EvaluationResults` | Parsed evaluation.json with metrics and plots    |
+| `BenchmarkProgress` | Progress tracking for experiment execution       |
+
+All dataclasses implement `to_dict()` for JSON serialization.
+
+#### config.py -- Configuration Management
+
+`GraflagConfig` loads configuration from a `.env` file and exposes typed properties.
+
+**Config resolution order**:
+
+1. Explicit path passed via `--config` flag.
+2. `.env` file in the current working directory.
+3. Standard location: `~/.config/graflag/config.env`.
+
+`graflag setup` runs an interactive wizard (`init_config()`) that prompts for values and stores them in the standard location.
+
+| Property           | Env Variable  | Default              | Description                          |
+|--------------------|---------------|----------------------|--------------------------------------|
+| `manager_ip`       | `MANAGER_IP`  | (required)           | IP address of the Swarm manager node |
+| `ssh_port`         | `SSH_PORT`    | `22`                 | SSH port on the manager              |
+| `ssh_key`          | `SSH_KEY`     | `~/.ssh/id_ed25519`  | Path to SSH private key              |
+| `remote_shared_dir`| `SHARED_DIR`  | `/shared`            | Path to shared storage on remote     |
+| `nfs_port`         | `NFS_PORT`    | `2049`               | NFS port for mounting                |
+| `hosts_file`       | `HOSTS_FILE`  | `hosts.yml`          | Path to hosts.yml with worker IPs    |
+
+#### ssh.py -- SSH Operations
+
+`SSHManager` provides remote command execution and file transfer:
+
+- **`execute(command)`**: Runs a command on the manager via `ssh` subprocess. Always connects as `root@MANAGER_IP`.
+- **`copy_files()`**: Bidirectional rsync over SSH. Handles both local-to-remote and remote-to-local transfers.
+- **`path_exists()`, `read_file()`, `mkdir()`, `list_dir()`**: File system operations on the remote via SSH.
+
+All SSH commands use `-o StrictHostKeyChecking=no` and authenticate with the configured SSH key.
+
+#### docker_ops.py -- Docker Swarm Operations
+
+`DockerManager` handles Docker Swarm interactions using the **Docker SDK for Python** (`docker-py`) connected via an SSH tunnel to the remote Docker daemon.
+
+**Connection model**: An SSH tunnel forwards a local TCP port to the remote Docker socket (`/var/run/docker.sock`). The Docker SDK connects to `tcp://localhost:<tunnel_port>`, providing native Python access to the Docker API. The tunnel is established lazily on first use and reused across operations.
+
+**Operations using Docker SDK** (native Python API):
+
+- **Swarm management**: `setup_swarm_manager()` via `client.swarm.init()`, `get_swarm_token()` via `client.swarm.attrs`, `get_nodes()` via `client.nodes.list()`.
+- **Registry**: `setup_local_registry()` via `client.services.create()`.
+- **Service creation**: `create_service()` via `client.services.create()` with `ServiceMode`, `RestartPolicy`, `Resources`, `Mount`, and network configuration.
+- **Service lifecycle**: `list_services()`, `stop_service()`, `get_service_logs()`, `follow_service_logs()` via `service.logs(follow=True, stream=True)`.
+- **Cluster status**: `get_cluster_status()` via `client.info()` and node/service listing.
+
+**Operations using SSH** (build context is on the remote host):
+
+- **Image building**: `build_method_image()` -- runs `docker build` and `docker push` via SSH because the build context (shared directory with methods and libs) resides on the remote host.
+- **Evaluator image**: `build_evaluator_image()` -- same rationale.
+
+**Worker setup**: `setup_workers()` uses SSH to execute `docker swarm join` on each worker node, since the Docker SDK connection only reaches the manager.
+
+**Reserved environment variables** (defined in `ReservedEnvVars` enum): `DATA`, `EXP`, `METHOD_NAME`, `COMMAND`, `MONITOR_INTERVAL`. These cannot be overridden by user-supplied `--params`.
+
+#### api.py -- Python API
+
+`GraFlagAPI` is a thin error-safe wrapper around `GraFlag` core, designed for GUI integration. Since core now returns structured data directly, the API layer:
+
+- Delegates all operations to `self.core` (no duplicated logic).
+- Wraps each call in try/except, returning empty lists or `None` on error instead of raising (prevents GUI crashes).
+- Maintains the same public interface used by the GUI (backward-compatible).
+- All returned dataclasses implement `to_dict()` for JSON serialization.
+
+#### gui/ -- Web Interface (subpackage)
+
+A Flask application with a Vue.js frontend, located in `graflag/graflag/gui/`. Accessible via `graflag gui [--host HOST] [--port PORT] [--debug]`.
+
+**Backend** (`server.py`):
+- Built on Flask with Flask-SocketIO for real-time updates.
+- Uses `GraFlagAPI` as its data layer.
+- REST endpoints under `/api/` for methods, datasets, experiments, services, run, evaluation, logs, and plot serving.
+- Run, evaluation, stop, and delete operations execute in background threads to avoid blocking HTTP responses.
+- Plot images are streamed from the remote via SSH + base64 encoding.
+- Server-side caching for methods and datasets (30-second TTL).
+
+**Real-time updates**:
+- WebSocket connection via Socket.IO.
+- A `background_updater` thread polls experiments and services every 2 seconds.
+- Updates are broadcast to all connected clients only when state changes (change detection via comparison with `last_state`).
+
+**Frontend**:
+- Vue.js single-page application served from Flask templates.
+- Communicates with the backend via REST API and WebSocket events.
+
+#### devcluster/ -- Development Cluster (subpackage)
+
+A Docker Compose-based virtual cluster for local development and testing, located in `graflag/graflag/devcluster/`. Accessible via `graflag devcluster --hosts hosts.yml [--pubkey KEY]`.
+
+**Components**:
+- `docker-compose.yml`: Defines a manager node and multiple worker nodes (up to 4) on a bridged network (`192.168.100.0/24`).
+- `deploy.sh`: Automated deployment script that generates SSH keys, builds the Docker Compose configuration from `hosts.yml`, and starts the cluster.
+- `manager/`: Dockerfile and configuration for the manager container (Docker-in-Docker with SSH, NFS server).
+- `worker/`: Dockerfile and configuration for worker containers (Docker-in-Docker with SSH, NFS client).
+
+**Key characteristics**:
+- All containers run in privileged mode (required for Docker-in-Docker and NFS).
+- GPU passthrough is configured via `deploy.resources.reservations.devices`.
+- Static IP assignment on a custom bridge network.
+- SSH key exchange is handled during build time via build arguments.
+
+### graflag-shared (NFS Shared Storage)
+
+The shared storage directory is NFS-exported by the manager node and mounted on all worker nodes. Structure:
+
+```
+graflag-shared/
++-- methods/              # GAD method implementations
+|   +-- <method_name>/
+|       +-- .env          # Method metadata and default parameters
+|       +-- Dockerfile    # Container definition
+|       +-- train_graflag.py  # GraFlag integration script
+|       +-- ...
++-- datasets/             # Benchmark datasets
+|   +-- <dataset_name>/
+|       +-- ...
++-- experiments/          # Experiment results (one directory per run)
+|   +-- exp__<method>__<dataset>__<timestamp>/
+|       +-- results.json
+|       +-- status.json
+|       +-- service_config.json
+|       +-- service_details.json
+|       +-- method_output.txt
+|       +-- build.log
+|       +-- training.csv
+|       +-- resources.csv
+|       +-- eval/
++-- libs/                 # Shared Python libraries
+    +-- graflag_runner/
+    +-- graflag_evaluator/
+    +-- graflag_bond/
+```
+
+---
+
+## Execution Flow
+
+The complete lifecycle of an experiment:
+
+### 1. Command Parsing
+
+```
+graflag run -m taddy -d uci --build --params MAX_EPOCH=100
+```
+
+The CLI parses arguments, instantiates `GraFlag`, and calls `run()`.
+
+### 2. Validation
+
+- SSH to manager to verify `methods/taddy/` exists.
+- SSH to manager to verify `datasets/uci/` exists.
+- Create experiment directory: `experiments/exp__taddy__uci__20260309_143000/`.
+
+### 3. Image Build (if `--build`)
+
+```
+status.json <- {"status": "building"}
+
+docker build --network=host \
+  -f /shared/methods/taddy/Dockerfile \
+  -t taddy:latest \
+  -t MANAGER_IP:5000/taddy:latest \
+  /shared/
+
+docker push MANAGER_IP:5000/taddy:latest
+```
+
+The build context is the entire shared directory, giving the Dockerfile access to `libs/` for installing `graflag_runner` and other shared libraries.
+
+Build output is saved to `experiments/exp__*/build.log`.
+
+### 4. Service Deployment
+
+Using the Docker SDK via SSH tunnel, the equivalent of:
+
+```
+docker service create --quiet -d \
+  --name exp__taddy__uci__20260309_143000 \
+  --restart-condition none \
+  --network host \
+  --generic-resource NVIDIA-GPU=0 \
+  --env METHOD_NAME=taddy \
+  --env DATA=/shared/datasets/uci/ \
+  --env EXP=/shared/experiments/exp__taddy__uci__20260309_143000/ \
+  --env _MAX_EPOCH=100 \
+  --mount type=bind,source=/shared,target=/shared \
+  MANAGER_IP:5000/taddy:latest
+```
+
+is performed via `client.services.create()` with `ServiceMode`, `RestartPolicy`, `Resources`, `Mount`, and `env` parameters. The method's `.env` is read and merged into the env list (rather than using `--env-file`), giving the orchestrator full control over parameter precedence.
+
+Service configuration is saved to `service_config.json` before deployment. Service details (including assigned worker node) are saved to `service_details.json` after creation.
+
+### 5. Method Execution (inside container)
+
+The container's CMD invokes `graflag_runner`:
+
+```
+python3 -m graflag_runner --pass-env-args
+```
+
+`MethodRunner.from_env()` reads environment variables and:
+1. Extracts `_`-prefixed env vars and converts them to CLI arguments (e.g., `_MAX_EPOCH=100` becomes `--max_epoch 100`).
+2. Validates dataset compatibility if `SUPPORTED_DATASETS` is defined.
+3. Writes `status.json` with status `running`.
+4. Starts `ResourceMonitor` in a background thread (tracks CPU, memory, GPU usage via `psutil` and `nvidia-smi`).
+5. Executes the method command via subprocess with real-time output capture.
+6. On completion, writes final `status.json` with status `completed` or `failed`, execution time, and resource summary.
+7. Saves captured output to `method_output.txt`.
+
+The method code itself uses `ResultWriter` to produce `results.json`:
+
+```python
+from graflag_runner import ResultWriter
+
+writer = ResultWriter()
+# ... run detection algorithm ...
+writer.save_scores(result_type="EDGE_STREAM_ANOMALY_SCORES", scores=scores, ground_truth=gt)
+writer.add_metadata(method_name="taddy", dataset="uci")
+writer.add_resource_metrics(exec_time_ms=45230.15, peak_memory_mb=2048.5, peak_gpu_mb=4096.0)
+writer.finalize()  # Writes results.json
+```
+
+### 6. Evaluation (optional, triggered separately)
+
+```
+graflag evaluate -e exp__taddy__uci__20260309_143000
+```
+
+This deploys a separate `graflag-evaluator` Docker service that:
+1. Loads `results.json` from the experiment directory.
+2. Computes metrics (AUC-ROC, AUC-PR, etc.) via `MetricCalculator`.
+3. Generates plots (ROC curve, PR curve, score distribution, spot curves) via `PlotGenerator`.
+4. Saves `evaluation.json` and plot PNGs to the `eval/` subdirectory.
+
+---
+
+## Shared Libraries
+
+### graflag_runner
+
+**Location**: `graflag-shared/libs/graflag_runner/`
+
+The execution framework installed inside method containers. Provides:
+
+| Module             | Description                                                    |
+|--------------------|----------------------------------------------------------------|
+| `runner.py`        | `MethodRunner` -- main execution wrapper. Manages lifecycle, resource monitoring, status tracking, and output capture. |
+| `results.py`       | `ResultWriter` -- standardized result serialization. Supports `save_scores()`, `add_metadata()`, `add_resource_metrics()`, `spot()` (CSV-based metric tracking), and `finalize()`. |
+| `monitor.py`       | `ResourceMonitor` -- background thread tracking CPU memory (via `psutil`), GPU memory (via `nvidia-smi`), with periodic CSV logging through `ResultWriter.spot()`. |
+| `streaming.py`     | `StreamableArray` and `stream_write_json` -- memory-efficient streaming for large score arrays (writes JSON row-by-row without loading entire arrays into memory). |
+| `subprocess_utils.py` | `run_with_realtime_output()` -- subprocess execution with live stdout/stderr capture and forwarding. |
+| `logging_utils.py` | Simple logging functions (`debug`, `info`, `warning`, `error`, `critical`, `exception`). |
+| `__main__.py`      | Module entry point for `python -m graflag_runner`.             |
+
+**ResultWriter.spot()** method: Tracks real-time metrics to CSV files during training. Each metric group (e.g., `"training"`, `"validation"`, `"resources"`) gets its own CSV file. Schema is locked after the first call -- subsequent calls must provide the same metric keys. The first column is always a Unix timestamp.
+
+```python
+writer.spot("training", epoch=1, loss=0.5, auc=0.85)
+writer.spot("training", epoch=2, loss=0.3, auc=0.90)
+```
+
+### graflag_bond
+
+**Location**: `graflag-shared/libs/graflag_bond/`
+
+A wrapper library for running PyGOD anomaly detection methods through GraFlag. Provides:
+
+| Module         | Description                                                   |
+|----------------|---------------------------------------------------------------|
+| `detectors.py` | `BondDetector` -- dynamic PyGOD detector registry. Discovers all detector classes from `pygod.detector` via introspection. Maps method names (with optional `bond_` prefix) to detector classes. |
+| `train.py`     | Training logic for PyGOD detectors within the GraFlag framework. |
+| `utils.py`     | Utility functions including `get_all_parameters()` for detector parameter discovery. |
+
+Usage pattern: methods prefixed with `bond_` (e.g., `bond_dominant`) use this library to instantiate and train PyGOD detectors without writing boilerplate code. Their `.env` sets `COMMAND=python3 -m graflag_bond.train` and their Dockerfile uses `CMD ["python3", "-m", "graflag_runner"]` (without `--pass-env-args`).
+
+### graflag_evaluator
+
+**Location**: `graflag-shared/libs/graflag_evaluator/`
+
+The evaluation framework that computes metrics and generates plots. Runs as a Docker service.
+
+| Module              | Description                                                 |
+|---------------------|-------------------------------------------------------------|
+| `evaluator.py`      | `Evaluator` -- orchestrator that loads results, computes metrics, generates plots, and saves `evaluation.json`. |
+| `metrics.py`        | `MetricCalculator` -- computes AUC-ROC, AUC-PR, and other metrics based on result type. Handles ragged arrays (e.g., temporal edge scores with varying snapshot sizes). |
+| `plots.py`          | `PlotGenerator` -- generates ROC curves, PR curves, score distributions, and spot curves from CSV files. |
+| `run_evaluation.py` | Entry point for the evaluation Docker container.            |
+
+---
+
+## Data Flow
+
+### Environment Variable Injection
+
+Parameters flow through three layers:
+
+```
+Method .env file         CLI --params            Docker Service Env
++------------------+    +------------------+    +------------------+
+| METHOD_NAME=taddy|    | MAX_EPOCH=100    | -> | METHOD_NAME=taddy|
+| COMMAND=python...|    | LEARNING_RATE=.01|    | COMMAND=python...|
+| _BATCH_SIZE=128  |    +------------------+    | DATA=/shared/... |
+| _MAX_EPOCH=50    |                            | EXP=/shared/...  |
++------------------+                            | _BATCH_SIZE=128  |
+                                                | _MAX_EPOCH=100   | (overridden)
+                                                | _LEARNING_RATE=.01| (added)
+                                                +------------------+
+```
+
+1. The method's `.env` file defines metadata (`METHOD_NAME`, `COMMAND`, `DESCRIPTION`) and default parameters (underscore-prefixed: `_BATCH_SIZE=128`).
+2. The method's `.env` is read by `DockerManager._build_service_env()` and parsed into a dict.
+3. Reserved variables (`DATA`, `EXP`, `METHOD_NAME`, `COMMAND`, `MONITOR_INTERVAL`) are set by the orchestrator and cannot be overridden by `--params`.
+4. User `--params` are merged into the dict as `_KEY=VALUE`, overriding any defaults from the `.env` file.
+5. The merged dict is passed as the `env` parameter to `client.services.create()`.
+6. Inside the container, `graflag_runner` with `--pass-env-args` extracts `_`-prefixed env vars and converts them to CLI arguments: `_MAX_EPOCH=100` becomes `--max_epoch 100`.
+
+### Result Standardization
+
+All methods must produce a `results.json` via `ResultWriter` with this schema:
+
+```json
+{
+    "result_type": "EDGE_STREAM_ANOMALY_SCORES",
+    "scores": [0.1, 0.9, 0.3],
+    "ground_truth": [0, 1, 0],
+    "metadata": {
+        "method_name": "taddy",
+        "dataset": "uci"
+    }
+}
+```
+
+Valid result types:
+
+| Category   | Node                          | Edge                          | Graph                          |
+|------------|-------------------------------|-------------------------------|--------------------------------|
+| Static     | `NODE_ANOMALY_SCORES`         | `EDGE_ANOMALY_SCORES`         | `GRAPH_ANOMALY_SCORES`         |
+| Temporal   | `TEMPORAL_NODE_ANOMALY_SCORES`| `TEMPORAL_EDGE_ANOMALY_SCORES`| `TEMPORAL_GRAPH_ANOMALY_SCORES`|
+| Streaming  | `NODE_STREAM_ANOMALY_SCORES`  | `EDGE_STREAM_ANOMALY_SCORES`  | `GRAPH_STREAM_ANOMALY_SCORES`  |
+
+Optional additional fields: `timestamps`, `node_ids`, `edges`, `graph_ids`.
+
+### Evaluation Pipeline
+
+```
+results.json --> Evaluator --> MetricCalculator --> evaluation.json
+                           --> PlotGenerator    --> roc_curve.png
+                                                --> pr_curve.png
+                                                --> score_distribution.png
+
+*.csv (spot files) --> PlotGenerator --> spot_curves.png (per metric group)
+```
+
+The evaluator flattens scores and ground truth arrays, handles ragged temporal data, and computes standard binary classification metrics.
+
+---
+
+## Experiment Lifecycle
+
+Each experiment transitions through the following states, tracked in `status.json`:
+
+```
+                +----------+
+                | building |  (image build in progress)
+                +----+-----+
+                     |
+                     v
+                +---------+
+     +--------->| running |  (service deployed, method executing)
+     |          +----+----+
+     |               |
+     |     +---------+---------+
+     |     |                   |
+     |     v                   v
+     | +-----------+     +--------+
+     | | completed |     | failed |
+     | +-----------+     +--------+
+     |
+     | (external stop)
+     |     +----------+
+     +---->| stopped  |
+            +----------+
+```
+
+**State determination logic** (in `core.py`):
+
+1. `status.json` is the source of truth when present.
+2. Terminal states (`completed`, `failed`) from `status.json` are definitive.
+3. If `status.json` says `running` but no Docker service exists, status is `stopped`.
+4. If `status.json` says `building` but no service exists and `build.log` is present, status is `failed`.
+5. If no `status.json` exists but the Docker service is present, status is `running`.
+6. Legacy experiments without `status.json` that have `results.json` are assumed `completed`.
+7. All other cases are `unknown`.
+
+`status.json` is written at multiple points:
+- By `core.py` when the build starts (`building`) and if the build fails.
+- By `graflag_runner` when execution starts (`running`), and when it finishes (`completed` or `failed`), including execution time, resource summary, and exit code.
+
+---
+
+## Docker Swarm Service Model
+
+Each experiment runs as a Docker Swarm service with specific configuration:
+
+### Service Creation
+
+Services are created via the Docker SDK (`client.services.create()`):
+
+```python
+client.services.create(
+    image="REGISTRY:5000/method:tag",
+    name="exp__method__dataset__ts",
+    env=["METHOD_NAME=...", "DATA=...", "EXP=...", "_PARAM=VALUE", ...],
+    mounts=[Mount(target="/shared", source="/shared", type="bind")],
+    mode=ServiceMode("replicated", replicas=1),
+    restart_policy=RestartPolicy(condition="none"),
+    resources=Resources(generic_resources=[...]),  # GPU if enabled
+    networks=["host"],
+)
+```
+
+### Key Design Decisions
+
+- **`--restart-condition none`**: Experiments are one-shot tasks. If the method crashes, the service transitions to `Complete` (with non-zero exit code) rather than restarting. The status is tracked in `status.json`.
+- **`--network host`**: Containers share the host's network stack. This provides DNS resolution and internet access (for methods that download models or data).
+- **`--generic-resource NVIDIA-GPU=0`**: Reserves a GPU via Docker's generic resource model. The `0` is the GPU index. This requires the NVIDIA runtime and GPU resource advertisement on worker nodes.
+- **Bind mount**: The shared directory is bind-mounted at the same path inside the container, so all paths (DATA, EXP) are consistent between host and container.
+
+### Local Registry
+
+A `registry:2` service runs on the manager node (port 5000), constrained to `node.role==manager`. All method images are pushed here after building, allowing any worker node to pull them during service deployment.
+
+### Evaluation Services
+
+Evaluation runs as a separate service named `eval__exp__method__dataset__ts`. It uses the `graflag-evaluator` image, mounts shared storage at `/shared`, and receives the experiment path as a command argument. The evaluator service is removed after completion.
+
+---
+
+## Configuration
+
+### Client Configuration
+
+Run `graflag setup` to interactively configure and store settings in `~/.config/graflag/config.env`:
+
+```bash
+# Required
+MANAGER_IP=192.168.100.10
+
+# Optional (with defaults)
+SSH_PORT=22
+SSH_KEY=~/.ssh/id_ed25519
+SHARED_DIR=/shared
+HOSTS_FILE=hosts.yml
+```
+
+Config resolution order: `--config` flag > `.env` in working directory > `~/.config/graflag/config.env`.
+
+### Cluster Configuration (hosts.yml)
+
+Used by `DockerManager` for swarm setup and by `graflag devcluster` for virtual cluster deployment. The path to this file is stored in the client configuration (`HOSTS_FILE`).
+
+```yaml
+subnet: 192.168.100.0/24
+manager: 192.168.100.10
+workers:
+  - 192.168.100.11
+  - 192.168.100.12
+  - 192.168.100.13
+  - 192.168.100.14
+```
+
+### Method Configuration (.env)
+
+Each method has a `.env` file in its directory:
+
+```bash
+# Metadata (read by orchestrator)
+METHOD_NAME=taddy
+DESCRIPTION=Temporal anomaly detection on dynamic graphs
+SOURCE_CODE=https://github.com/example/taddy
+COMMAND=python3 train_graflag.py
+SUPPORTED_DATASETS=uci,btc_alpha,btc_otc
+
+# Default parameters (underscore prefix, overridable via --params)
+_MAX_EPOCH=200
+_BATCH_SIZE=128
+_LEARNING_RATE=0.001
+_HIDDEN_DIM=64
+```
+
+---
+
+## Experiment Output Structure
+
+```
+experiments/exp__taddy__uci__20260309_143000/
++-- status.json            # Execution status (building/running/completed/failed)
++-- service_config.json    # Full service configuration (reproducible)
++-- service_details.json   # Docker service metadata (node, task ID, etc.)
++-- build.log              # Docker image build output (if --build was used)
++-- method_output.txt      # Captured stdout/stderr from method execution
++-- results.json           # Standardized method output (scores, ground_truth)
++-- training.csv           # Training metrics from writer.spot("training", ...)
++-- validation.csv         # Validation metrics from writer.spot("validation", ...)
++-- resources.csv          # Resource usage from ResourceMonitor.spot("resources", ...)
++-- eval/                  # Evaluation output (created by graflag evaluate)
+    +-- evaluation.json    # Computed metrics and plot references
+    +-- roc_curve.png      # ROC curve plot
+    +-- pr_curve.png       # Precision-Recall curve plot
+    +-- score_distribution.png  # Score histogram by class
+    +-- spot_curves.png    # Spot metric curves (if spot files exist)
+```
+
+The `service_config.json` file contains all information needed to reproduce an experiment:
+
+```json
+{
+    "experiment_name": "exp__taddy__uci__20260309_143000",
+    "method_name": "taddy",
+    "dataset": "uci",
+    "tag": "latest",
+    "gpu_required": true,
+    "registry_image": "192.168.100.10:5000/taddy:latest",
+    "manager_ip": "192.168.100.10",
+    "timestamp": "2026-03-09T14:30:00.000000",
+    "data_path": "/shared/datasets/uci/",
+    "exp_path": "/shared/experiments/exp__taddy__uci__20260309_143000/",
+    "env_contents": {
+        "METHOD_NAME": "taddy",
+        "COMMAND": "python3 train_graflag.py",
+        "_MAX_EPOCH": "100",
+        "_BATCH_SIZE": "128"
+    }
+}
+```
+
+To replay an experiment:
+
+```bash
+graflag run --from-config ./experiments/exp__taddy__uci__20260309_143000/service_config.json
+```

@@ -1,0 +1,174 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Method Integration &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Method Integration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/method_integration.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="method-integration">
+<h1>Method Integration<a class="headerlink" href="#method-integration" title="Link to this heading"></a></h1>
+<p>For the full method integration guide, see <code class="docutils literal notranslate"><span class="pre">METHOD_INTEGRATION_GUIDE.md</span></code> in this directory.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>Each method requires three files in <code class="docutils literal notranslate"><span class="pre">graflag-shared/methods/&lt;name&gt;/</span></code>:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">.env</span></code> – method metadata and default parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> – container definition (clones source at build time)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code> – GraFlag integration script using <code class="docutils literal notranslate"><span class="pre">ResultWriter</span></code></p></li>
+</ol>
+</section>
+<section id="env-format">
+<h2>.env Format<a class="headerlink" href="#env-format" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">METHOD_NAME</span><span class="o">=</span><span class="n">mymethod</span>
+<span class="n">DESCRIPTION</span><span class="o">=</span><span class="n">Method</span> <span class="n">description</span>
+<span class="n">SOURCE_CODE</span><span class="o">=</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">author</span><span class="o">/</span><span class="n">repo</span>
+<span class="n">COMMAND</span><span class="o">=</span><span class="n">python3</span> <span class="n">train_graflag</span><span class="o">.</span><span class="n">py</span>
+
+<span class="n">_PARAM_NAME</span><span class="o">=</span><span class="n">default_value</span>
+<span class="n">_LEARNING_RATE</span><span class="o">=</span><span class="mf">0.001</span>
+<span class="n">_GPU</span><span class="o">=</span><span class="mi">0</span>
+</pre></div>
+</div>
+<p>Parameters prefixed with <code class="docutils literal notranslate"><span class="pre">_</span></code> are passed as command-line arguments to the method.</p>
+</section>
+<section id="dockerfile-pattern">
+<h2>Dockerfile Pattern<a class="headerlink" href="#dockerfile-pattern" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">FROM</span> <span class="n">nvidia</span><span class="o">/</span><span class="n">cuda</span><span class="p">:</span><span class="mf">12.1.0</span><span class="o">-</span><span class="n">runtime</span><span class="o">-</span><span class="n">ubuntu22</span><span class="mf">.04</span>
+<span class="c1"># install dependencies</span>
+<span class="n">RUN</span> <span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">author</span><span class="o">/</span><span class="n">repo</span> <span class="n">src</span>
+<span class="n">COPY</span> <span class="n">methods</span><span class="o">/</span><span class="n">mymethod</span><span class="o">/</span><span class="n">train_graflag</span><span class="o">.</span><span class="n">py</span> <span class="o">./</span>
+<span class="n">COPY</span> <span class="n">libs</span><span class="o">/</span> <span class="o">./</span><span class="n">libs</span><span class="o">/</span>
+<span class="n">RUN</span> <span class="n">pip</span> <span class="n">install</span> <span class="o">./</span><span class="n">libs</span><span class="o">/</span><span class="n">graflag_runner</span>
+<span class="n">CMD</span> <span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span> <span class="s2">&quot;-m&quot;</span><span class="p">,</span> <span class="s2">&quot;graflag_runner&quot;</span><span class="p">,</span> <span class="s2">&quot;--pass-env-args&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="resultwriter-usage">
+<h2>ResultWriter Usage<a class="headerlink" href="#resultwriter-usage" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span>
+
+<span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>
+<span class="c1"># ... run method ...</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span><span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;mymethod&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;cora&quot;</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_resource_metrics</span><span class="p">(</span><span class="n">exec_time_ms</span><span class="o">=</span><span class="mi">1234</span><span class="p">,</span> <span class="n">peak_memory_mb</span><span class="o">=</span><span class="mi">512</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.docker_ops &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="graflag.api" href="api_module.html" />
+    <link rel="prev" title="graflag.ssh" href="ssh.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.docker_ops</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.DATA"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.DATA</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.EXP"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.EXP</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.METHOD_NAME"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.METHOD_NAME</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.COMMAND"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.COMMAND</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.MONITOR_INTERVAL"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.MONITOR_INTERVAL</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.get_names"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.get_names()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.DockerManager"><code class="docutils literal notranslate"><span class="pre">DockerManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.client"><code class="docutils literal notranslate"><span class="pre">DockerManager.client</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.close"><code class="docutils literal notranslate"><span class="pre">DockerManager.close()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.setup_swarm_manager"><code class="docutils literal notranslate"><span class="pre">DockerManager.setup_swarm_manager()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.get_swarm_token"><code class="docutils literal notranslate"><span class="pre">DockerManager.get_swarm_token()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.setup_workers"><code class="docutils literal notranslate"><span class="pre">DockerManager.setup_workers()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.get_nodes"><code class="docutils literal notranslate"><span class="pre">DockerManager.get_nodes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.setup_local_registry"><code class="docutils literal notranslate"><span class="pre">DockerManager.setup_local_registry()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.build_method_image"><code class="docutils literal notranslate"><span class="pre">DockerManager.build_method_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.build_evaluator_image"><code class="docutils literal notranslate"><span class="pre">DockerManager.build_evaluator_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.create_service"><code class="docutils literal notranslate"><span class="pre">DockerManager.create_service()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.create_evaluation_service"><code class="docutils literal notranslate"><span class="pre">DockerManager.create_evaluation_service()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.list_services"><code class="docutils literal notranslate"><span class="pre">DockerManager.list_services()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.get_service_names"><code class="docutils literal notranslate"><span class="pre">DockerManager.get_service_names()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.stop_service"><code class="docutils literal notranslate"><span class="pre">DockerManager.stop_service()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.cleanup_finished_service"><code class="docutils literal notranslate"><span class="pre">DockerManager.cleanup_finished_service()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.remove_evaluation_service"><code class="docutils literal notranslate"><span class="pre">DockerManager.remove_evaluation_service()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.get_service_logs"><code class="docutils literal notranslate"><span class="pre">DockerManager.get_service_logs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.follow_service_logs"><code class="docutils literal notranslate"><span class="pre">DockerManager.follow_service_logs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.service_exists"><code class="docutils literal notranslate"><span class="pre">DockerManager.service_exists()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.is_service_failed"><code class="docutils literal notranslate"><span class="pre">DockerManager.is_service_failed()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.get_cluster_status"><code class="docutils literal notranslate"><span class="pre">DockerManager.get_cluster_status()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">graflag.docker_ops</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/docker_ops.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-graflag.docker_ops">
+<span id="graflag-docker-ops"></span><h1>graflag.docker_ops<a class="headerlink" href="#module-graflag.docker_ops" title="Link to this heading"></a></h1>
+<p>Docker operations for GraFlag using Docker SDK.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">ReservedEnvVars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#ReservedEnvVars"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<p>Reserved environment variable names that should not be overridden by method parameters.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.DATA">
+<span class="sig-name descname"><span class="pre">DATA</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'DATA'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.DATA" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.EXP">
+<span class="sig-name descname"><span class="pre">EXP</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'EXP'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.EXP" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.METHOD_NAME">
+<span class="sig-name descname"><span class="pre">METHOD_NAME</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'METHOD_NAME'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.METHOD_NAME" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.COMMAND">
+<span class="sig-name descname"><span class="pre">COMMAND</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'COMMAND'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.COMMAND" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.MONITOR_INTERVAL">
+<span class="sig-name descname"><span class="pre">MONITOR_INTERVAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'MONITOR_INTERVAL'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.MONITOR_INTERVAL" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.get_names">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#ReservedEnvVars.get_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.get_names" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">DockerManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ssh_manager</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hosts_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'hosts.yml'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Handle Docker Swarm operations via Docker SDK with SSH tunnel.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.client">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">client</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">DockerClient</span></span><a class="headerlink" href="#graflag.docker_ops.DockerManager.client" title="Link to this definition"></a></dt>
+<dd><p>Lazy-initialize Docker client via SSH tunnel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.close" title="Link to this definition"></a></dt>
+<dd><p>Close Docker client and SSH tunnel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.setup_swarm_manager">
+<span class="sig-name descname"><span class="pre">setup_swarm_manager</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.setup_swarm_manager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.setup_swarm_manager" title="Link to this definition"></a></dt>
+<dd><p>Initialize Docker Swarm on manager node.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.get_swarm_token">
+<span class="sig-name descname"><span class="pre">get_swarm_token</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.get_swarm_token"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.get_swarm_token" title="Link to this definition"></a></dt>
+<dd><p>Get Docker Swarm worker join token.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.setup_workers">
+<span class="sig-name descname"><span class="pre">setup_workers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">token</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.setup_workers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.setup_workers" title="Link to this definition"></a></dt>
+<dd><p>Setup worker nodes to join the swarm (requires SSH to each worker).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.get_nodes">
+<span class="sig-name descname"><span class="pre">get_nodes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.get_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.get_nodes" title="Link to this definition"></a></dt>
+<dd><p>Get list of swarm nodes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.setup_local_registry">
+<span class="sig-name descname"><span class="pre">setup_local_registry</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.setup_local_registry"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.setup_local_registry" title="Link to this definition"></a></dt>
+<dd><p>Setup local Docker registry service on manager.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.build_method_image">
+<span class="sig-name descname"><span class="pre">build_method_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.build_method_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.build_method_image" title="Link to this definition"></a></dt>
+<dd><p>Build method Docker image and push to local registry.</p>
+<p>Uses SSH because the build context resides on the remote host.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Combined build and push log output.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.build_evaluator_image">
+<span class="sig-name descname"><span class="pre">build_evaluator_image</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.build_evaluator_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.build_evaluator_image" title="Link to this definition"></a></dt>
+<dd><p>Build graflag-evaluator image and push to registry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Registry image path.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.create_service">
+<span class="sig-name descname"><span class="pre">create_service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exp_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu_required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.create_service"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.create_service" title="Link to this definition"></a></dt>
+<dd><p>Create Docker service for experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.create_evaluation_service">
+<span class="sig-name descname"><span class="pre">create_evaluation_service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.create_evaluation_service"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.create_evaluation_service" title="Link to this definition"></a></dt>
+<dd><p>Create Docker service to run evaluation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.list_services">
+<span class="sig-name descname"><span class="pre">list_services</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.list_services"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.list_services" title="Link to this definition"></a></dt>
+<dd><p>List all Docker services.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.get_service_names">
+<span class="sig-name descname"><span class="pre">get_service_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">set</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.get_service_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.get_service_names" title="Link to this definition"></a></dt>
+<dd><p>Get set of all service names.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.stop_service">
+<span class="sig-name descname"><span class="pre">stop_service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.stop_service"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.stop_service" title="Link to this definition"></a></dt>
+<dd><p>Stop and remove a service.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.cleanup_finished_service">
+<span class="sig-name descname"><span class="pre">cleanup_finished_service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.cleanup_finished_service"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.cleanup_finished_service" title="Link to this definition"></a></dt>
+<dd><p>Remove a finished service (safe if it doesn’t exist).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.remove_evaluation_service">
+<span class="sig-name descname"><span class="pre">remove_evaluation_service</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.remove_evaluation_service"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.remove_evaluation_service" title="Link to this definition"></a></dt>
+<dd><p>Remove evaluation service for an experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.get_service_logs">
+<span class="sig-name descname"><span class="pre">get_service_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.get_service_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.get_service_logs" title="Link to this definition"></a></dt>
+<dd><p>Get recent logs for a service.</p>
+<p>Uses SSH + Docker CLI because the Docker SDK log streaming
+is unreliable for swarm services.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.follow_service_logs">
+<span class="sig-name descname"><span class="pre">follow_service_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.follow_service_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.follow_service_logs" title="Link to this definition"></a></dt>
+<dd><p>Follow service logs in real-time until task finishes.</p>
+<p>Uses SSH + Docker CLI subprocess because the Docker SDK’s
+follow mode does not stream reliably for swarm services.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.service_exists">
+<span class="sig-name descname"><span class="pre">service_exists</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.service_exists"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.service_exists" title="Link to this definition"></a></dt>
+<dd><p>Check if a Docker service exists.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.is_service_failed">
+<span class="sig-name descname"><span class="pre">is_service_failed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.is_service_failed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.is_service_failed" title="Link to this definition"></a></dt>
+<dd><p>Check if a service exists but all its tasks have failed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.get_cluster_status">
+<span class="sig-name descname"><span class="pre">get_cluster_status</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.get_cluster_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.get_cluster_status" title="Link to this definition"></a></dt>
+<dd><p>Get Docker Swarm cluster status.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssh.html" class="btn btn-neutral float-left" title="graflag.ssh" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api_module.html" class="btn btn-neutral float-right" title="graflag.api" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

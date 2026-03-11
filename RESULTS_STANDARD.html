@@ -1,0 +1,513 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Graph Anomaly Detection Result Types &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="GraFlag Architecture" href="ARCHITECTURE.html" />
+    <link rel="prev" title="AI Agent Instructions: GraFlag Method Integration" href="AGENT_METHOD_INTEGRATION.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Graph Anomaly Detection Result Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#static-graph-results">Static Graph Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#node-anomaly-scores">NODE_ANOMALY_SCORES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#edge-anomaly-scores">EDGE_ANOMALY_SCORES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graph-anomaly-scores">GRAPH_ANOMALY_SCORES</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#temporal-dynamic-graph-results">Temporal/Dynamic Graph Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#temporal-node-anomaly-scores">TEMPORAL_NODE_ANOMALY_SCORES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#temporal-edge-anomaly-scores">TEMPORAL_EDGE_ANOMALY_SCORES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#temporal-graph-anomaly-scores">TEMPORAL_GRAPH_ANOMALY_SCORES</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#streaming-graph-results">Streaming Graph Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#node-stream-anomaly-scores">NODE_STREAM_ANOMALY_SCORES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#edge-stream-anomaly-scores">EDGE_STREAM_ANOMALY_SCORES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graph-stream-anomaly-scores">GRAPH_STREAM_ANOMALY_SCORES</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#special-score-values">Special Score Values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#writing-results-with-resultwriter">Writing Results with ResultWriter</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#required-fields">Required Fields</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optional-fields">Optional Fields</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Graph Anomaly Detection Result Types</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/RESULTS_STANDARD.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="graph-anomaly-detection-result-types">
+<h1>Graph Anomaly Detection Result Types<a class="headerlink" href="#graph-anomaly-detection-result-types" title="Link to this heading"></a></h1>
+<p>This document defines the standardized result types used in GraFlag for graph anomaly detection methods.</p>
+<section id="static-graph-results">
+<h2>Static Graph Results<a class="headerlink" href="#static-graph-results" title="Link to this heading"></a></h2>
+<section id="node-anomaly-scores">
+<h3>NODE_ANOMALY_SCORES<a class="headerlink" href="#node-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Anomaly scores for each individual node in a static graph.</p>
+<p><strong>Format:</strong> Array of numerical scores, one per node</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.12</span><span class="p">,</span><span class="w"> </span><span class="mf">0.89</span><span class="p">,</span><span class="w"> </span><span class="mf">0.03</span><span class="p">,</span><span class="w"> </span><span class="mf">0.76</span><span class="p">,</span><span class="w"> </span><span class="mf">0.15</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;node_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="edge-anomaly-scores">
+<h3>EDGE_ANOMALY_SCORES<a class="headerlink" href="#edge-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Anomaly scores for each individual edge in a static graph.</p>
+<p><strong>Format:</strong> Array of numerical scores, one per edge</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EDGE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.92</span><span class="p">,</span><span class="w"> </span><span class="mf">0.17</span><span class="p">,</span><span class="w"> </span><span class="mf">0.68</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;edges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">]]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="graph-anomaly-scores">
+<h3>GRAPH_ANOMALY_SCORES<a class="headerlink" href="#graph-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Anomaly scores for entire graphs in a graph classification setting.</p>
+<p><strong>Format:</strong> Array of numerical scores, one per graph</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GRAPH_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.23</span><span class="p">,</span><span class="w"> </span><span class="mf">0.87</span><span class="p">,</span><span class="w"> </span><span class="mf">0.11</span><span class="p">,</span><span class="w"> </span><span class="mf">0.94</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;graph_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;graph_001&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_002&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_003&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_004&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="temporal-dynamic-graph-results">
+<h2>Temporal/Dynamic Graph Results<a class="headerlink" href="#temporal-dynamic-graph-results" title="Link to this heading"></a></h2>
+<section id="temporal-node-anomaly-scores">
+<h3>TEMPORAL_NODE_ANOMALY_SCORES<a class="headerlink" href="#temporal-node-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Time-series of anomaly scores for nodes as the graph evolves over time.</p>
+<p><strong>Format:</strong> 2D array where each row represents a time step, each column a node</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TEMPORAL_NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.12</span><span class="p">,</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span><span class="w"> </span><span class="mf">0.08</span><span class="p">,</span><span class="w"> </span><span class="mf">0.19</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.15</span><span class="p">,</span><span class="w"> </span><span class="mf">0.89</span><span class="p">,</span><span class="w"> </span><span class="mf">0.12</span><span class="p">,</span><span class="w"> </span><span class="mf">0.22</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.18</span><span class="p">,</span><span class="w"> </span><span class="mf">0.93</span><span class="p">,</span><span class="w"> </span><span class="mf">0.15</span><span class="p">,</span><span class="w"> </span><span class="mf">0.25</span><span class="p">]</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;node_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="temporal-edge-anomaly-scores">
+<h3>TEMPORAL_EDGE_ANOMALY_SCORES<a class="headerlink" href="#temporal-edge-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Time-series of anomaly scores for edges as new connections appear/disappear.</p>
+<p><strong>Format:</strong> 2D array where each row represents a time step, each column an edge</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TEMPORAL_EDGE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.32</span><span class="p">,</span><span class="w"> </span><span class="mf">0.17</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.08</span><span class="p">,</span><span class="w"> </span><span class="mf">0.91</span><span class="p">,</span><span class="w"> </span><span class="mf">0.20</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.12</span><span class="p">,</span><span class="w"> </span><span class="mf">0.95</span><span class="p">,</span><span class="w"> </span><span class="mf">0.23</span><span class="p">]</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;edges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="temporal-graph-anomaly-scores">
+<h3>TEMPORAL_GRAPH_ANOMALY_SCORES<a class="headerlink" href="#temporal-graph-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Time-series of anomaly scores for entire graphs in a dynamic setting.</p>
+<p><strong>Format:</strong> 2D array where each row represents a time iteration, each column a graph</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TEMPORAL_GRAPH_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.086</span><span class="p">,</span><span class="w"> </span><span class="mf">0.056</span><span class="p">,</span><span class="w"> </span><span class="mf">0.062</span><span class="p">,</span><span class="w"> </span><span class="mf">0.044</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.089</span><span class="p">,</span><span class="w"> </span><span class="mf">0.061</span><span class="p">,</span><span class="w"> </span><span class="mf">0.065</span><span class="p">,</span><span class="w"> </span><span class="mf">0.047</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mf">0.092</span><span class="p">,</span><span class="w"> </span><span class="mf">0.358</span><span class="p">,</span><span class="w"> </span><span class="mf">0.068</span><span class="p">,</span><span class="w"> </span><span class="mf">0.050</span><span class="p">]</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">    </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">]</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;iterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;graph_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">478</span><span class="p">,</span><span class="w"> </span><span class="mi">338</span><span class="p">,</span><span class="w"> </span><span class="mi">337</span><span class="p">,</span><span class="w"> </span><span class="mi">318</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="streaming-graph-results">
+<h2>Streaming Graph Results<a class="headerlink" href="#streaming-graph-results" title="Link to this heading"></a></h2>
+<section id="node-stream-anomaly-scores">
+<h3>NODE_STREAM_ANOMALY_SCORES<a class="headerlink" href="#node-stream-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Anomaly scores for nodes in a streaming setting where each node activity appears at a specific timestamp. Used for node stream anomaly detection where node events arrive sequentially over time.</p>
+<p><strong>Format:</strong> 1D array of scores with corresponding node IDs and timestamps (one score per node occurrence)</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;NODE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.12</span><span class="p">,</span><span class="w"> </span><span class="mf">0.89</span><span class="p">,</span><span class="w"> </span><span class="mf">0.15</span><span class="p">,</span><span class="w"> </span><span class="mf">0.76</span><span class="p">,</span><span class="w"> </span><span class="mf">0.23</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;node_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Notes:</strong></p>
+<ul class="simple">
+<li><p>Each index corresponds to one node activity occurrence in the stream</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scores[i]</span></code> is the anomaly score for node <code class="docutils literal notranslate"><span class="pre">node_ids[i]</span></code> at time <code class="docutils literal notranslate"><span class="pre">timestamps[i]</span></code></p></li>
+<li><p>Same node can appear multiple times at different timestamps</p></li>
+<li><p>More memory-efficient than 2D format when node activities are sparse over time</p></li>
+</ul>
+<p><strong>Comparison with TEMPORAL_NODE_ANOMALY_SCORES:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>TEMPORAL_NODE_ANOMALY_SCORES</p></th>
+<th class="head"><p>NODE_STREAM_ANOMALY_SCORES</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Format</p></td>
+<td><p>2D array <code class="docutils literal notranslate"><span class="pre">[T</span> <span class="pre">x</span> <span class="pre">N]</span></code></p></td>
+<td><p>1D array <code class="docutils literal notranslate"><span class="pre">[M]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Use Case</p></td>
+<td><p>Fixed node set, scores over time</p></td>
+<td><p>Streaming node events</p></td>
+</tr>
+<tr class="row-even"><td><p>Memory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">O(T</span> <span class="pre">x</span> <span class="pre">N)</span></code> - can be large</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">O(M)</span></code> - efficient</p></td>
+</tr>
+<tr class="row-odd"><td><p>Inactive Nodes</p></td>
+<td><p>Use <code class="docutils literal notranslate"><span class="pre">-2</span></code> for missing nodes</p></td>
+<td><p>Not represented</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<hr class="docutils" />
+<section id="edge-stream-anomaly-scores">
+<h3>EDGE_STREAM_ANOMALY_SCORES<a class="headerlink" href="#edge-stream-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Anomaly scores for edges in a streaming setting where each edge appears at a specific timestamp. Used for edge stream anomaly detection where edges arrive sequentially over time.</p>
+<p><strong>Format:</strong> 1D array of scores with corresponding edge pairs and timestamps (one score per edge occurrence)</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.05</span><span class="p">,</span><span class="w"> </span><span class="mf">0.91</span><span class="p">,</span><span class="w"> </span><span class="mf">0.23</span><span class="p">,</span><span class="w"> </span><span class="mf">0.68</span><span class="p">,</span><span class="w"> </span><span class="mf">0.12</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;edges&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">],</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">]],</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Notes:</strong></p>
+<ul class="simple">
+<li><p>Each index corresponds to one edge occurrence in the stream</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scores[i]</span></code> is the anomaly score for edge <code class="docutils literal notranslate"><span class="pre">edges[i]</span></code> at time <code class="docutils literal notranslate"><span class="pre">timestamps[i]</span></code></p></li>
+<li><p>Same edge can appear multiple times at different timestamps</p></li>
+<li><p>More memory-efficient than 2D format when edges are sparse over time</p></li>
+</ul>
+<p><strong>Comparison with TEMPORAL_EDGE_ANOMALY_SCORES:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>TEMPORAL_EDGE_ANOMALY_SCORES</p></th>
+<th class="head"><p>EDGE_STREAM_ANOMALY_SCORES</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Format</p></td>
+<td><p>2D array <code class="docutils literal notranslate"><span class="pre">[T</span> <span class="pre">x</span> <span class="pre">E]</span></code></p></td>
+<td><p>1D array <code class="docutils literal notranslate"><span class="pre">[N]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Use Case</p></td>
+<td><p>Fixed edge set, scores over time</p></td>
+<td><p>Streaming edges</p></td>
+</tr>
+<tr class="row-even"><td><p>Memory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">O(T</span> <span class="pre">x</span> <span class="pre">E)</span></code> - can be large</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">O(N)</span></code> - efficient</p></td>
+</tr>
+<tr class="row-odd"><td><p>Inactive Edges</p></td>
+<td><p>Use <code class="docutils literal notranslate"><span class="pre">-2</span></code> for missing edges</p></td>
+<td><p>Not represented</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<hr class="docutils" />
+<section id="graph-stream-anomaly-scores">
+<h3>GRAPH_STREAM_ANOMALY_SCORES<a class="headerlink" href="#graph-stream-anomaly-scores" title="Link to this heading"></a></h3>
+<p><strong>Description:</strong> Anomaly scores for graphs in a streaming setting where each graph snapshot appears at a specific timestamp.</p>
+<p><strong>Format:</strong> 1D array of scores with corresponding graph IDs and timestamps (one score per graph occurrence)</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;result_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;GRAPH_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mf">0.23</span><span class="p">,</span><span class="w"> </span><span class="mf">0.87</span><span class="p">,</span><span class="w"> </span><span class="mf">0.11</span><span class="p">,</span><span class="w"> </span><span class="mf">0.94</span><span class="p">,</span><span class="w"> </span><span class="mf">0.35</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;ground_truth&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;graph_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;graph_001&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_002&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_001&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_003&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graph_002&quot;</span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;timestamps&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Notes:</strong></p>
+<ul class="simple">
+<li><p>Each index corresponds to one graph occurrence in the stream</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scores[i]</span></code> is the anomaly score for graph <code class="docutils literal notranslate"><span class="pre">graph_ids[i]</span></code> at time <code class="docutils literal notranslate"><span class="pre">timestamps[i]</span></code></p></li>
+<li><p>Same graph can appear multiple times at different timestamps</p></li>
+<li><p>More memory-efficient than 2D format when graph events are sparse over time</p></li>
+</ul>
+<p><strong>Comparison with TEMPORAL_GRAPH_ANOMALY_SCORES:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>TEMPORAL_GRAPH_ANOMALY_SCORES</p></th>
+<th class="head"><p>GRAPH_STREAM_ANOMALY_SCORES</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Format</p></td>
+<td><p>2D array <code class="docutils literal notranslate"><span class="pre">[T</span> <span class="pre">x</span> <span class="pre">G]</span></code></p></td>
+<td><p>1D array <code class="docutils literal notranslate"><span class="pre">[M]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Use Case</p></td>
+<td><p>Fixed graph set, scores over time</p></td>
+<td><p>Streaming graph snapshots</p></td>
+</tr>
+<tr class="row-even"><td><p>Memory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">O(T</span> <span class="pre">x</span> <span class="pre">G)</span></code> - can be large</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">O(M)</span></code> - efficient</p></td>
+</tr>
+<tr class="row-odd"><td><p>Inactive Graphs</p></td>
+<td><p>Use <code class="docutils literal notranslate"><span class="pre">-2</span></code> for missing graphs</p></td>
+<td><p>Not represented</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<hr class="docutils" />
+<section id="special-score-values">
+<h2>Special Score Values<a class="headerlink" href="#special-score-values" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-1</span></code>: Unknown/unassigned</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-2</span></code>: Inactive/unseen at this time step (temporal/streaming types only)</p></li>
+</ul>
+</section>
+<section id="writing-results-with-resultwriter">
+<h2>Writing Results with ResultWriter<a class="headerlink" href="#writing-results-with-resultwriter" title="Link to this heading"></a></h2>
+<p>Methods should use <code class="docutils literal notranslate"><span class="pre">ResultWriter</span></code> from <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> to produce <code class="docutils literal notranslate"><span class="pre">results.json</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span>
+
+<span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>
+
+<span class="c1"># Save scores with ground truth</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
+    <span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="n">scores</span><span class="o">=</span><span class="n">anomaly_scores</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+    <span class="n">ground_truth</span><span class="o">=</span><span class="n">labels</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+    <span class="n">node_ids</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">anomaly_scores</span><span class="p">)))</span>  <span class="c1"># optional</span>
+<span class="p">)</span>
+
+<span class="c1"># Add metadata</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span>
+    <span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;your_method&quot;</span><span class="p">,</span>
+    <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;cora&quot;</span>
+<span class="p">)</span>
+
+<span class="c1"># Add resource metrics (optional, also set automatically by graflag_runner)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_resource_metrics</span><span class="p">(</span>
+    <span class="n">exec_time_ms</span><span class="o">=</span><span class="mf">12345.67</span><span class="p">,</span>
+    <span class="n">peak_memory_mb</span><span class="o">=</span><span class="mf">512.3</span><span class="p">,</span>
+    <span class="n">peak_gpu_mb</span><span class="o">=</span><span class="mf">2048.0</span>      <span class="c1"># optional</span>
+<span class="p">)</span>
+
+<span class="c1"># Finalize (writes results.json to EXP directory)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">results.json</span></code> file is saved to the experiment directory (<code class="docutils literal notranslate"><span class="pre">EXP</span></code> environment variable) and is used by <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">evaluate</span></code> to compute metrics (AUC-ROC, AUC-PR) and generate plots.</p>
+<section id="required-fields">
+<h3>Required Fields<a class="headerlink" href="#required-fields" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">result_type</span></code></p></td>
+<td><p>One of the valid result types listed above</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">scores</span></code></p></td>
+<td><p>Anomaly scores (list or nested list)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ground_truth</span></code></p></td>
+<td><p>Binary labels matching scores shape (0=normal, 1=anomaly)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="optional-fields">
+<h3>Optional Fields<a class="headerlink" href="#optional-fields" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">metadata</span></code></p></td>
+<td><p>Dict with method_name, dataset, hyperparameters, etc.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">timestamps</span></code></p></td>
+<td><p>Time indices for temporal/streaming types</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">node_ids</span></code></p></td>
+<td><p>Node identifiers</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">edges</span></code></p></td>
+<td><p>Edge pairs as <code class="docutils literal notranslate"><span class="pre">[[src,</span> <span class="pre">dst],</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">graph_ids</span></code></p></td>
+<td><p>Graph identifiers</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="AGENT_METHOD_INTEGRATION.html" class="btn btn-neutral float-left" title="AI Agent Instructions: GraFlag Method Integration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ARCHITECTURE.html" class="btn btn-neutral float-right" title="GraFlag Architecture" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

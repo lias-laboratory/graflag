@@ -1,0 +1,1116 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agent Instructions: GraFlag Method Integration &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Graph Anomaly Detection Result Types" href="RESULTS_STANDARD.html" />
+    <link rel="prev" title="GraFlag Method Integration Guide" href="METHOD_INTEGRATION_GUIDE.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">AI Agent Instructions: GraFlag Method Integration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-reference">Quick Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#two-integration-patterns">Two Integration Patterns</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pattern-a-pass-env-args-for-methods-using-argparse">Pattern A: <code class="docutils literal notranslate"><span class="pre">--pass-env-args</span></code> (for methods using argparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pattern-b-direct-env-var-access-for-library-based-methods">Pattern B: Direct env var access (for library-based methods)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-checklist">Integration Checklist</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#file-1-env-configuration">File 1: <code class="docutils literal notranslate"><span class="pre">.env</span></code> Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#rules">Rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#template-pattern-a">Template (Pattern A)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#template-pattern-b-bond-methods">Template (Pattern B – bond_* methods)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#real-example-taddy">Real Example: TADDY</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#file-2-dockerfile">File 2: <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Template (Pattern A)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Template (Pattern B – bond_* methods)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#key-points">Key Points</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#file-3-train-graflag-py">File 3: <code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#critical-implementation-details">Critical Implementation Details</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#str2bool-helper-required-for-boolean-arguments">1. str2bool Helper (REQUIRED for boolean arguments)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#argument-parsing-handle-case-sensitivity">2. Argument Parsing (Handle case sensitivity)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#environment-variables">3. Environment Variables</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#resultwriter-api">4. ResultWriter API</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#result-saving-critical">5. Result Saving (CRITICAL)</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#complete-template">Complete Template</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#file-4-dataset-directory">File 4: Dataset Directory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Rules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#structure">Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#result-types-reference">Result Types Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#common-errors-and-fixes">Common Errors and Fixes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#error-1-unrecognized-arguments-param-name-value">Error 1: “unrecognized arguments: –param_name value”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-2-unrecognized-arguments-true-or-false">Error 2: “unrecognized arguments: True” or “False”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-3-file-not-found-on-cluster">Error 3: “File not found” on cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-4-auc-is-null">Error 4: “AUC is null”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-5-valueerror-setting-array-element-with-sequence">Error 5: “ValueError: setting array element with sequence”</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-commands">Testing Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#agent-prompt-template">Agent Prompt Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-complete-gady-integration-pattern-a">Example: Complete GADY Integration (Pattern A)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#env"><code class="docutils literal notranslate"><span class="pre">.env</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#train-graflag-py-key-parts"><code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code> (key parts)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#example-bond-cola-integration-pattern-b">Example: bond_cola Integration (Pattern B)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id4"><code class="docutils literal notranslate"><span class="pre">.env</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dockerfile"><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">AI Agent Instructions: GraFlag Method Integration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/AGENT_METHOD_INTEGRATION.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ai-agent-instructions-graflag-method-integration">
+<h1>AI Agent Instructions: GraFlag Method Integration<a class="headerlink" href="#ai-agent-instructions-graflag-method-integration" title="Link to this heading"></a></h1>
+<p>This document provides precise instructions for an AI agent to integrate new graph anomaly detection methods into the GraFlag benchmarking framework.</p>
+<hr class="docutils" />
+<section id="quick-reference">
+<h2>Quick Reference<a class="headerlink" href="#quick-reference" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Item</p></th>
+<th class="head"><p>Location</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Methods directory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">graflag-shared/methods/{method_name}/</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Datasets directory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">graflag-shared/datasets/{dataset_name}/</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Libraries directory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">graflag-shared/libs/</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Existing examples</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">methods/taddy/</span></code>, <code class="docutils literal notranslate"><span class="pre">methods/bond_cola/</span></code>, <code class="docutils literal notranslate"><span class="pre">methods/generaldyg/</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Entry point script</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code> (preferred) or <code class="docutils literal notranslate"><span class="pre">entrypoint.py</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>CLI command</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span> <span class="pre">-m</span> <span class="pre">METHOD</span> <span class="pre">-d</span> <span class="pre">DATASET</span> <span class="pre">[--build]</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<hr class="docutils" />
+<section id="two-integration-patterns">
+<h2>Two Integration Patterns<a class="headerlink" href="#two-integration-patterns" title="Link to this heading"></a></h2>
+<p>GraFlag supports two patterns for running methods. Choose based on how the method consumes its parameters.</p>
+<section id="pattern-a-pass-env-args-for-methods-using-argparse">
+<h3>Pattern A: <code class="docutils literal notranslate"><span class="pre">--pass-env-args</span></code> (for methods using argparse)<a class="headerlink" href="#pattern-a-pass-env-args-for-methods-using-argparse" title="Link to this heading"></a></h3>
+<p>The runner extracts <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed env vars and passes them as CLI arguments to the method’s command.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_BATCH_SIZE=128</span></code> becomes <code class="docutils literal notranslate"><span class="pre">--batch_size</span> <span class="pre">128</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_LEARNING_RATE=0.001</span></code> becomes <code class="docutils literal notranslate"><span class="pre">--learning_rate</span> <span class="pre">0.001</span></code></p></li>
+<li><p>Parameter names are <strong>lowercased</strong> by the runner.</p></li>
+</ul>
+<div class="highlight-dockerfile notranslate"><div class="highlight"><pre><span></span><span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-m&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graflag_runner&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;--pass-env-args&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Used by: <code class="docutils literal notranslate"><span class="pre">taddy</span></code>, <code class="docutils literal notranslate"><span class="pre">generaldyg</span></code>, <code class="docutils literal notranslate"><span class="pre">dynwalk</span></code>, <code class="docutils literal notranslate"><span class="pre">strgnn</span></code>, <code class="docutils literal notranslate"><span class="pre">slade</span></code>, <code class="docutils literal notranslate"><span class="pre">gady</span></code>, <code class="docutils literal notranslate"><span class="pre">anograph</span></code>, <code class="docutils literal notranslate"><span class="pre">addgraph</span></code></p>
+</section>
+<section id="pattern-b-direct-env-var-access-for-library-based-methods">
+<h3>Pattern B: Direct env var access (for library-based methods)<a class="headerlink" href="#pattern-b-direct-env-var-access-for-library-based-methods" title="Link to this heading"></a></h3>
+<p>The method reads <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed env vars directly via <code class="docutils literal notranslate"><span class="pre">os.environ</span></code>. No CLI argument conversion.</p>
+<div class="highlight-dockerfile notranslate"><div class="highlight"><pre><span></span><span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-m&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graflag_runner&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Used by: <code class="docutils literal notranslate"><span class="pre">bond_cola</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_ocgnn</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_dominant</span></code>, and all <code class="docutils literal notranslate"><span class="pre">bond_*</span></code> methods (which use <code class="docutils literal notranslate"><span class="pre">graflag_bond</span></code> library)</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="integration-checklist">
+<h2>Integration Checklist<a class="headerlink" href="#integration-checklist" title="Link to this heading"></a></h2>
+<p>For each method, create/verify the following files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>graflag-shared/methods/{method_name}/
+├── .env                     # REQUIRED: Configuration
+├── Dockerfile               # REQUIRED: Container definition
+├── train_graflag.py         # REQUIRED: GraFlag wrapper script
+├── requirements.txt         # OPTIONAL: Python dependencies
+└── src/                     # OPTIONAL: Original method source code
+    └── (cloned from GitHub at build time)
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="file-1-env-configuration">
+<h2>File 1: <code class="docutils literal notranslate"><span class="pre">.env</span></code> Configuration<a class="headerlink" href="#file-1-env-configuration" title="Link to this heading"></a></h2>
+<section id="rules">
+<h3>Rules<a class="headerlink" href="#rules" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code></strong>: Lowercase, alphanumeric and underscores only</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">COMMAND</span></code></strong>: Entry point command (e.g., <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">train_graflag.py</span></code> or <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">graflag_bond.train</span></code>)</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">SUPPORTED_DATASETS</span></code></strong>: Comma-separated list of compatible dataset names (supports wildcards like <code class="docutils literal notranslate"><span class="pre">bond_*</span></code>)</p></li>
+<li><p><strong>Hyperparameters</strong>: ALL must be prefixed with <code class="docutils literal notranslate"><span class="pre">_</span></code> (underscore)</p></li>
+<li><p><strong>Parameter naming</strong> (Pattern A only): graflag_runner <strong>lowercases</strong> parameter names</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_LR_G=0.001</span></code> is passed as <code class="docutils literal notranslate"><span class="pre">--lr_g</span> <span class="pre">0.001</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">_BATCH_SIZE=128</span></code> is passed as <code class="docutils literal notranslate"><span class="pre">--batch_size</span> <span class="pre">128</span></code></p></li>
+</ul>
+</li>
+<li><p><strong>Boolean parameters</strong> (Pattern A only): Use empty value for True, omit entirely for False</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">_USE_MEMORY=</span></code> means flag is present (True)</p></li>
+<li><p>(omit line) means flag is absent (False)</p></li>
+<li><p><strong>NEVER</strong> use <code class="docutils literal notranslate"><span class="pre">_USE_MEMORY=True</span></code> or <code class="docutils literal notranslate"><span class="pre">_USE_MEMORY=False</span></code></p></li>
+</ul>
+</li>
+<li><p><strong>Reserved variables</strong> (set by the orchestrator, cannot be overridden): <code class="docutils literal notranslate"><span class="pre">DATA</span></code>, <code class="docutils literal notranslate"><span class="pre">EXP</span></code>, <code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code>, <code class="docutils literal notranslate"><span class="pre">MONITOR_INTERVAL</span></code></p></li>
+</ol>
+</section>
+<section id="template-pattern-a">
+<h3>Template (Pattern A)<a class="headerlink" href="#template-pattern-a" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">METHOD_NAME</span><span class="o">={</span>method_name<span class="o">}</span>
+<span class="nv">DESCRIPTION</span><span class="o">={</span>Brief<span class="w"> </span>description<span class="w"> </span>from<span class="w"> </span>paper<span class="o">}</span>
+<span class="nv">SOURCE_CODE</span><span class="o">={</span>GitHub<span class="w"> </span>URL<span class="o">}</span>
+<span class="nv">SUPPORTED_DATASETS</span><span class="o">={</span>dataset1<span class="o">}</span>,<span class="o">{</span>dataset2<span class="o">}</span>
+
+<span class="nv">COMMAND</span><span class="o">=</span>python3<span class="w"> </span>train_graflag.py
+
+<span class="c1"># === HYPERPARAMETERS ===</span>
+<span class="nv">_EPOCHS</span><span class="o">=</span><span class="m">100</span>
+<span class="nv">_BATCH_SIZE</span><span class="o">=</span><span class="m">128</span>
+<span class="nv">_LEARNING_RATE</span><span class="o">=</span><span class="m">0</span>.001
+<span class="nv">_HIDDEN_DIM</span><span class="o">=</span><span class="m">64</span>
+<span class="nv">_SEED</span><span class="o">=</span><span class="m">42</span>
+</pre></div>
+</div>
+</section>
+<section id="template-pattern-b-bond-methods">
+<h3>Template (Pattern B – bond_* methods)<a class="headerlink" href="#template-pattern-b-bond-methods" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">METHOD_NAME</span><span class="o">=</span>bond_<span class="o">{</span>detector<span class="o">}</span>
+<span class="nv">DESCRIPTION</span><span class="o">={</span>Detector<span class="w"> </span>description<span class="o">}</span>
+<span class="nv">SOURCE_CODE</span><span class="o">={</span>GitHub<span class="w"> </span>URL<span class="o">}</span>
+<span class="nv">SUPPORTED_DATASETS</span><span class="o">=</span>bond_*
+
+<span class="nv">COMMAND</span><span class="o">=</span>python3<span class="w"> </span>-m<span class="w"> </span>graflag_bond.train
+
+<span class="nv">_HID_DIM</span><span class="o">=</span><span class="m">64</span>
+<span class="nv">_NUM_LAYERS</span><span class="o">=</span><span class="m">4</span>
+<span class="nv">_DROPOUT</span><span class="o">=</span><span class="m">0</span>
+<span class="nv">_WEIGHT_DECAY</span><span class="o">=</span><span class="m">0</span>
+<span class="nv">_LR</span><span class="o">=</span><span class="m">0</span>.004
+<span class="nv">_EPOCH</span><span class="o">=</span><span class="m">100</span>
+<span class="nv">_GPU</span><span class="o">=</span><span class="m">0</span>
+<span class="nv">_BATCH_SIZE</span><span class="o">=</span><span class="m">0</span>
+</pre></div>
+</div>
+</section>
+<section id="real-example-taddy">
+<h3>Real Example: TADDY<a class="headerlink" href="#real-example-taddy" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">METHOD_NAME</span><span class="o">=</span>taddy
+<span class="nv">DESCRIPTION</span><span class="o">=</span>Anomaly<span class="w"> </span>Detection<span class="w"> </span><span class="k">in</span><span class="w"> </span>Dynamic<span class="w"> </span>Graphs<span class="w"> </span>via<span class="w"> </span>Transformer
+<span class="nv">SOURCE_CODE</span><span class="o">=</span>https://github.com/example/TADDY
+
+<span class="nv">COMMAND</span><span class="o">=</span>python3<span class="w"> </span>train_graflag.py
+
+<span class="nv">_ANOMALY_PER</span><span class="o">=</span><span class="m">0</span>.1
+<span class="nv">_TRAIN_PER</span><span class="o">=</span><span class="m">0</span>.4
+<span class="nv">_NEIGHBOR_NUM</span><span class="o">=</span><span class="m">20</span>
+<span class="nv">_MAX_EPOCH</span><span class="o">=</span><span class="m">200</span>
+<span class="nv">_BATCH_SIZE</span><span class="o">=</span><span class="m">128</span>
+<span class="nv">_LEARNING_RATE</span><span class="o">=</span><span class="m">0</span>.001
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="file-2-dockerfile">
+<h2>File 2: <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code><a class="headerlink" href="#file-2-dockerfile" title="Link to this heading"></a></h2>
+<section id="id1">
+<h3>Template (Pattern A)<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<div class="highlight-dockerfile notranslate"><div class="highlight"><pre><span></span><span class="k">FROM</span><span class="w"> </span><span class="s">nvidia/cuda:12.1.0-runtime-ubuntu22.04</span>
+
+<span class="k">ENV</span><span class="w"> </span><span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive
+
+<span class="k">WORKDIR</span><span class="w"> </span><span class="s">/app</span>
+
+<span class="c"># System dependencies</span>
+<span class="k">RUN</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>python3<span class="w"> </span>python3-pip<span class="w"> </span>git<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
+
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--upgrade<span class="w"> </span>pip
+
+<span class="c"># PyTorch (adjust version based on method requirements)</span>
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>torch<span class="w"> </span>torchvision<span class="w"> </span>torchaudio<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu121
+
+<span class="c"># Common dependencies</span>
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>numpy<span class="w"> </span>scipy<span class="w"> </span>scikit-learn<span class="w"> </span>pandas<span class="w"> </span>networkx<span class="w"> </span>tqdm
+
+<span class="c"># PyTorch Geometric (if needed)</span>
+<span class="c"># RUN pip install --no-cache-dir torch-geometric</span>
+<span class="c"># RUN pip install --no-cache-dir \</span>
+<span class="c">#     torch-scatter torch-sparse \</span>
+<span class="c">#     -f https://data.pyg.org/whl/torch-2.1.0+cu121.html</span>
+
+<span class="c"># Clone source code from GitHub</span>
+<span class="k">RUN</span><span class="w"> </span>git<span class="w"> </span>clone<span class="w"> </span><span class="o">{</span>github_url<span class="o">}</span><span class="w"> </span>src
+
+<span class="c"># Copy GraFlag integration files</span>
+<span class="k">COPY</span><span class="w"> </span>methods/<span class="o">{</span>method_name<span class="o">}</span>/train_graflag.py<span class="w"> </span>./
+<span class="k">COPY</span><span class="w"> </span>methods/<span class="o">{</span>method_name<span class="o">}</span>/*.py<span class="w"> </span>./
+
+<span class="c"># Install graflag_runner library</span>
+<span class="k">COPY</span><span class="w"> </span>libs/<span class="w"> </span>./libs/
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>./libs/graflag_runner
+
+<span class="c"># Entry point with --pass-env-args</span>
+<span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-m&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graflag_runner&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;--pass-env-args&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Template (Pattern B – bond_* methods)<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<div class="highlight-dockerfile notranslate"><div class="highlight"><pre><span></span><span class="k">FROM</span><span class="w"> </span><span class="s">nvidia/cuda:12.1.0-runtime-ubuntu22.04</span>
+
+<span class="k">ENV</span><span class="w"> </span><span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive
+
+<span class="k">WORKDIR</span><span class="w"> </span><span class="s">/app</span>
+
+<span class="k">RUN</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>python3<span class="w"> </span>python3-pip<span class="w"> </span>git<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
+
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--upgrade<span class="w"> </span>pip
+
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>torch<span class="w"> </span>torchvision<span class="w"> </span>torchaudio<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu121
+
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>torch-geometric<span class="w"> </span>pygod
+
+<span class="c"># Install GraFlag libraries (runner + bond wrapper)</span>
+<span class="k">COPY</span><span class="w"> </span>libs/<span class="w"> </span>./libs/
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>./libs/graflag_runner
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>./libs/graflag_bond
+
+<span class="c"># No --pass-env-args: graflag_bond reads env vars directly</span>
+<span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-m&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graflag_runner&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="key-points">
+<h3>Key Points<a class="headerlink" href="#key-points" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Build context</strong>: The entire <code class="docutils literal notranslate"><span class="pre">graflag-shared/</span></code> directory is the build context, so <code class="docutils literal notranslate"><span class="pre">COPY</span> <span class="pre">libs/</span></code> and <code class="docutils literal notranslate"><span class="pre">COPY</span> <span class="pre">methods/</span></code> work correctly.</p></li>
+<li><p><strong>Base image</strong>: Use <code class="docutils literal notranslate"><span class="pre">nvidia/cuda</span></code> matching the method’s CUDA requirements. Common choices:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">nvidia/cuda:12.1.0-runtime-ubuntu22.04</span></code> (newer methods)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nvidia/cuda:11.1.1-runtime-ubuntu20.04</span></code> (older methods)</p></li>
+</ul>
+</li>
+<li><p><strong>graflag_runner</strong>: Always install it – it handles execution lifecycle, resource monitoring, and status tracking.</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="file-3-train-graflag-py">
+<h2>File 3: <code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code><a class="headerlink" href="#file-3-train-graflag-py" title="Link to this heading"></a></h2>
+<p>This is only needed for Pattern A methods. Pattern B methods use <code class="docutils literal notranslate"><span class="pre">graflag_bond.train</span></code> directly.</p>
+<section id="critical-implementation-details">
+<h3>Critical Implementation Details<a class="headerlink" href="#critical-implementation-details" title="Link to this heading"></a></h3>
+<section id="str2bool-helper-required-for-boolean-arguments">
+<h4>1. str2bool Helper (REQUIRED for boolean arguments)<a class="headerlink" href="#str2bool-helper-required-for-boolean-arguments" title="Link to this heading"></a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">str2bool</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert string to boolean for argparse compatibility.</span>
+
+<span class="sd">    graflag_runner passes: --flag True or --flag False</span>
+<span class="sd">    But argparse action=&#39;store_true&#39; expects: --flag (no value)</span>
+<span class="sd">    This helper handles both patterns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">v</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;true&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;no&#39;</span><span class="p">,</span> <span class="s1">&#39;false&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s1">&#39;Boolean value expected.&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="argument-parsing-handle-case-sensitivity">
+<h4>2. Argument Parsing (Handle case sensitivity)<a class="headerlink" href="#argument-parsing-handle-case-sensitivity" title="Link to this heading"></a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+
+    <span class="c1"># Standard arguments</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--data&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;dataset&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--seed&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+
+    <span class="c1"># Numeric with aliases for case sensitivity</span>
+    <span class="c1"># If original uses --lr_G, add lowercase alias</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr_g&#39;</span><span class="p">,</span> <span class="s1">&#39;--lr_G&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr_d&#39;</span><span class="p">,</span> <span class="s1">&#39;--lr_D&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+
+    <span class="c1"># Boolean arguments -- MUST use str2bool</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_memory&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">str2bool</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span>
+                        <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_gpu&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">str2bool</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span>
+                        <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="environment-variables">
+<h4>3. Environment Variables<a class="headerlink" href="#environment-variables" title="Link to this heading"></a></h4>
+<p>The orchestrator sets these environment variables in every container:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Example</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DATA</span></code></p></td>
+<td><p>Input dataset directory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/shared/datasets/uci</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">EXP</span></code></p></td>
+<td><p>Experiment output directory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/shared/experiments/exp__taddy__uci__20260309_143000</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code></p></td>
+<td><p>Method identifier</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">taddy</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">COMMAND</span></code></p></td>
+<td><p>Command from .env</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">train_graflag.py</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="resultwriter-api">
+<h4>4. ResultWriter API<a class="headerlink" href="#resultwriter-api" title="Link to this heading"></a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span>
+
+<span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>  <span class="c1"># Auto-reads EXP env var</span>
+
+<span class="c1"># Add metadata (call before or after save_scores)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;taddy&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;uci&quot;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+
+<span class="c1"># Add resource metrics (optional, also set automatically by graflag_runner)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_resource_metrics</span><span class="p">(</span>
+    <span class="n">exec_time_ms</span><span class="o">=</span><span class="mf">45230.15</span><span class="p">,</span>
+    <span class="n">peak_memory_mb</span><span class="o">=</span><span class="mf">2048.5</span><span class="p">,</span>
+    <span class="n">peak_gpu_mb</span><span class="o">=</span><span class="mf">4096.0</span>       <span class="c1"># optional</span>
+<span class="p">)</span>
+
+<span class="c1"># Track training progress (creates training.csv)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">spot</span><span class="p">(</span><span class="s2">&quot;training&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">auc</span><span class="o">=</span><span class="mf">0.85</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">spot</span><span class="p">(</span><span class="s2">&quot;training&quot;</span><span class="p">,</span> <span class="n">epoch</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">loss</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">auc</span><span class="o">=</span><span class="mf">0.90</span><span class="p">)</span>
+
+<span class="c1"># Track validation metrics (creates validation.csv)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">spot</span><span class="p">(</span><span class="s2">&quot;validation&quot;</span><span class="p">,</span> <span class="n">val_loss</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">val_auc</span><span class="o">=</span><span class="mf">0.88</span><span class="p">)</span>
+
+<span class="c1"># Save final scores</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
+    <span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="n">scores</span><span class="o">=</span><span class="n">scores_list</span><span class="p">,</span>
+    <span class="n">ground_truth</span><span class="o">=</span><span class="n">labels_list</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Finalize (writes results.json)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>For large results, use streaming to avoid memory issues:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span><span class="p">,</span> <span class="n">StreamableArray</span>
+
+<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
+    <span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="n">scores</span><span class="o">=</span><span class="n">StreamableArray</span><span class="p">(</span><span class="n">score_generator</span><span class="p">()),</span>  <span class="c1"># Writes row-by-row</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="result-saving-critical">
+<h4>5. Result Saving (CRITICAL)<a class="headerlink" href="#result-saving-critical" title="Link to this heading"></a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># CRITICAL RULES:</span>
+<span class="c1"># 1. Use TEST data for evaluation (contains anomalies)</span>
+<span class="c1"># 2. Training data typically has all zeros (no anomalies)</span>
+<span class="c1"># 3. Always include ground_truth</span>
+<span class="c1"># 4. Choose correct result_type</span>
+
+<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
+    <span class="n">result_type</span><span class="o">=</span><span class="n">result_type</span><span class="p">,</span>
+    <span class="n">scores</span><span class="o">=</span><span class="n">scores</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="n">scores</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+    <span class="n">ground_truth</span><span class="o">=</span><span class="n">labels</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="n">labels</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="complete-template">
+<h3>Complete Template<a class="headerlink" href="#complete-template" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">GraFlag integration for {MethodName}.</span>
+<span class="sd">{Description}</span>
+<span class="sd">Source: {GitHub URL}</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="c1"># Add original source to path</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;src&#39;</span><span class="p">)</span>
+
+<span class="c1"># Import original method modules</span>
+<span class="c1"># from your_module import YourModel, YourDataLoader</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">str2bool</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert string to boolean for argparse compatibility.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">v</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;true&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;no&#39;</span><span class="p">,</span> <span class="s1">&#39;false&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s1">&#39;Boolean value expected.&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{MethodName}</span><span class="s1"> GraFlag Integration&#39;</span><span class="p">)</span>
+
+    <span class="c1"># === DATA ===</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--data&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;dataset&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--seed&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+
+    <span class="c1"># === MODEL ===</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--hidden_dim&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--num_layers&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="c1"># === TRAINING ===</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--batch_size&#39;</span><span class="p">,</span> <span class="s1">&#39;--bs&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--epochs&#39;</span><span class="p">,</span> <span class="s1">&#39;--n_epoch&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr&#39;</span><span class="p">,</span> <span class="s1">&#39;--learning_rate&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+
+    <span class="c1"># === BOOLEAN FLAGS (use str2bool) ===</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_feature&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">str2bool</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span>
+                        <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># === METHOD-SPECIFIC ===</span>
+    <span class="c1"># Add parameters from original method&#39;s argparse</span>
+
+    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{MethodName}</span><span class="s2"> - GraFlag Integration&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1"># Get paths from environment</span>
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DATA&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">data_dir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;DATA environment variable not set&quot;</span><span class="p">)</span>
+
+    <span class="n">data_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+    <span class="n">dataset_name</span> <span class="o">=</span> <span class="n">data_path</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Configuration:&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Data Path: </span><span class="si">{</span><span class="n">data_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">()</span>
+
+    <span class="c1"># Set seeds</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">manual_seed</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">seed</span><span class="p">)</span>
+
+    <span class="c1"># Initialize ResultWriter</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># =============================================</span>
+        <span class="c1"># IMPLEMENT: Load data</span>
+        <span class="c1"># =============================================</span>
+        <span class="c1"># data = YourDataLoader(data_path, dataset_name)</span>
+
+        <span class="c1"># =============================================</span>
+        <span class="c1"># IMPLEMENT: Train model with writer.spot()</span>
+        <span class="c1"># =============================================</span>
+        <span class="c1"># for epoch in range(args.epochs):</span>
+        <span class="c1">#     loss = train_epoch(model, data)</span>
+        <span class="c1">#     writer.spot(&quot;training&quot;, epoch=epoch+1, loss=loss)</span>
+
+        <span class="c1"># =============================================</span>
+        <span class="c1"># IMPLEMENT: Generate predictions on TEST data</span>
+        <span class="c1"># =============================================</span>
+        <span class="c1"># CRITICAL: Use test split that contains anomalies!</span>
+        <span class="c1"># scores = model.predict(data.test)</span>
+        <span class="c1"># labels = data.test_labels</span>
+
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># Replace with actual</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># Replace with actual</span>
+
+        <span class="c1"># =============================================</span>
+        <span class="c1"># Save results</span>
+        <span class="c1"># =============================================</span>
+        <span class="n">result_type</span> <span class="o">=</span> <span class="s2">&quot;NODE_ANOMALY_SCORES&quot;</span>  <span class="c1"># Adjust per method</span>
+
+        <span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
+            <span class="n">result_type</span><span class="o">=</span><span class="n">result_type</span><span class="p">,</span>
+            <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="p">,</span>
+            <span class="n">ground_truth</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span>
+            <span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{method_name}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">dataset</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
+            <span class="o">**</span><span class="nb">vars</span><span class="p">(</span><span class="n">args</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[OK] Results saved successfully&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="file-4-dataset-directory">
+<h2>File 4: Dataset Directory<a class="headerlink" href="#file-4-dataset-directory" title="Link to this heading"></a></h2>
+<section id="id3">
+<h3>Rules<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Naming</strong>: Use descriptive names (e.g., <code class="docutils literal notranslate"><span class="pre">uci</span></code>, <code class="docutils literal notranslate"><span class="pre">btc_alpha</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_inj_cora</span></code>)</p></li>
+<li><p><strong>NO SYMLINKS</strong>: Use actual file copies (symlinks break on NFS-mounted cluster)</p></li>
+<li><p><strong>Include README.md</strong>: Document data format and source</p></li>
+</ol>
+</section>
+<section id="structure">
+<h3>Structure<a class="headerlink" href="#structure" title="Link to this heading"></a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>graflag-shared/datasets/{dataset_name}/
+├── README.md          # Dataset description
+└── {data_files}       # Actual data files (CSV, NPZ, etc.)
+</pre></div>
+</div>
+</section>
+<section id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h3>
+<p>Existing dataset names in the platform:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bond_inj_cora</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_inj_amazon</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_inj_flickr</span></code> (injection-based anomaly)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bond_books</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_disney</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_enron</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_reddit</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_weibo</span></code> (real-world)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bond_gen_100</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_gen_500</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_gen_1000</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_gen_5000</span></code>, <code class="docutils literal notranslate"><span class="pre">bond_gen_10000</span></code> (synthetic)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">btc_alpha</span></code>, <code class="docutils literal notranslate"><span class="pre">btc_otc</span></code> (cryptocurrency networks)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uci</span></code> (social network)</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="result-types-reference">
+<h2>Result Types Reference<a class="headerlink" href="#result-types-reference" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Method Output</p></th>
+<th class="head"><p>Result Type</p></th>
+<th class="head"><p>scores Format</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Static node scores</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">NODE_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[float,</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Static edge scores</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">EDGE_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[float,</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Static graph scores</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GRAPH_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[float,</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Dynamic node (snapshots)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TEMPORAL_NODE_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[[t1],</span> <span class="pre">[t2],</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Dynamic edge (snapshots)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TEMPORAL_EDGE_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[[t1],</span> <span class="pre">[t2],</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Dynamic graph (snapshots)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TEMPORAL_GRAPH_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[[t1],</span> <span class="pre">[t2],</span> <span class="pre">...]</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Streaming nodes</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">NODE_STREAM_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[float,</span> <span class="pre">...]</span></code> with timestamps</p></td>
+</tr>
+<tr class="row-odd"><td><p>Streaming edges</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">EDGE_STREAM_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[float,</span> <span class="pre">...]</span></code> with timestamps</p></td>
+</tr>
+<tr class="row-even"><td><p>Streaming graphs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GRAPH_STREAM_ANOMALY_SCORES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">[float,</span> <span class="pre">...]</span></code> with timestamps</p></td>
+</tr>
+</tbody>
+</table>
+<p>Special score values:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-1</span></code>: Unknown/unassigned</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-2</span></code>: Inactive/unseen at this time step</p></li>
+</ul>
+</section>
+<hr class="docutils" />
+<section id="common-errors-and-fixes">
+<h2>Common Errors and Fixes<a class="headerlink" href="#common-errors-and-fixes" title="Link to this heading"></a></h2>
+<section id="error-1-unrecognized-arguments-param-name-value">
+<h3>Error 1: “unrecognized arguments: –param_name value”<a class="headerlink" href="#error-1-unrecognized-arguments-param-name-value" title="Link to this heading"></a></h3>
+<p><strong>Cause</strong>: Parameter name mismatch (case sensitivity)</p>
+<p><strong>Fix</strong>: Add lowercase alias in argparse:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># .env has: _LR_G=0.001</span>
+<span class="c1"># graflag_runner passes: --lr_g 0.001</span>
+<span class="c1"># Original expects: --lr_G</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr_g&#39;</span><span class="p">,</span> <span class="s1">&#39;--lr_G&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="error-2-unrecognized-arguments-true-or-false">
+<h3>Error 2: “unrecognized arguments: True” or “False”<a class="headerlink" href="#error-2-unrecognized-arguments-true-or-false" title="Link to this heading"></a></h3>
+<p><strong>Cause</strong>: Boolean using <code class="docutils literal notranslate"><span class="pre">action='store_true'</span></code></p>
+<p><strong>Fix</strong>: Use <code class="docutils literal notranslate"><span class="pre">str2bool</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># WRONG:</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--flag&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+
+<span class="c1"># RIGHT:</span>
+<span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--flag&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">str2bool</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span> <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="error-3-file-not-found-on-cluster">
+<h3>Error 3: “File not found” on cluster<a class="headerlink" href="#error-3-file-not-found-on-cluster" title="Link to this heading"></a></h3>
+<p><strong>Cause</strong>: Dataset contains symlinks</p>
+<p><strong>Fix</strong>: Replace symlinks with actual files:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Find symlinks</span>
+find<span class="w"> </span>graflag-shared/datasets/<span class="w"> </span>-type<span class="w"> </span>l
+
+<span class="c1"># Replace with actual files</span>
+cp<span class="w"> </span>--remove-destination<span class="w"> </span>/actual/path/to/file<span class="w"> </span>graflag-shared/datasets/dataset_name/file
+</pre></div>
+</div>
+</section>
+<section id="error-4-auc-is-null">
+<h3>Error 4: “AUC is null”<a class="headerlink" href="#error-4-auc-is-null" title="Link to this heading"></a></h3>
+<p><strong>Cause</strong>: Using training data (all labels = 0, no anomalies)</p>
+<p><strong>Fix</strong>: Use TEST data that contains anomalies:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># WRONG: Using training snapshots</span>
+<span class="k">for</span> <span class="n">snap</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;snap_train&#39;</span><span class="p">]:</span>
+    <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">predict</span><span class="p">(</span><span class="n">snap</span><span class="p">))</span>
+
+<span class="c1"># RIGHT: Using test snapshots with injected anomalies</span>
+<span class="k">for</span> <span class="n">snap</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;snap_test&#39;</span><span class="p">]:</span>
+    <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">predict</span><span class="p">(</span><span class="n">snap</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="error-5-valueerror-setting-array-element-with-sequence">
+<h3>Error 5: “ValueError: setting array element with sequence”<a class="headerlink" href="#error-5-valueerror-setting-array-element-with-sequence" title="Link to this heading"></a></h3>
+<p><strong>Cause</strong>: Ragged arrays (different lengths per timestamp)</p>
+<p><strong>Status</strong>: Handled by graflag_evaluator (flattens ragged arrays automatically)</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="testing-commands">
+<h2>Testing Commands<a class="headerlink" href="#testing-commands" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Sync method to cluster</span>
+graflag<span class="w"> </span>sync<span class="w"> </span>--path<span class="w"> </span>methods/<span class="o">{</span>method_name<span class="o">}</span>
+
+<span class="c1"># 2. Build and run</span>
+graflag<span class="w"> </span>run<span class="w"> </span>-m<span class="w"> </span><span class="o">{</span>method_name<span class="o">}</span><span class="w"> </span>-d<span class="w"> </span><span class="o">{</span>dataset_name<span class="o">}</span><span class="w"> </span>--build
+
+<span class="c1"># 3. Check logs (follow in real-time)</span>
+graflag<span class="w"> </span>logs<span class="w"> </span>-e<span class="w"> </span>exp__<span class="o">{</span>method_name<span class="o">}</span>__<span class="o">{</span>dataset_name<span class="o">}</span>__TIMESTAMP<span class="w"> </span>-f
+
+<span class="c1"># 4. Stop if needed</span>
+graflag<span class="w"> </span>stop<span class="w"> </span>-e<span class="w"> </span>exp__<span class="o">{</span>method_name<span class="o">}</span>__<span class="o">{</span>dataset_name<span class="o">}</span>__TIMESTAMP
+
+<span class="c1"># 5. Evaluate results</span>
+graflag<span class="w"> </span>evaluate<span class="w"> </span>-e<span class="w"> </span>exp__<span class="o">{</span>method_name<span class="o">}</span>__<span class="o">{</span>dataset_name<span class="o">}</span>__TIMESTAMP
+
+<span class="c1"># 6. Run with custom parameters</span>
+graflag<span class="w"> </span>run<span class="w"> </span>-m<span class="w"> </span><span class="o">{</span>method_name<span class="o">}</span><span class="w"> </span>-d<span class="w"> </span><span class="o">{</span>dataset_name<span class="o">}</span><span class="w"> </span>--params<span class="w"> </span><span class="nv">EPOCHS</span><span class="o">=</span><span class="m">50</span><span class="w"> </span><span class="nv">BATCH_SIZE</span><span class="o">=</span><span class="m">64</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="agent-prompt-template">
+<h2>Agent Prompt Template<a class="headerlink" href="#agent-prompt-template" title="Link to this heading"></a></h2>
+<p>Use this prompt to instruct an AI agent to integrate methods:</p>
+<hr class="docutils" />
+<div class="highlight-markdown notranslate"><div class="highlight"><pre><span></span><span class="gh"># Task: Integrate Graph Anomaly Detection Methods into GraFlag</span>
+
+<span class="gu">## Methods to Integrate</span>
+
+| Method | Paper | GitHub | Description |
+|--------|-------|--------|-------------|
+| {method1} | {paper1} | {github1} | {desc1} |
+| {method2} | {paper2} | {github2} | {desc2} |
+
+<span class="gu">## Instructions</span>
+
+For EACH method in the list above, perform the following steps:
+
+<span class="gu">### Step 1: Analyze Original Repository</span>
+<span class="k">1.</span> Examine the GitHub repository structure
+<span class="k">2.</span> Identify:
+<span class="w">   </span><span class="k">-</span><span class="w"> </span>Main training script and entry point
+<span class="w">   </span><span class="k">-</span><span class="w"> </span>Data loading code and expected data format
+<span class="w">   </span><span class="k">-</span><span class="w"> </span>Model architecture files
+<span class="w">   </span><span class="k">-</span><span class="w"> </span>All configurable hyperparameters (check argparse)
+<span class="w">   </span><span class="k">-</span><span class="w"> </span>Required Python dependencies
+<span class="w">   </span><span class="k">-</span><span class="w"> </span>CUDA/PyTorch version requirements
+
+<span class="gu">### Step 2: Choose Integration Pattern</span>
+<span class="k">-</span><span class="w"> </span><span class="gs">**Pattern A**</span> (<span class="sb">`--pass-env-args`</span>): If the method uses argparse for configuration.
+  The runner converts <span class="sb">`_PARAM=value`</span> env vars to <span class="sb">`--param value`</span> CLI args.
+<span class="k">-</span><span class="w"> </span><span class="gs">**Pattern B**</span> (direct env): If the method is library-based (e.g., PyGOD via <span class="sb">`graflag_bond`</span>).
+  The method reads env vars directly.
+
+<span class="gu">### Step 3: Create Method Directory</span>
+Create <span class="sb">`graflag-shared/methods/{method_name}/`</span> with these files:
+
+<span class="gu">#### 3.1: `.env` File</span>
+<span class="k">-</span><span class="w"> </span>Set METHOD_NAME (lowercase, alphanumeric, underscores)
+<span class="k">-</span><span class="w"> </span>Set DESCRIPTION from paper abstract
+<span class="k">-</span><span class="w"> </span>Set SOURCE_CODE to GitHub URL
+<span class="k">-</span><span class="w"> </span>Set SUPPORTED_DATASETS to compatible dataset names (comma-separated, wildcards ok)
+<span class="k">-</span><span class="w"> </span>Set COMMAND (e.g., <span class="sb">`python3 train_graflag.py`</span> or <span class="sb">`python3 -m graflag_bond.train`</span>)
+<span class="k">-</span><span class="w"> </span>Add ALL hyperparameters with <span class="sb">`_`</span> prefix
+<span class="k">-</span><span class="w"> </span>For booleans (Pattern A): empty value = True, omit = False
+<span class="k">-</span><span class="w"> </span>Remember: parameter names are lowercased by graflag_runner (Pattern A only)
+
+<span class="gu">#### 3.2: `Dockerfile`</span>
+<span class="k">-</span><span class="w"> </span>Base: <span class="sb">`nvidia/cuda`</span> (version matching method requirements)
+<span class="k">-</span><span class="w"> </span>Install all Python dependencies
+<span class="k">-</span><span class="w"> </span>Clone source code: <span class="sb">`RUN git clone {github_url} src`</span>
+<span class="k">-</span><span class="w"> </span>Copy train_graflag.py and helper files
+<span class="k">-</span><span class="w"> </span>Install graflag_runner: <span class="sb">`COPY libs/ ./libs/ &amp;&amp; RUN pip install --no-cache-dir ./libs/graflag_runner`</span>
+<span class="k">-</span><span class="w"> </span>Install graflag_bond too if using Pattern B: <span class="sb">`RUN pip install --no-cache-dir ./libs/graflag_bond`</span>
+<span class="k">-</span><span class="w"> </span>CMD: <span class="sb">`[&quot;python3&quot;, &quot;-m&quot;, &quot;graflag_runner&quot;, &quot;--pass-env-args&quot;]`</span> (Pattern A) or <span class="sb">`[&quot;python3&quot;, &quot;-m&quot;, &quot;graflag_runner&quot;]`</span> (Pattern B)
+
+<span class="gu">#### 3.3: `train_graflag.py` (Pattern A only)</span>
+<span class="k">-</span><span class="w"> </span>Add <span class="sb">`str2bool()`</span> helper function at the top
+<span class="k">-</span><span class="w"> </span>Implement <span class="sb">`parse_args()`</span>:
+<span class="w">  </span><span class="k">-</span><span class="w"> </span>Match ALL arguments from original code
+<span class="w">  </span><span class="k">-</span><span class="w"> </span>Add lowercase aliases for case-sensitive parameters
+<span class="w">  </span><span class="k">-</span><span class="w"> </span>Use <span class="sb">`str2bool`</span> for ALL boolean arguments
+<span class="k">-</span><span class="w"> </span>Read data from <span class="sb">`os.environ.get(&#39;DATA&#39;)`</span> path
+<span class="k">-</span><span class="w"> </span>Import and use original method&#39;s model/training code
+<span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.spot(&quot;training&quot;, ...)`</span> during training loop
+<span class="k">-</span><span class="w"> </span>Generate predictions on TEST data (contains anomalies)
+<span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.save_scores()`</span> with correct result_type and ground_truth
+<span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.add_metadata()`</span> with all hyperparameters
+<span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.finalize()`</span>
+
+<span class="gu">### Step 4: Create Dataset Directory (if needed)</span>
+Create <span class="sb">`graflag-shared/datasets/{dataset_name}/`</span>:
+<span class="k">-</span><span class="w"> </span>Copy actual data files (NO symlinks)
+<span class="k">-</span><span class="w"> </span>Create README.md with dataset description
+
+<span class="gu">### Step 5: Verify Integration</span>
+Report the following for each method:
+<span class="k">- [ ]</span> <span class="sb">`.env`</span> file created with all parameters
+<span class="k">- [ ]</span> <span class="sb">`Dockerfile`</span> created with correct dependencies
+<span class="k">- [ ]</span> Integration script created (train_graflag.py or graflag_bond)
+<span class="k">- [ ]</span> Dataset directory created with actual files
+<span class="k">- [ ]</span> Result type determined based on method output
+
+<span class="gu">## Critical Requirements</span>
+
+<span class="k">1.</span> <span class="gs">**str2bool**</span>: ALL boolean arguments MUST use the str2bool helper (Pattern A)
+<span class="k">2.</span> <span class="gs">**Case sensitivity**</span>: Add lowercase aliases for arguments like <span class="sb">`--lr_G`</span> -&gt; <span class="sb">`--lr_g`</span>
+<span class="k">3.</span> <span class="gs">**No symlinks**</span>: Dataset files must be actual copies
+<span class="k">4.</span> <span class="gs">**TEST data**</span>: Predictions must be on test data with anomalies, not training data
+<span class="k">5.</span> <span class="gs">**ground_truth**</span>: Always include ground_truth in save_scores()
+<span class="k">6.</span> <span class="gs">**Reserved vars**</span>: Never override DATA, EXP, METHOD_NAME, COMMAND, MONITOR_INTERVAL
+
+<span class="gu">## Reference Implementations</span>
+
+Study these existing integrations:
+<span class="k">-</span><span class="w"> </span><span class="sb">`methods/taddy/`</span> -- Pattern A, temporal edge anomaly detection
+<span class="k">-</span><span class="w"> </span><span class="sb">`methods/generaldyg/`</span> -- Pattern A, dynamic graph anomaly detection
+<span class="k">-</span><span class="w"> </span><span class="sb">`methods/bond_cola/`</span> -- Pattern B, contrastive self-supervised (PyGOD via graflag_bond)
+<span class="k">-</span><span class="w"> </span><span class="sb">`methods/bond_dominant/`</span> -- Pattern B, deep matrix factorization (PyGOD via graflag_bond)
+
+<span class="gu">## Workspace Paths</span>
+<span class="k">-</span><span class="w"> </span>Methods: <span class="sb">`graflag-shared/methods/`</span>
+<span class="k">-</span><span class="w"> </span>Datasets: <span class="sb">`graflag-shared/datasets/`</span>
+<span class="k">-</span><span class="w"> </span>Libraries: <span class="sb">`graflag-shared/libs/`</span> (graflag_runner, graflag_bond, graflag_evaluator)
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="example-complete-gady-integration-pattern-a">
+<h2>Example: Complete GADY Integration (Pattern A)<a class="headerlink" href="#example-complete-gady-integration-pattern-a" title="Link to this heading"></a></h2>
+<section id="env">
+<h3><code class="docutils literal notranslate"><span class="pre">.env</span></code><a class="headerlink" href="#env" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">METHOD_NAME</span><span class="o">=</span>gady
+<span class="nv">DESCRIPTION</span><span class="o">=</span>GADY:<span class="w"> </span>Unsupervised<span class="w"> </span>Anomaly<span class="w"> </span>Detection<span class="w"> </span>on<span class="w"> </span>Dynamic<span class="w"> </span>Graphs
+<span class="nv">SOURCE_CODE</span><span class="o">=</span>https://github.com/CuiYu-Coder/GADY
+<span class="nv">SUPPORTED_DATASETS</span><span class="o">=</span>gady_uci,gady_btc_alpha
+
+<span class="nv">COMMAND</span><span class="o">=</span>python3<span class="w"> </span>train_graflag.py
+
+<span class="nv">_LR_G</span><span class="o">=</span><span class="m">0</span>.0001
+<span class="nv">_LR_D</span><span class="o">=</span><span class="m">0</span>.0001
+<span class="nv">_BS</span><span class="o">=</span><span class="m">64</span>
+<span class="nv">_N_EPOCH</span><span class="o">=</span><span class="m">100</span>
+<span class="nv">_HIDDEN_DIM</span><span class="o">=</span><span class="m">64</span>
+<span class="nv">_EMBED_DIM</span><span class="o">=</span><span class="m">256</span>
+<span class="nv">_SEED</span><span class="o">=</span><span class="m">42</span>
+<span class="nv">_USE_MEMORY</span><span class="o">=</span>
+</pre></div>
+</div>
+</section>
+<section id="train-graflag-py-key-parts">
+<h3><code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code> (key parts)<a class="headerlink" href="#train-graflag-py-key-parts" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">str2bool</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">v</span>
+    <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;true&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;no&#39;</span><span class="p">,</span> <span class="s1">&#39;false&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="s1">&#39;0&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">raise</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentTypeError</span><span class="p">(</span><span class="s1">&#39;Boolean value expected.&#39;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="c1"># Lowercase aliases for graflag_runner compatibility</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr_g&#39;</span><span class="p">,</span> <span class="s1">&#39;--lr_G&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lr_d&#39;</span><span class="p">,</span> <span class="s1">&#39;--lr_D&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--bs&#39;</span><span class="p">,</span> <span class="s1">&#39;--batch_size&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">64</span><span class="p">)</span>
+    <span class="c1"># Boolean with str2bool</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_memory&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">str2bool</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span>
+                        <span class="n">const</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="example-bond-cola-integration-pattern-b">
+<h2>Example: bond_cola Integration (Pattern B)<a class="headerlink" href="#example-bond-cola-integration-pattern-b" title="Link to this heading"></a></h2>
+<section id="id4">
+<h3><code class="docutils literal notranslate"><span class="pre">.env</span></code><a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">METHOD_NAME</span><span class="o">=</span>bond_cola
+<span class="nv">DESCRIPTION</span><span class="o">=</span>Anomaly<span class="w"> </span>Detection<span class="w"> </span>on<span class="w"> </span>Attributed<span class="w"> </span>Networks<span class="w"> </span>via<span class="w"> </span>Contrastive<span class="w"> </span>Self-Supervised<span class="w"> </span>Learning
+<span class="nv">SOURCE_CODE</span><span class="o">=</span>https://github.com/pygod-team/pygod
+<span class="nv">SUPPORTED_DATASETS</span><span class="o">=</span>bond_*
+
+<span class="nv">COMMAND</span><span class="o">=</span>python3<span class="w"> </span>-m<span class="w"> </span>graflag_bond.train
+
+<span class="nv">_HID_DIM</span><span class="o">=</span><span class="m">64</span>
+<span class="nv">_NUM_LAYERS</span><span class="o">=</span><span class="m">4</span>
+<span class="nv">_DROPOUT</span><span class="o">=</span><span class="m">0</span>
+<span class="nv">_WEIGHT_DECAY</span><span class="o">=</span><span class="m">0</span>
+<span class="nv">_LR</span><span class="o">=</span><span class="m">0</span>.004
+<span class="nv">_EPOCH</span><span class="o">=</span><span class="m">100</span>
+<span class="nv">_GPU</span><span class="o">=</span><span class="m">0</span>
+<span class="nv">_BATCH_SIZE</span><span class="o">=</span><span class="m">0</span>
+</pre></div>
+</div>
+</section>
+<section id="dockerfile">
+<h3><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code><a class="headerlink" href="#dockerfile" title="Link to this heading"></a></h3>
+<div class="highlight-dockerfile notranslate"><div class="highlight"><pre><span></span><span class="k">FROM</span><span class="w"> </span><span class="s">nvidia/cuda:12.1.0-runtime-ubuntu22.04</span>
+
+<span class="k">ENV</span><span class="w"> </span><span class="nv">DEBIAN_FRONTEND</span><span class="o">=</span>noninteractive
+<span class="k">WORKDIR</span><span class="w"> </span><span class="s">/app</span>
+
+<span class="k">RUN</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>python3<span class="w"> </span>python3-pip<span class="w"> </span>git<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
+
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>--upgrade<span class="w"> </span>pip
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>torch<span class="w"> </span>torchvision<span class="w"> </span>torchaudio<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu121
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>torch-geometric<span class="w"> </span>pygod
+
+<span class="k">COPY</span><span class="w"> </span>libs/<span class="w"> </span>./libs/
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>./libs/graflag_runner
+<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>./libs/graflag_bond
+
+<span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-m&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;graflag_runner&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>No <code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code> needed – <code class="docutils literal notranslate"><span class="pre">graflag_bond.train</span></code> handles everything via the <code class="docutils literal notranslate"><span class="pre">BondDetector</span></code> registry that discovers PyGOD detector classes automatically.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Choose pattern</strong>: Pattern A (<code class="docutils literal notranslate"><span class="pre">--pass-env-args</span></code>) for argparse methods, Pattern B (direct env) for library methods</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">.env</span></code></strong>: Lowercase method name, <code class="docutils literal notranslate"><span class="pre">_</span></code> prefix for params, <code class="docutils literal notranslate"><span class="pre">SUPPORTED_DATASETS</span></code> for compatibility</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong>: CUDA base, install graflag_runner (and graflag_bond if Pattern B), correct CMD</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code></strong> (Pattern A only): <code class="docutils literal notranslate"><span class="pre">str2bool</span></code> helper, lowercase aliases, TEST data for predictions, ResultWriter for output</p></li>
+<li><p><strong>Dataset</strong>: Actual files (no symlinks)</p></li>
+</ol>
+<p><strong>Key rule</strong>: If the original method works but GraFlag integration fails, the issue is almost always argument parsing (case sensitivity or boolean handling).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="METHOD_INTEGRATION_GUIDE.html" class="btn btn-neutral float-left" title="GraFlag Method Integration Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="RESULTS_STANDARD.html" class="btn btn-neutral float-right" title="Graph Anomaly Detection Result Types" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

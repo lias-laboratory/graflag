@@ -1,0 +1,198 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick Start &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CLI Reference" href="cli.html" />
+    <link rel="prev" title="GraFlag Documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-an-experiment">Running an Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#evaluating-results">Evaluating Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#web-dashboard">Web Dashboard</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quick Start</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/quickstart.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quick-start">
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h1>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>Install the GraFlag CLI (includes GUI and devcluster):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">graflag</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
+</pre></div>
+</div>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<p>Run the interactive setup wizard, which prompts for connection details and stores
+them in <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">setup</span>
+</pre></div>
+</div>
+<p>The wizard asks for:</p>
+<ul class="simple">
+<li><p><strong>Manager IP</strong> – address of the Swarm manager node</p></li>
+<li><p><strong>SSH port</strong> – SSH port on the manager (default: 22)</p></li>
+<li><p><strong>SSH key</strong> – path to your private key (default: <code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519</span></code>)</p></li>
+<li><p><strong>Shared directory</strong> – NFS-mounted path on the remote (default: <code class="docutils literal notranslate"><span class="pre">/shared</span></code>)</p></li>
+<li><p><strong>Hosts file</strong> – path to <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code> containing worker IPs (default: <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code>)</p></li>
+</ul>
+<p>Alternatively, place a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the working directory to override the
+stored configuration.</p>
+<p>For local development without a physical cluster, use the built-in devcluster:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">devcluster</span> <span class="o">--</span><span class="n">hosts</span> <span class="n">hosts</span><span class="o">.</span><span class="n">yml</span>
+<span class="n">graflag</span> <span class="n">setup</span>
+</pre></div>
+</div>
+</section>
+<section id="running-an-experiment">
+<h2>Running an Experiment<a class="headerlink" href="#running-an-experiment" title="Link to this heading"></a></h2>
+<p>Build and run a method on a dataset:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">-</span><span class="n">m</span> <span class="n">bond_dominant</span> <span class="o">-</span><span class="n">d</span> <span class="n">bond_inj_cora</span> <span class="o">--</span><span class="n">build</span>
+</pre></div>
+</div>
+<p>With custom parameters:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">-</span><span class="n">m</span> <span class="n">taddy</span> <span class="o">-</span><span class="n">d</span> <span class="n">uci</span> <span class="o">--</span><span class="n">params</span> <span class="n">MAX_EPOCH</span><span class="o">=</span><span class="mi">100</span> <span class="n">LEARNING_RATE</span><span class="o">=</span><span class="mf">0.001</span>
+</pre></div>
+</div>
+</section>
+<section id="evaluating-results">
+<h2>Evaluating Results<a class="headerlink" href="#evaluating-results" title="Link to this heading"></a></h2>
+<p>Run evaluation on a completed experiment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">evaluate</span> <span class="o">-</span><span class="n">e</span> <span class="n">exp__bond_dominant__bond_inj_cora__20260309_120000</span>
+</pre></div>
+</div>
+<p>This computes AUC-ROC, AUC-PR, and generates plots in the experiment’s <code class="docutils literal notranslate"><span class="pre">eval/</span></code> directory.</p>
+</section>
+<section id="web-dashboard">
+<h2>Web Dashboard<a class="headerlink" href="#web-dashboard" title="Link to this heading"></a></h2>
+<p>Start the GUI:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span>
+</pre></div>
+</div>
+<p>Open <code class="docutils literal notranslate"><span class="pre">http://localhost:5000</span></code> in a browser. Use <code class="docutils literal notranslate"><span class="pre">--port</span></code> to change the port:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span> <span class="o">--</span><span class="n">port</span> <span class="mi">8080</span> <span class="o">--</span><span class="n">debug</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="GraFlag Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cli.html" class="btn btn-neutral float-right" title="CLI Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

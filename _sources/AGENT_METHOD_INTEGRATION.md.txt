@@ -1,0 +1,851 @@
+# AI Agent Instructions: GraFlag Method Integration
+
+This document provides precise instructions for an AI agent to integrate new graph anomaly detection methods into the GraFlag benchmarking framework.
+
+---
+
+## Quick Reference
+
+| Item | Location |
+|------|----------|
+| Methods directory | `graflag-shared/methods/{method_name}/` |
+| Datasets directory | `graflag-shared/datasets/{dataset_name}/` |
+| Libraries directory | `graflag-shared/libs/` |
+| Existing examples | `methods/taddy/`, `methods/bond_cola/`, `methods/generaldyg/` |
+| Entry point script | `train_graflag.py` (preferred) or `entrypoint.py` |
+| CLI command | `graflag run -m METHOD -d DATASET [--build]` |
+
+---
+
+## Two Integration Patterns
+
+GraFlag supports two patterns for running methods. Choose based on how the method consumes its parameters.
+
+### Pattern A: `--pass-env-args` (for methods using argparse)
+
+The runner extracts `_`-prefixed env vars and passes them as CLI arguments to the method's command.
+
+- `_BATCH_SIZE=128` becomes `--batch_size 128`
+- `_LEARNING_RATE=0.001` becomes `--learning_rate 0.001`
+- Parameter names are **lowercased** by the runner.
+
+```dockerfile
+CMD ["python3", "-m", "graflag_runner", "--pass-env-args"]
+```
+
+Used by: `taddy`, `generaldyg`, `dynwalk`, `strgnn`, `slade`, `gady`, `anograph`, `addgraph`
+
+### Pattern B: Direct env var access (for library-based methods)
+
+The method reads `_`-prefixed env vars directly via `os.environ`. No CLI argument conversion.
+
+```dockerfile
+CMD ["python3", "-m", "graflag_runner"]
+```
+
+Used by: `bond_cola`, `bond_ocgnn`, `bond_dominant`, and all `bond_*` methods (which use `graflag_bond` library)
+
+---
+
+## Integration Checklist
+
+For each method, create/verify the following files:
+
+```
+graflag-shared/methods/{method_name}/
+├── .env                     # REQUIRED: Configuration
+├── Dockerfile               # REQUIRED: Container definition
+├── train_graflag.py         # REQUIRED: GraFlag wrapper script
+├── requirements.txt         # OPTIONAL: Python dependencies
+└── src/                     # OPTIONAL: Original method source code
+    └── (cloned from GitHub at build time)
+```
+
+---
+
+## File 1: `.env` Configuration
+
+### Rules
+
+1. **`METHOD_NAME`**: Lowercase, alphanumeric and underscores only
+2. **`COMMAND`**: Entry point command (e.g., `python3 train_graflag.py` or `python3 -m graflag_bond.train`)
+3. **`SUPPORTED_DATASETS`**: Comma-separated list of compatible dataset names (supports wildcards like `bond_*`)
+4. **Hyperparameters**: ALL must be prefixed with `_` (underscore)
+5. **Parameter naming** (Pattern A only): graflag_runner **lowercases** parameter names
+   - `_LR_G=0.001` is passed as `--lr_g 0.001`
+   - `_BATCH_SIZE=128` is passed as `--batch_size 128`
+6. **Boolean parameters** (Pattern A only): Use empty value for True, omit entirely for False
+   - `_USE_MEMORY=` means flag is present (True)
+   - (omit line) means flag is absent (False)
+   - **NEVER** use `_USE_MEMORY=True` or `_USE_MEMORY=False`
+7. **Reserved variables** (set by the orchestrator, cannot be overridden): `DATA`, `EXP`, `METHOD_NAME`, `COMMAND`, `MONITOR_INTERVAL`
+
+### Template (Pattern A)
+
+```bash
+METHOD_NAME={method_name}
+DESCRIPTION={Brief description from paper}
+SOURCE_CODE={GitHub URL}
+SUPPORTED_DATASETS={dataset1},{dataset2}
+
+COMMAND=python3 train_graflag.py
+
+# === HYPERPARAMETERS ===
+_EPOCHS=100
+_BATCH_SIZE=128
+_LEARNING_RATE=0.001
+_HIDDEN_DIM=64
+_SEED=42
+```
+
+### Template (Pattern B -- bond_* methods)
+
+```bash
+METHOD_NAME=bond_{detector}
+DESCRIPTION={Detector description}
+SOURCE_CODE={GitHub URL}
+SUPPORTED_DATASETS=bond_*
+
+COMMAND=python3 -m graflag_bond.train
+
+_HID_DIM=64
+_NUM_LAYERS=4
+_DROPOUT=0
+_WEIGHT_DECAY=0
+_LR=0.004
+_EPOCH=100
+_GPU=0
+_BATCH_SIZE=0
+```
+
+### Real Example: TADDY
+
+```bash
+METHOD_NAME=taddy
+DESCRIPTION=Anomaly Detection in Dynamic Graphs via Transformer
+SOURCE_CODE=https://github.com/example/TADDY
+
+COMMAND=python3 train_graflag.py
+
+_ANOMALY_PER=0.1
+_TRAIN_PER=0.4
+_NEIGHBOR_NUM=20
+_MAX_EPOCH=200
+_BATCH_SIZE=128
+_LEARNING_RATE=0.001
+```
+
+---
+
+## File 2: `Dockerfile`
+
+### Template (Pattern A)
+
+```dockerfile
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip
+
+# PyTorch (adjust version based on method requirements)
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu121
+
+# Common dependencies
+RUN pip install --no-cache-dir numpy scipy scikit-learn pandas networkx tqdm
+
+# PyTorch Geometric (if needed)
+# RUN pip install --no-cache-dir torch-geometric
+# RUN pip install --no-cache-dir \
+#     torch-scatter torch-sparse \
+#     -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+
+# Clone source code from GitHub
+RUN git clone {github_url} src
+
+# Copy GraFlag integration files
+COPY methods/{method_name}/train_graflag.py ./
+COPY methods/{method_name}/*.py ./
+
+# Install graflag_runner library
+COPY libs/ ./libs/
+RUN pip install --no-cache-dir ./libs/graflag_runner
+
+# Entry point with --pass-env-args
+CMD ["python3", "-m", "graflag_runner", "--pass-env-args"]
+```
+
+### Template (Pattern B -- bond_* methods)
+
+```dockerfile
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip
+
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu121
+
+RUN pip install --no-cache-dir torch-geometric pygod
+
+# Install GraFlag libraries (runner + bond wrapper)
+COPY libs/ ./libs/
+RUN pip install --no-cache-dir ./libs/graflag_runner
+RUN pip install --no-cache-dir ./libs/graflag_bond
+
+# No --pass-env-args: graflag_bond reads env vars directly
+CMD ["python3", "-m", "graflag_runner"]
+```
+
+### Key Points
+
+- **Build context**: The entire `graflag-shared/` directory is the build context, so `COPY libs/` and `COPY methods/` work correctly.
+- **Base image**: Use `nvidia/cuda` matching the method's CUDA requirements. Common choices:
+  - `nvidia/cuda:12.1.0-runtime-ubuntu22.04` (newer methods)
+  - `nvidia/cuda:11.1.1-runtime-ubuntu20.04` (older methods)
+- **graflag_runner**: Always install it -- it handles execution lifecycle, resource monitoring, and status tracking.
+
+---
+
+## File 3: `train_graflag.py`
+
+This is only needed for Pattern A methods. Pattern B methods use `graflag_bond.train` directly.
+
+### Critical Implementation Details
+
+#### 1. str2bool Helper (REQUIRED for boolean arguments)
+
+```python
+def str2bool(v):
+    """
+    Convert string to boolean for argparse compatibility.
+
+    graflag_runner passes: --flag True or --flag False
+    But argparse action='store_true' expects: --flag (no value)
+    This helper handles both patterns.
+    """
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1', ''):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+```
+
+#### 2. Argument Parsing (Handle case sensitivity)
+
+```python
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    # Standard arguments
+    parser.add_argument('--data', type=str, default='dataset')
+    parser.add_argument('--seed', type=int, default=42)
+
+    # Numeric with aliases for case sensitivity
+    # If original uses --lr_G, add lowercase alias
+    parser.add_argument('--lr_g', '--lr_G', type=float, default=0.0001)
+    parser.add_argument('--lr_d', '--lr_D', type=float, default=0.0001)
+
+    # Boolean arguments -- MUST use str2bool
+    parser.add_argument('--use_memory', type=str2bool, nargs='?',
+                        const=True, default=False)
+    parser.add_argument('--use_gpu', type=str2bool, nargs='?',
+                        const=True, default=True)
+
+    return parser.parse_args()
+```
+
+#### 3. Environment Variables
+
+The orchestrator sets these environment variables in every container:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATA` | Input dataset directory | `/shared/datasets/uci` |
+| `EXP` | Experiment output directory | `/shared/experiments/exp__taddy__uci__20260309_143000` |
+| `METHOD_NAME` | Method identifier | `taddy` |
+| `COMMAND` | Command from .env | `python3 train_graflag.py` |
+
+#### 4. ResultWriter API
+
+```python
+from graflag_runner import ResultWriter
+
+writer = ResultWriter()  # Auto-reads EXP env var
+
+# Add metadata (call before or after save_scores)
+writer.add_metadata(method_name="taddy", dataset="uci", learning_rate=0.001)
+
+# Add resource metrics (optional, also set automatically by graflag_runner)
+writer.add_resource_metrics(
+    exec_time_ms=45230.15,
+    peak_memory_mb=2048.5,
+    peak_gpu_mb=4096.0       # optional
+)
+
+# Track training progress (creates training.csv)
+writer.spot("training", epoch=1, loss=0.5, auc=0.85)
+writer.spot("training", epoch=2, loss=0.3, auc=0.90)
+
+# Track validation metrics (creates validation.csv)
+writer.spot("validation", val_loss=0.4, val_auc=0.88)
+
+# Save final scores
+writer.save_scores(
+    result_type="EDGE_STREAM_ANOMALY_SCORES",
+    scores=scores_list,
+    ground_truth=labels_list,
+)
+
+# Finalize (writes results.json)
+writer.finalize()
+```
+
+For large results, use streaming to avoid memory issues:
+
+```python
+from graflag_runner import ResultWriter, StreamableArray
+
+writer.save_scores(
+    result_type="NODE_ANOMALY_SCORES",
+    scores=StreamableArray(score_generator()),  # Writes row-by-row
+)
+```
+
+#### 5. Result Saving (CRITICAL)
+
+```python
+# CRITICAL RULES:
+# 1. Use TEST data for evaluation (contains anomalies)
+# 2. Training data typically has all zeros (no anomalies)
+# 3. Always include ground_truth
+# 4. Choose correct result_type
+
+writer.save_scores(
+    result_type=result_type,
+    scores=scores if isinstance(scores, list) else scores.tolist(),
+    ground_truth=labels if isinstance(labels, list) else labels.tolist(),
+)
+```
+
+### Complete Template
+
+```python
+"""
+GraFlag integration for {MethodName}.
+{Description}
+Source: {GitHub URL}
+"""
+
+import os
+import sys
+import argparse
+import logging
+from pathlib import Path
+
+import numpy as np
+import torch
+
+# Add original source to path
+sys.path.insert(0, 'src')
+
+# Import original method modules
+# from your_module import YourModel, YourDataLoader
+
+from graflag_runner import ResultWriter
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def str2bool(v):
+    """Convert string to boolean for argparse compatibility."""
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1', ''):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def parse_args():
+    parser = argparse.ArgumentParser('{MethodName} GraFlag Integration')
+
+    # === DATA ===
+    parser.add_argument('--data', type=str, default='dataset')
+    parser.add_argument('--seed', type=int, default=42)
+
+    # === MODEL ===
+    parser.add_argument('--hidden_dim', type=int, default=64)
+    parser.add_argument('--num_layers', type=int, default=2)
+
+    # === TRAINING ===
+    parser.add_argument('--batch_size', '--bs', type=int, default=128)
+    parser.add_argument('--epochs', '--n_epoch', type=int, default=100)
+    parser.add_argument('--lr', '--learning_rate', type=float, default=0.001)
+
+    # === BOOLEAN FLAGS (use str2bool) ===
+    parser.add_argument('--use_feature', type=str2bool, nargs='?',
+                        const=True, default=False)
+
+    # === METHOD-SPECIFIC ===
+    # Add parameters from original method's argparse
+
+    return parser.parse_args()
+
+
+def main():
+    print("=" * 60)
+    print("{MethodName} - GraFlag Integration")
+    print("=" * 60)
+
+    args = parse_args()
+
+    # Get paths from environment
+    data_dir = os.environ.get('DATA')
+    if not data_dir:
+        raise ValueError("DATA environment variable not set")
+
+    data_path = Path(data_dir)
+    dataset_name = data_path.name
+
+    print(f"\nConfiguration:")
+    print(f"  Dataset: {dataset_name}")
+    print(f"  Data Path: {data_path}")
+    for k, v in vars(args).items():
+        print(f"  {k}: {v}")
+    print()
+
+    # Set seeds
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(args.seed)
+
+    # Initialize ResultWriter
+    writer = ResultWriter()
+
+    try:
+        # =============================================
+        # IMPLEMENT: Load data
+        # =============================================
+        # data = YourDataLoader(data_path, dataset_name)
+
+        # =============================================
+        # IMPLEMENT: Train model with writer.spot()
+        # =============================================
+        # for epoch in range(args.epochs):
+        #     loss = train_epoch(model, data)
+        #     writer.spot("training", epoch=epoch+1, loss=loss)
+
+        # =============================================
+        # IMPLEMENT: Generate predictions on TEST data
+        # =============================================
+        # CRITICAL: Use test split that contains anomalies!
+        # scores = model.predict(data.test)
+        # labels = data.test_labels
+
+        scores = []  # Replace with actual
+        labels = []  # Replace with actual
+
+        # =============================================
+        # Save results
+        # =============================================
+        result_type = "NODE_ANOMALY_SCORES"  # Adjust per method
+
+        writer.save_scores(
+            result_type=result_type,
+            scores=scores,
+            ground_truth=labels,
+        )
+
+        writer.add_metadata(
+            method_name="{method_name}",
+            dataset=dataset_name,
+            **vars(args),
+        )
+
+        writer.finalize()
+
+        print("\n" + "=" * 60)
+        print("[OK] Results saved successfully")
+        print("=" * 60)
+
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
+        raise
+
+
+if __name__ == "__main__":
+    main()
+```
+
+---
+
+## File 4: Dataset Directory
+
+### Rules
+
+1. **Naming**: Use descriptive names (e.g., `uci`, `btc_alpha`, `bond_inj_cora`)
+2. **NO SYMLINKS**: Use actual file copies (symlinks break on NFS-mounted cluster)
+3. **Include README.md**: Document data format and source
+
+### Structure
+
+```
+graflag-shared/datasets/{dataset_name}/
+├── README.md          # Dataset description
+└── {data_files}       # Actual data files (CSV, NPZ, etc.)
+```
+
+### Examples
+
+Existing dataset names in the platform:
+
+- `bond_inj_cora`, `bond_inj_amazon`, `bond_inj_flickr` (injection-based anomaly)
+- `bond_books`, `bond_disney`, `bond_enron`, `bond_reddit`, `bond_weibo` (real-world)
+- `bond_gen_100`, `bond_gen_500`, `bond_gen_1000`, `bond_gen_5000`, `bond_gen_10000` (synthetic)
+- `btc_alpha`, `btc_otc` (cryptocurrency networks)
+- `uci` (social network)
+
+---
+
+## Result Types Reference
+
+| Method Output | Result Type | scores Format |
+|--------------|-------------|---------------|
+| Static node scores | `NODE_ANOMALY_SCORES` | `[float, ...]` |
+| Static edge scores | `EDGE_ANOMALY_SCORES` | `[float, ...]` |
+| Static graph scores | `GRAPH_ANOMALY_SCORES` | `[float, ...]` |
+| Dynamic node (snapshots) | `TEMPORAL_NODE_ANOMALY_SCORES` | `[[t1], [t2], ...]` |
+| Dynamic edge (snapshots) | `TEMPORAL_EDGE_ANOMALY_SCORES` | `[[t1], [t2], ...]` |
+| Dynamic graph (snapshots) | `TEMPORAL_GRAPH_ANOMALY_SCORES` | `[[t1], [t2], ...]` |
+| Streaming nodes | `NODE_STREAM_ANOMALY_SCORES` | `[float, ...]` with timestamps |
+| Streaming edges | `EDGE_STREAM_ANOMALY_SCORES` | `[float, ...]` with timestamps |
+| Streaming graphs | `GRAPH_STREAM_ANOMALY_SCORES` | `[float, ...]` with timestamps |
+
+Special score values:
+- `-1`: Unknown/unassigned
+- `-2`: Inactive/unseen at this time step
+
+---
+
+## Common Errors and Fixes
+
+### Error 1: "unrecognized arguments: --param_name value"
+
+**Cause**: Parameter name mismatch (case sensitivity)
+
+**Fix**: Add lowercase alias in argparse:
+```python
+# .env has: _LR_G=0.001
+# graflag_runner passes: --lr_g 0.001
+# Original expects: --lr_G
+parser.add_argument('--lr_g', '--lr_G', type=float, default=0.001)
+```
+
+### Error 2: "unrecognized arguments: True" or "False"
+
+**Cause**: Boolean using `action='store_true'`
+
+**Fix**: Use `str2bool`:
+```python
+# WRONG:
+parser.add_argument('--flag', action='store_true')
+
+# RIGHT:
+parser.add_argument('--flag', type=str2bool, nargs='?', const=True, default=False)
+```
+
+### Error 3: "File not found" on cluster
+
+**Cause**: Dataset contains symlinks
+
+**Fix**: Replace symlinks with actual files:
+```bash
+# Find symlinks
+find graflag-shared/datasets/ -type l
+
+# Replace with actual files
+cp --remove-destination /actual/path/to/file graflag-shared/datasets/dataset_name/file
+```
+
+### Error 4: "AUC is null"
+
+**Cause**: Using training data (all labels = 0, no anomalies)
+
+**Fix**: Use TEST data that contains anomalies:
+```python
+# WRONG: Using training snapshots
+for snap in data['snap_train']:
+    scores.append(predict(snap))
+
+# RIGHT: Using test snapshots with injected anomalies
+for snap in data['snap_test']:
+    scores.append(predict(snap))
+```
+
+### Error 5: "ValueError: setting array element with sequence"
+
+**Cause**: Ragged arrays (different lengths per timestamp)
+
+**Status**: Handled by graflag_evaluator (flattens ragged arrays automatically)
+
+---
+
+## Testing Commands
+
+```bash
+# 1. Sync method to cluster
+graflag sync --path methods/{method_name}
+
+# 2. Build and run
+graflag run -m {method_name} -d {dataset_name} --build
+
+# 3. Check logs (follow in real-time)
+graflag logs -e exp__{method_name}__{dataset_name}__TIMESTAMP -f
+
+# 4. Stop if needed
+graflag stop -e exp__{method_name}__{dataset_name}__TIMESTAMP
+
+# 5. Evaluate results
+graflag evaluate -e exp__{method_name}__{dataset_name}__TIMESTAMP
+
+# 6. Run with custom parameters
+graflag run -m {method_name} -d {dataset_name} --params EPOCHS=50 BATCH_SIZE=64
+```
+
+---
+
+## Agent Prompt Template
+
+Use this prompt to instruct an AI agent to integrate methods:
+
+---
+
+````markdown
+# Task: Integrate Graph Anomaly Detection Methods into GraFlag
+
+## Methods to Integrate
+
+| Method | Paper | GitHub | Description |
+|--------|-------|--------|-------------|
+| {method1} | {paper1} | {github1} | {desc1} |
+| {method2} | {paper2} | {github2} | {desc2} |
+
+## Instructions
+
+For EACH method in the list above, perform the following steps:
+
+### Step 1: Analyze Original Repository
+1. Examine the GitHub repository structure
+2. Identify:
+   - Main training script and entry point
+   - Data loading code and expected data format
+   - Model architecture files
+   - All configurable hyperparameters (check argparse)
+   - Required Python dependencies
+   - CUDA/PyTorch version requirements
+
+### Step 2: Choose Integration Pattern
+- **Pattern A** (`--pass-env-args`): If the method uses argparse for configuration.
+  The runner converts `_PARAM=value` env vars to `--param value` CLI args.
+- **Pattern B** (direct env): If the method is library-based (e.g., PyGOD via `graflag_bond`).
+  The method reads env vars directly.
+
+### Step 3: Create Method Directory
+Create `graflag-shared/methods/{method_name}/` with these files:
+
+#### 3.1: `.env` File
+- Set METHOD_NAME (lowercase, alphanumeric, underscores)
+- Set DESCRIPTION from paper abstract
+- Set SOURCE_CODE to GitHub URL
+- Set SUPPORTED_DATASETS to compatible dataset names (comma-separated, wildcards ok)
+- Set COMMAND (e.g., `python3 train_graflag.py` or `python3 -m graflag_bond.train`)
+- Add ALL hyperparameters with `_` prefix
+- For booleans (Pattern A): empty value = True, omit = False
+- Remember: parameter names are lowercased by graflag_runner (Pattern A only)
+
+#### 3.2: `Dockerfile`
+- Base: `nvidia/cuda` (version matching method requirements)
+- Install all Python dependencies
+- Clone source code: `RUN git clone {github_url} src`
+- Copy train_graflag.py and helper files
+- Install graflag_runner: `COPY libs/ ./libs/ && RUN pip install --no-cache-dir ./libs/graflag_runner`
+- Install graflag_bond too if using Pattern B: `RUN pip install --no-cache-dir ./libs/graflag_bond`
+- CMD: `["python3", "-m", "graflag_runner", "--pass-env-args"]` (Pattern A) or `["python3", "-m", "graflag_runner"]` (Pattern B)
+
+#### 3.3: `train_graflag.py` (Pattern A only)
+- Add `str2bool()` helper function at the top
+- Implement `parse_args()`:
+  - Match ALL arguments from original code
+  - Add lowercase aliases for case-sensitive parameters
+  - Use `str2bool` for ALL boolean arguments
+- Read data from `os.environ.get('DATA')` path
+- Import and use original method's model/training code
+- Call `writer.spot("training", ...)` during training loop
+- Generate predictions on TEST data (contains anomalies)
+- Call `writer.save_scores()` with correct result_type and ground_truth
+- Call `writer.add_metadata()` with all hyperparameters
+- Call `writer.finalize()`
+
+### Step 4: Create Dataset Directory (if needed)
+Create `graflag-shared/datasets/{dataset_name}/`:
+- Copy actual data files (NO symlinks)
+- Create README.md with dataset description
+
+### Step 5: Verify Integration
+Report the following for each method:
+- [ ] `.env` file created with all parameters
+- [ ] `Dockerfile` created with correct dependencies
+- [ ] Integration script created (train_graflag.py or graflag_bond)
+- [ ] Dataset directory created with actual files
+- [ ] Result type determined based on method output
+
+## Critical Requirements
+
+1. **str2bool**: ALL boolean arguments MUST use the str2bool helper (Pattern A)
+2. **Case sensitivity**: Add lowercase aliases for arguments like `--lr_G` -> `--lr_g`
+3. **No symlinks**: Dataset files must be actual copies
+4. **TEST data**: Predictions must be on test data with anomalies, not training data
+5. **ground_truth**: Always include ground_truth in save_scores()
+6. **Reserved vars**: Never override DATA, EXP, METHOD_NAME, COMMAND, MONITOR_INTERVAL
+
+## Reference Implementations
+
+Study these existing integrations:
+- `methods/taddy/` -- Pattern A, temporal edge anomaly detection
+- `methods/generaldyg/` -- Pattern A, dynamic graph anomaly detection
+- `methods/bond_cola/` -- Pattern B, contrastive self-supervised (PyGOD via graflag_bond)
+- `methods/bond_dominant/` -- Pattern B, deep matrix factorization (PyGOD via graflag_bond)
+
+## Workspace Paths
+- Methods: `graflag-shared/methods/`
+- Datasets: `graflag-shared/datasets/`
+- Libraries: `graflag-shared/libs/` (graflag_runner, graflag_bond, graflag_evaluator)
+````
+
+---
+
+## Example: Complete GADY Integration (Pattern A)
+
+### `.env`
+```bash
+METHOD_NAME=gady
+DESCRIPTION=GADY: Unsupervised Anomaly Detection on Dynamic Graphs
+SOURCE_CODE=https://github.com/CuiYu-Coder/GADY
+SUPPORTED_DATASETS=gady_uci,gady_btc_alpha
+
+COMMAND=python3 train_graflag.py
+
+_LR_G=0.0001
+_LR_D=0.0001
+_BS=64
+_N_EPOCH=100
+_HIDDEN_DIM=64
+_EMBED_DIM=256
+_SEED=42
+_USE_MEMORY=
+```
+
+### `train_graflag.py` (key parts)
+```python
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1', ''):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    # Lowercase aliases for graflag_runner compatibility
+    parser.add_argument('--lr_g', '--lr_G', type=float, default=0.0001)
+    parser.add_argument('--lr_d', '--lr_D', type=float, default=0.0001)
+    parser.add_argument('--bs', '--batch_size', type=int, default=64)
+    # Boolean with str2bool
+    parser.add_argument('--use_memory', type=str2bool, nargs='?',
+                        const=True, default=True)
+    return parser.parse_args()
+```
+
+## Example: bond_cola Integration (Pattern B)
+
+### `.env`
+```bash
+METHOD_NAME=bond_cola
+DESCRIPTION=Anomaly Detection on Attributed Networks via Contrastive Self-Supervised Learning
+SOURCE_CODE=https://github.com/pygod-team/pygod
+SUPPORTED_DATASETS=bond_*
+
+COMMAND=python3 -m graflag_bond.train
+
+_HID_DIM=64
+_NUM_LAYERS=4
+_DROPOUT=0
+_WEIGHT_DECAY=0
+_LR=0.004
+_EPOCH=100
+_GPU=0
+_BATCH_SIZE=0
+```
+
+### `Dockerfile`
+```dockerfile
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y python3 python3-pip git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+RUN pip install --no-cache-dir torch-geometric pygod
+
+COPY libs/ ./libs/
+RUN pip install --no-cache-dir ./libs/graflag_runner
+RUN pip install --no-cache-dir ./libs/graflag_bond
+
+CMD ["python3", "-m", "graflag_runner"]
+```
+
+No `train_graflag.py` needed -- `graflag_bond.train` handles everything via the `BondDetector` registry that discovers PyGOD detector classes automatically.
+
+---
+
+## Summary
+
+1. **Choose pattern**: Pattern A (`--pass-env-args`) for argparse methods, Pattern B (direct env) for library methods
+2. **`.env`**: Lowercase method name, `_` prefix for params, `SUPPORTED_DATASETS` for compatibility
+3. **`Dockerfile`**: CUDA base, install graflag_runner (and graflag_bond if Pattern B), correct CMD
+4. **`train_graflag.py`** (Pattern A only): `str2bool` helper, lowercase aliases, TEST data for predictions, ResultWriter for output
+5. **Dataset**: Actual files (no symlinks)
+
+**Key rule**: If the original method works but GraFlag integration fails, the issue is almost always argument parsing (case sensitivity or boolean handling).

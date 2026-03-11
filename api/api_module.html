@@ -1,0 +1,274 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.api &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="GraFlag Method Integration Guide" href="../METHOD_INTEGRATION_GUIDE.html" />
+    <link rel="prev" title="graflag.docker_ops" href="docker_ops.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.api</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.api.GraFlagAPI"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_cluster_info"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_cluster_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.setup_cluster"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.setup_cluster()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.list_methods"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.list_methods()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_method_details"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_method_details()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.list_datasets"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.list_datasets()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.list_experiments"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.list_experiments()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_experiment_details"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_experiment_details()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.run"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_experiment_results"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_experiment_results()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_evaluation_results"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_evaluation_results()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.evaluate_experiment"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.evaluate_experiment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.list_running_services"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.list_running_services()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.stop_experiment"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.stop_experiment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.delete_experiment"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.delete_experiment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_experiment_logs"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_experiment_logs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.download_file"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.download_file()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.download_directory"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.download_directory()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">graflag.api</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/api_module.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-graflag.api">
+<span id="graflag-api"></span><h1>graflag.api<a class="headerlink" href="#module-graflag.api" title="Link to this heading"></a></h1>
+<p>GraFlag Python API for GUI Integration.</p>
+<p>Thin wrapper around GraFlag core that provides error-safe access
+and returns structured dataclass objects suitable for GUI/web consumption.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.api.</span></span><span class="sig-name descname"><span class="pre">GraFlagAPI</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.env'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>High-level Python API for GraFlag operations.</p>
+<p>All methods return structured data (dataclasses) and catch exceptions
+to avoid crashing the GUI. Use the core GraFlag class directly for
+CLI-style usage where exceptions should propagate.</p>
+<dl>
+<dt>Usage:</dt><dd><p>api = GraFlagAPI(config_file=”.env”)</p>
+<p>cluster = api.get_cluster_info()
+methods = api.list_methods()
+experiments = api.list_experiments()</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_cluster_info">
+<span class="sig-name descname"><span class="pre">get_cluster_info</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ClusterInfo" title="graflag.models.ClusterInfo"><span class="pre">ClusterInfo</span></a></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_cluster_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_cluster_info" title="Link to this definition"></a></dt>
+<dd><p>Get cluster status information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.setup_cluster">
+<span class="sig-name descname"><span class="pre">setup_cluster</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.setup_cluster"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.setup_cluster" title="Link to this definition"></a></dt>
+<dd><p>Setup GraFlag cluster.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.list_methods">
+<span class="sig-name descname"><span class="pre">list_methods</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.MethodInfo" title="graflag.models.MethodInfo"><span class="pre">MethodInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.list_methods"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.list_methods" title="Link to this definition"></a></dt>
+<dd><p>List available methods.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_method_details">
+<span class="sig-name descname"><span class="pre">get_method_details</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.MethodInfo" title="graflag.models.MethodInfo"><span class="pre">MethodInfo</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_method_details"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_method_details" title="Link to this definition"></a></dt>
+<dd><p>Get details for a specific method.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.list_datasets">
+<span class="sig-name descname"><span class="pre">list_datasets</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.DatasetInfo" title="graflag.models.DatasetInfo"><span class="pre">DatasetInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.list_datasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.list_datasets" title="Link to this definition"></a></dt>
+<dd><p>List available datasets.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.list_experiments">
+<span class="sig-name descname"><span class="pre">list_experiments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.list_experiments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.list_experiments" title="Link to this definition"></a></dt>
+<dd><p>List recent experiments.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_experiment_details">
+<span class="sig-name descname"><span class="pre">get_experiment_details</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_experiment_details"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_experiment_details" title="Link to this definition"></a></dt>
+<dd><p>Get details for a specific experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_progress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.RunProgress" title="graflag.models.RunProgress"><span class="pre">RunProgress</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.run" title="Link to this definition"></a></dt>
+<dd><p>Run an experiment. Returns experiment name.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_experiment_results">
+<span class="sig-name descname"><span class="pre">get_experiment_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentResults" title="graflag.models.ExperimentResults"><span class="pre">ExperimentResults</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_experiment_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_experiment_results" title="Link to this definition"></a></dt>
+<dd><p>Get experiment results.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_evaluation_results">
+<span class="sig-name descname"><span class="pre">get_evaluation_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.EvaluationResults" title="graflag.models.EvaluationResults"><span class="pre">EvaluationResults</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_evaluation_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_evaluation_results" title="Link to this definition"></a></dt>
+<dd><p>Get evaluation results.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.evaluate_experiment">
+<span class="sig-name descname"><span class="pre">evaluate_experiment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.evaluate_experiment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.evaluate_experiment" title="Link to this definition"></a></dt>
+<dd><p>Run evaluation on an experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.list_running_services">
+<span class="sig-name descname"><span class="pre">list_running_services</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.list_running_services"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.list_running_services" title="Link to this definition"></a></dt>
+<dd><p>List running Docker services.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.stop_experiment">
+<span class="sig-name descname"><span class="pre">stop_experiment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.stop_experiment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.stop_experiment" title="Link to this definition"></a></dt>
+<dd><p>Stop a running experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.delete_experiment">
+<span class="sig-name descname"><span class="pre">delete_experiment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.delete_experiment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.delete_experiment" title="Link to this definition"></a></dt>
+<dd><p>Stop and delete an experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_experiment_logs">
+<span class="sig-name descname"><span class="pre">get_experiment_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_experiment_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_experiment_logs" title="Link to this definition"></a></dt>
+<dd><p>Get recent logs for an experiment.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.download_file">
+<span class="sig-name descname"><span class="pre">download_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remote_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.download_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.download_file" title="Link to this definition"></a></dt>
+<dd><p>Download a file from remote shared directory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.api.GraFlagAPI.download_directory">
+<span class="sig-name descname"><span class="pre">download_directory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remote_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.download_directory"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.download_directory" title="Link to this definition"></a></dt>
+<dd><p>Download a directory from remote shared directory.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="docker_ops.html" class="btn btn-neutral float-left" title="graflag.docker_ops" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../METHOD_INTEGRATION_GUIDE.html" class="btn btn-neutral float-right" title="GraFlag Method Integration Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

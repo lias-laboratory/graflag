@@ -1,0 +1,289 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GraFlag Documentation &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Quick Start" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">GraFlag Documentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="graflag-documentation">
+<h1>GraFlag Documentation<a class="headerlink" href="#graflag-documentation" title="Link to this heading"></a></h1>
+<p>Distributed benchmarking framework for Graph Anomaly Detection.</p>
+<div style="display:flex; gap:12px; margin:24px 0;">
+  <a href="https://github.com/lias-laboratory/graflag" style="display:inline-flex; align-items:center; gap:6px; padding:10px 20px; background:#24292e; color:white; border-radius:8px; text-decoration:none; font-weight:600;">
+    <svg viewBox="0 0 16 16" width="18" height="18" fill="white"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    Source Code
+  </a>
+  <a href="quickstart.html" style="display:inline-flex; align-items:center; gap:6px; padding:10px 20px; background:#4F46E5; color:white; border-radius:8px; text-decoration:none; font-weight:600;">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    Documentation
+  </a>
+  <a href="demo.html" style="display:inline-flex; align-items:center; gap:6px; padding:10px 20px; background:#10B981; color:white; border-radius:8px; text-decoration:none; font-weight:600;">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="white" stroke="none"><path d="M8 5v14l11-7z"/></svg>
+    Demo Video
+  </a>
+</div><div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#running-an-experiment">Running an Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#evaluating-results">Evaluating Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#web-dashboard">Web Dashboard</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cli.html#commands">Commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="gui.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui.html#features">Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="gui.html#api-endpoints">API Endpoints</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="devcluster.html#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="devcluster.html#setup">Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="devcluster.html#architecture">Architecture</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.GraFlag"><code class="docutils literal notranslate"><span class="pre">GraFlag</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.GraFlagError"><code class="docutils literal notranslate"><span class="pre">GraFlagError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.GraflagConfig"><code class="docutils literal notranslate"><span class="pre">GraflagConfig</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.ClusterInfo"><code class="docutils literal notranslate"><span class="pre">ClusterInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.MethodInfo"><code class="docutils literal notranslate"><span class="pre">MethodInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.DatasetInfo"><code class="docutils literal notranslate"><span class="pre">DatasetInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.ExperimentInfo"><code class="docutils literal notranslate"><span class="pre">ExperimentInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.ExperimentResults"><code class="docutils literal notranslate"><span class="pre">ExperimentResults</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.EvaluationResults"><code class="docutils literal notranslate"><span class="pre">EvaluationResults</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/graflag.html#graflag.RunProgress"><code class="docutils literal notranslate"><span class="pre">RunProgress</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/core.html#graflag.core.GraFlagError"><code class="docutils literal notranslate"><span class="pre">GraFlagError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/core.html#graflag.core.GraFlag"><code class="docutils literal notranslate"><span class="pre">GraFlag</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.ClusterInfo"><code class="docutils literal notranslate"><span class="pre">ClusterInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.MethodInfo"><code class="docutils literal notranslate"><span class="pre">MethodInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.DatasetInfo"><code class="docutils literal notranslate"><span class="pre">DatasetInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.ExperimentInfo"><code class="docutils literal notranslate"><span class="pre">ExperimentInfo</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.ExperimentResults"><code class="docutils literal notranslate"><span class="pre">ExperimentResults</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.EvaluationResults"><code class="docutils literal notranslate"><span class="pre">EvaluationResults</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/models.html#graflag.models.RunProgress"><code class="docutils literal notranslate"><span class="pre">RunProgress</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/config.html#graflag.config.get_config_path"><code class="docutils literal notranslate"><span class="pre">get_config_path()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/config.html#graflag.config.init_config"><code class="docutils literal notranslate"><span class="pre">init_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/config.html#graflag.config.GraflagConfig"><code class="docutils literal notranslate"><span class="pre">GraflagConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/ssh.html#graflag.ssh.SSHManager"><code class="docutils literal notranslate"><span class="pre">SSHManager</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/docker_ops.html#graflag.docker_ops.ReservedEnvVars"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/docker_ops.html#graflag.docker_ops.DockerManager"><code class="docutils literal notranslate"><span class="pre">DockerManager</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/api_module.html#graflag.api.GraFlagAPI"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#directory-structure">Directory Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#step-1-create-env-configuration-file">Step 1: Create <code class="docutils literal notranslate"><span class="pre">.env</span></code> Configuration File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#step-2-create-dockerfile">Step 2: Create Dockerfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#step-3-create-training-wrapper-train-graflag-py">Step 3: Create Training Wrapper (<code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#step-4-test-integration-locally">Step 4: Test Integration Locally</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#step-5-deploy-to-graflag-cluster">Step 5: Deploy to GraFlag Cluster</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#advanced-features">Advanced Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#quick-reference">Quick Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#complete-checklist">Complete Checklist</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#example-complete-integration-minimal-pattern-a">Example: Complete Integration (Minimal, Pattern A)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html#resources">Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#quick-reference">Quick Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#two-integration-patterns">Two Integration Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#integration-checklist">Integration Checklist</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#file-1-env-configuration">File 1: <code class="docutils literal notranslate"><span class="pre">.env</span></code> Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#file-2-dockerfile">File 2: <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#file-3-train-graflag-py">File 3: <code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#file-4-dataset-directory">File 4: Dataset Directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#result-types-reference">Result Types Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#common-errors-and-fixes">Common Errors and Fixes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#testing-commands">Testing Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#agent-prompt-template">Agent Prompt Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#example-complete-gady-integration-pattern-a">Example: Complete GADY Integration (Pattern A)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#example-bond-cola-integration-pattern-b">Example: bond_cola Integration (Pattern B)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="RESULTS_STANDARD.html#static-graph-results">Static Graph Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="RESULTS_STANDARD.html#temporal-dynamic-graph-results">Temporal/Dynamic Graph Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="RESULTS_STANDARD.html#streaming-graph-results">Streaming Graph Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="RESULTS_STANDARD.html#special-score-values">Special Score Values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="RESULTS_STANDARD.html#writing-results-with-resultwriter">Writing Results with ResultWriter</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#system-overview">System Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#design-principles">Design Principles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#component-diagram">Component Diagram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#component-descriptions">Component Descriptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#execution-flow">Execution Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#shared-libraries">Shared Libraries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#data-flow">Data Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#experiment-lifecycle">Experiment Lifecycle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#docker-swarm-service-model">Docker Swarm Service Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ARCHITECTURE.html#experiment-output-structure">Experiment Output Structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="demo.html#scenarios">Scenarios</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-right" title="Quick Start" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

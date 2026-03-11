@@ -1,0 +1,326 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.core &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="graflag.models" href="models.html" />
+    <link rel="prev" title="graflag package" href="graflag.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="graflag.html">graflag package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.core</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.core.GraFlagError"><code class="docutils literal notranslate"><span class="pre">GraFlagError</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.core.GraFlag"><code class="docutils literal notranslate"><span class="pre">GraFlag</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.setup"><code class="docutils literal notranslate"><span class="pre">GraFlag.setup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.status"><code class="docutils literal notranslate"><span class="pre">GraFlag.status()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.run"><code class="docutils literal notranslate"><span class="pre">GraFlag.run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.evaluate"><code class="docutils literal notranslate"><span class="pre">GraFlag.evaluate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.list_methods"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_methods()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.list_datasets"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_datasets()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.list_experiments"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_experiments()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.list_services"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_services()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.get_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_logs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.follow_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.follow_logs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.show_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.show_logs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.stop"><code class="docutils literal notranslate"><span class="pre">GraFlag.stop()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.get_experiment_results"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_experiment_results()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.get_evaluation_results"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_evaluation_results()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.copy_files"><code class="docutils literal notranslate"><span class="pre">GraFlag.copy_files()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.mount_nfs"><code class="docutils literal notranslate"><span class="pre">GraFlag.mount_nfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.sync"><code class="docutils literal notranslate"><span class="pre">GraFlag.sync()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">graflag.core</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/core.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-graflag.core">
+<span id="graflag-core"></span><h1>graflag.core<a class="headerlink" href="#module-graflag.core" title="Link to this heading"></a></h1>
+<p>Core GraFlag functionality.</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="graflag.core.GraFlagError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.core.</span></span><span class="sig-name descname"><span class="pre">GraFlagError</span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlagError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlagError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Custom exception for GraFlag errors.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.core.GraFlag">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.core.</span></span><span class="sig-name descname"><span class="pre">GraFlag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.env'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main GraFlag orchestration class.</p>
+<p>All public methods return structured data. No direct printing to stdout
+(except follow_logs which streams in real time).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.setup">
+<span class="sig-name descname"><span class="pre">setup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.setup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.setup" title="Link to this definition"></a></dt>
+<dd><p>Setup GraFlag cluster: initialize swarm and setup workers.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.status">
+<span class="sig-name descname"><span class="pre">status</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ClusterInfo" title="graflag.models.ClusterInfo"><span class="pre">ClusterInfo</span></a></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.status" title="Link to this definition"></a></dt>
+<dd><p>Get cluster status.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ClusterInfo with nodes, services, and shared directory info.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.run" title="Link to this definition"></a></dt>
+<dd><p>Run experiment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Experiment name.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#graflag.core.GraFlagError" title="graflag.core.GraFlagError"><strong>GraFlagError</strong></a> – If run fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.evaluate" title="Link to this definition"></a></dt>
+<dd><p>Evaluate an experiment: compute metrics and generate plots.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#graflag.core.GraFlagError" title="graflag.core.GraFlagError"><strong>GraFlagError</strong></a> – If evaluation fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.list_methods">
+<span class="sig-name descname"><span class="pre">list_methods</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.MethodInfo" title="graflag.models.MethodInfo"><span class="pre">MethodInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.list_methods"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.list_methods" title="Link to this definition"></a></dt>
+<dd><p>List available methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of MethodInfo objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.list_datasets">
+<span class="sig-name descname"><span class="pre">list_datasets</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.DatasetInfo" title="graflag.models.DatasetInfo"><span class="pre">DatasetInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.list_datasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.list_datasets" title="Link to this definition"></a></dt>
+<dd><p>List available datasets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of DatasetInfo objects.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.list_experiments">
+<span class="sig-name descname"><span class="pre">list_experiments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.list_experiments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.list_experiments" title="Link to this definition"></a></dt>
+<dd><p>List recent experiments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of ExperimentInfo (most recent first).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.list_services">
+<span class="sig-name descname"><span class="pre">list_services</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.list_services"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.list_services" title="Link to this definition"></a></dt>
+<dd><p>List running Docker services.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of service dicts with name, replicas, image, status.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.get_logs">
+<span class="sig-name descname"><span class="pre">get_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tail</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.get_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.get_logs" title="Link to this definition"></a></dt>
+<dd><p>Get experiment logs (non-streaming).</p>
+<p>Tries Docker service logs first, then falls back to method_output.txt.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List of log lines.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.follow_logs">
+<span class="sig-name descname"><span class="pre">follow_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tee_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.follow_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.follow_logs" title="Link to this definition"></a></dt>
+<dd><p>Follow logs for an experiment (streams to stdout).</p>
+<p>Shows build log (if exists) + service logs.
+Falls back to method_output.txt if the service is gone.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.show_logs">
+<span class="sig-name descname"><span class="pre">show_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tee_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.show_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.show_logs" title="Link to this definition"></a></dt>
+<dd><p>Show logs (non-follow mode) — prints to stdout.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.stop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.stop" title="Link to this definition"></a></dt>
+<dd><p>Stop a running experiment/service.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>experiment_name</strong> – Name of the experiment</p></li>
+<li><p><strong>remove</strong> – If True, also delete the experiment directory</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.get_experiment_results">
+<span class="sig-name descname"><span class="pre">get_experiment_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentResults" title="graflag.models.ExperimentResults"><span class="pre">ExperimentResults</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.get_experiment_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.get_experiment_results" title="Link to this definition"></a></dt>
+<dd><p>Get experiment results from results.json.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.get_evaluation_results">
+<span class="sig-name descname"><span class="pre">get_evaluation_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.EvaluationResults" title="graflag.models.EvaluationResults"><span class="pre">EvaluationResults</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.get_evaluation_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.get_evaluation_results" title="Link to this definition"></a></dt>
+<dd><p>Get evaluation results from eval/evaluation.json.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.copy_files">
+<span class="sig-name descname"><span class="pre">copy_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">recursive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_remote</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.copy_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.copy_files" title="Link to this definition"></a></dt>
+<dd><p>Copy files/directories bidirectionally.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.mount_nfs">
+<span class="sig-name descname"><span class="pre">mount_nfs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shared_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.mount_nfs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.mount_nfs" title="Link to this definition"></a></dt>
+<dd><p>Mount NFS share on local machine.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_lib</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.sync" title="Link to this definition"></a></dt>
+<dd><p>Sync a local method or library directory to remote shared storage.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="graflag.html" class="btn btn-neutral float-left" title="graflag package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="models.html" class="btn btn-neutral float-right" title="graflag.models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

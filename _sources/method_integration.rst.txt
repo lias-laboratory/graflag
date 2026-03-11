@@ -1,0 +1,56 @@
+Method Integration
+==================
+
+For the full method integration guide, see ``METHOD_INTEGRATION_GUIDE.md`` in this directory.
+
+Overview
+--------
+
+Each method requires three files in ``graflag-shared/methods/<name>/``:
+
+1. ``.env`` -- method metadata and default parameters
+2. ``Dockerfile`` -- container definition (clones source at build time)
+3. ``train_graflag.py`` -- GraFlag integration script using ``ResultWriter``
+
+.env Format
+-----------
+
+::
+
+    METHOD_NAME=mymethod
+    DESCRIPTION=Method description
+    SOURCE_CODE=https://github.com/author/repo
+    COMMAND=python3 train_graflag.py
+
+    _PARAM_NAME=default_value
+    _LEARNING_RATE=0.001
+    _GPU=0
+
+Parameters prefixed with ``_`` are passed as command-line arguments to the method.
+
+Dockerfile Pattern
+------------------
+
+::
+
+    FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+    # install dependencies
+    RUN git clone https://github.com/author/repo src
+    COPY methods/mymethod/train_graflag.py ./
+    COPY libs/ ./libs/
+    RUN pip install ./libs/graflag_runner
+    CMD ["python3", "-m", "graflag_runner", "--pass-env-args"]
+
+ResultWriter Usage
+------------------
+
+::
+
+    from graflag_runner import ResultWriter
+
+    writer = ResultWriter()
+    # ... run method ...
+    writer.save_scores(result_type="NODE_ANOMALY_SCORES", scores=scores, ground_truth=gt)
+    writer.add_metadata(method_name="mymethod", dataset="cora")
+    writer.add_resource_metrics(exec_time_ms=1234, peak_memory_mb=512)
+    writer.finalize()

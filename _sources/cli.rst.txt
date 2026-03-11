@@ -1,0 +1,126 @@
+CLI Reference
+=============
+
+The ``graflag`` command provides the primary interface for managing benchmarks.
+
+Commands
+--------
+
+setup
+~~~~~
+
+Initialize Docker Swarm and verify cluster connectivity::
+
+    graflag setup
+
+On first run, prompts for manager IP, SSH credentials, shared directory,
+and the path to ``hosts.yml`` (which defines worker node IPs).
+Configuration is stored in ``~/.config/graflag/config.env``.
+
+run
+~~~
+
+Run an experiment::
+
+    graflag run -m METHOD -d DATASET [--build] [--no-gpu] [--params KEY=VALUE ...]
+    graflag run --from-config service_config.json [--params KEY=VALUE ...]
+
+Options:
+
+- ``-m, --method`` -- Method name
+- ``-d, --dataset`` -- Dataset name
+- ``-b, --build`` -- Build Docker image before running
+- ``--no-gpu`` -- Disable GPU support
+- ``-p, --params`` -- Override parameters as KEY=VALUE pairs
+- ``--from-config`` -- Load configuration from a saved service_config.json
+
+list
+~~~~
+
+List available resources::
+
+    graflag list methods
+    graflag list datasets
+    graflag list experiments
+    graflag list services
+
+status
+~~~~~~
+
+Show cluster status and running services::
+
+    graflag status
+
+logs
+~~~~
+
+View experiment logs::
+
+    graflag logs -e EXPERIMENT_NAME [-f] [--tee FILE]
+
+Options:
+
+- ``-f, --follow`` -- Stream logs in real-time
+- ``--tee`` -- Save logs to file while displaying
+
+stop
+~~~~
+
+Stop a running experiment::
+
+    graflag stop -e EXPERIMENT_NAME [--rm]
+
+Options:
+
+- ``--rm`` -- Also delete the experiment directory
+
+evaluate
+~~~~~~~~
+
+Run evaluation on a completed experiment::
+
+    graflag evaluate -e EXPERIMENT_NAME
+
+copy
+~~~~
+
+Copy files between local and remote::
+
+    graflag copy -s SOURCE -d DEST [-r] [--from-remote]
+
+sync
+~~~~
+
+Sync a method or library to remote shared storage::
+
+    graflag sync [--path DIR] [--lib]
+
+gui
+~~~
+
+Start the web dashboard::
+
+    graflag gui [--host HOST] [--port PORT] [--debug] [--config FILE]
+
+Options:
+
+- ``--host`` -- Host to bind to (default: 0.0.0.0)
+- ``--port`` -- Port to bind to (default: 5000)
+- ``--debug`` -- Enable Flask debug mode
+- ``--config`` -- Path to config file
+
+See :doc:`gui` for details.
+
+devcluster
+~~~~~~~~~~
+
+Deploy a local development cluster using Docker Compose::
+
+    graflag devcluster --hosts hosts.yml [--pubkey ~/.ssh/id_ed25519.pub]
+
+Options:
+
+- ``--hosts`` -- Path to hosts.yml configuration file (required)
+- ``--pubkey`` -- Path to SSH public key (default: ``~/.ssh/id_ed25519.pub``)
+
+See :doc:`devcluster` for details.

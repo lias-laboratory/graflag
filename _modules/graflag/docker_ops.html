@@ -1,0 +1,858 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.docker_ops &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../method_integration.html">Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">graflag.docker_ops</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for graflag.docker_ops</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Docker operations for GraFlag using Docker SDK.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">docker</span>
+<span class="kn">from</span> <span class="nn">docker.types</span> <span class="kn">import</span> <span class="n">ServiceMode</span><span class="p">,</span> <span class="n">RestartPolicy</span><span class="p">,</span> <span class="n">Resources</span><span class="p">,</span> <span class="n">Mount</span><span class="p">,</span> <span class="n">EndpointSpec</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">load_method_env</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ReservedEnvVars">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ReservedEnvVars">[docs]</a>
+<span class="k">class</span> <span class="nc">ReservedEnvVars</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reserved environment variable names that should not be overridden by method parameters.&quot;&quot;&quot;</span>
+    <span class="n">DATA</span> <span class="o">=</span> <span class="s1">&#39;DATA&#39;</span>
+    <span class="n">EXP</span> <span class="o">=</span> <span class="s1">&#39;EXP&#39;</span>
+    <span class="n">METHOD_NAME</span> <span class="o">=</span> <span class="s1">&#39;METHOD_NAME&#39;</span>
+    <span class="n">COMMAND</span> <span class="o">=</span> <span class="s1">&#39;COMMAND&#39;</span>
+    <span class="n">MONITOR_INTERVAL</span> <span class="o">=</span> <span class="s1">&#39;MONITOR_INTERVAL&#39;</span>
+
+<div class="viewcode-block" id="ReservedEnvVars.get_names">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.get_names">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">var</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">cls</span><span class="p">}</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="DockerManager">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager">[docs]</a>
+<span class="k">class</span> <span class="nc">DockerManager</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle Docker Swarm operations via Docker SDK with SSH tunnel.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ssh_manager</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">hosts_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hosts.yml&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span> <span class="o">=</span> <span class="n">ssh_manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span> <span class="o">=</span> <span class="n">hosts_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Lazy-initialize Docker client via SSH tunnel.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>
+
+    <span class="k">def</span> <span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Establish SSH tunnel and create Docker client.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># Find free local port</span>
+        <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span> <span class="k">as</span> <span class="n">s</span><span class="p">:</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">getsockname</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># Build SSH tunnel command</span>
+        <span class="n">ssh_args</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;ssh&#39;</span><span class="p">,</span> <span class="s1">&#39;-N&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;-L&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s1">:/var/run/docker.sock&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;StrictHostKeyChecking=no&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;ExitOnForwardFailure=yes&#39;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
+            <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">)])</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Starting SSH tunnel on port </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Wait for tunnel to be ready</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">stderr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SSH tunnel failed: </span><span class="si">{</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span> <span class="k">as</span> <span class="n">s</span><span class="p">:</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">settimeout</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="p">))</span>
+                <span class="k">break</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ConnectionRefusedError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+                <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;SSH tunnel failed to become ready&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">(</span>
+            <span class="n">base_url</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;tcp://localhost:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Docker client connected via SSH tunnel&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DockerManager.close">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.close">[docs]</a>
+    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close Docker client and SSH tunnel.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_load_hosts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load hosts configuration from YAML file.&quot;&quot;&quot;</span>
+        <span class="n">hosts_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">hosts_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">hosts_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Swarm Management</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="DockerManager.setup_swarm_manager">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.setup_swarm_manager">[docs]</a>
+    <span class="k">def</span> <span class="nf">setup_swarm_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Docker Swarm on manager node.&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[SETUP] Initializing Docker Swarm on manager...&quot;</span><span class="p">)</span>
+
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Swarm&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LocalNodeState&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;active&#39;</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Docker Swarm already initialized&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">hosts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_hosts</span><span class="p">()</span>
+        <span class="n">advertise_addr</span> <span class="o">=</span> <span class="n">hosts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;manager&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">swarm</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">advertise_addr</span><span class="o">=</span><span class="n">advertise_addr</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Docker Swarm initialized&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.get_swarm_token">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_swarm_token">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_swarm_token</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get Docker Swarm worker join token.&quot;&quot;&quot;</span>
+        <span class="n">swarm_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">swarm</span><span class="o">.</span><span class="n">attrs</span>
+        <span class="k">return</span> <span class="n">swarm_attrs</span><span class="p">[</span><span class="s1">&#39;JoinTokens&#39;</span><span class="p">][</span><span class="s1">&#39;Worker&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.setup_workers">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.setup_workers">[docs]</a>
+    <span class="k">def</span> <span class="nf">setup_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup worker nodes to join the swarm (requires SSH to each worker).&quot;&quot;&quot;</span>
+        <span class="n">hosts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_hosts</span><span class="p">()</span>
+        <span class="n">manager_ip</span> <span class="o">=</span> <span class="n">hosts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;manager&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">)</span>
+        <span class="n">workers</span> <span class="o">=</span> <span class="n">hosts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;workers&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">workers</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No workers defined in hosts.yml&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[SETUP] Setting up </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span><span class="si">}</span><span class="s2"> worker nodes...&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">worker_ip</span> <span class="ow">in</span> <span class="n">workers</span><span class="p">:</span>
+            <span class="n">check_cmd</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;ssh -o StrictHostKeyChecking=no root@</span><span class="si">{</span><span class="n">worker_ip</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;docker info --format </span><span class="se">\&quot;{{{{</span><span class="s2">.Swarm.LocalNodeState</span><span class="se">}}}}\&quot;</span><span class="s2">&#39;&quot;</span>
+            <span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">check_cmd</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;active&quot;</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Worker </span><span class="si">{</span><span class="n">worker_ip</span><span class="si">}</span><span class="s2"> already in swarm&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">join_cmd</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;ssh -o StrictHostKeyChecking=no root@</span><span class="si">{</span><span class="n">worker_ip</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;docker swarm join --token </span><span class="si">{</span><span class="n">token</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:2377&#39;&quot;</span>
+            <span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">join_cmd</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Worker </span><span class="si">{</span><span class="n">worker_ip</span><span class="si">}</span><span class="s2"> joined swarm&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Failed to join worker </span><span class="si">{</span><span class="n">worker_ip</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.get_nodes">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_nodes">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get list of swarm nodes.&quot;&quot;&quot;</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">list</span><span class="p">():</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">attrs</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Spec&#39;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">manager_status</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ManagerStatus&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+            <span class="n">nodes</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;hostname&#39;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Description&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Hostname&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="n">status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;availability&#39;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Availability&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;role&#39;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Role&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;is_manager&#39;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">manager_status</span><span class="p">),</span>
+                <span class="s1">&#39;leader&#39;</span><span class="p">:</span> <span class="n">manager_status</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Leader&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+            <span class="p">})</span>
+        <span class="k">return</span> <span class="n">nodes</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Registry</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="DockerManager.setup_local_registry">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.setup_local_registry">[docs]</a>
+    <span class="k">def</span> <span class="nf">setup_local_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup local Docker registry service on manager.&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[BUILD] Setting up local Docker registry...&quot;</span><span class="p">)</span>
+
+        <span class="n">existing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;registry&#39;</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">existing</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Local registry already running&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">image</span><span class="o">=</span><span class="s1">&#39;registry:2&#39;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s1">&#39;registry&#39;</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">ServiceMode</span><span class="p">(</span><span class="s1">&#39;replicated&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">endpoint_spec</span><span class="o">=</span><span class="n">EndpointSpec</span><span class="p">(</span><span class="n">ports</span><span class="o">=</span><span class="p">{</span><span class="mi">5000</span><span class="p">:</span> <span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="s1">&#39;tcp&#39;</span><span class="p">)}),</span>
+            <span class="n">mounts</span><span class="o">=</span><span class="p">[</span><span class="n">Mount</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="s1">&#39;/var/lib/registry&#39;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s1">&#39;registry-data&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;volume&#39;</span><span class="p">)],</span>
+            <span class="n">constraints</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;node.role==manager&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Local registry started on port 5000&quot;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Image Build (SSH — build context is on remote host)</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="DockerManager.build_method_image">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_method_image">[docs]</a>
+    <span class="k">def</span> <span class="nf">build_method_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build method Docker image and push to local registry.</span>
+
+<span class="sd">        Uses SSH because the build context resides on the remote host.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Combined build and push log output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">method_name</span> <span class="o">=</span> <span class="n">method_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[BUILD] Building image </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+        <span class="n">local_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">build_log</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Build image</span>
+        <span class="n">build_cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;docker build --network=host &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-f </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/methods/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">/Dockerfile &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-t </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> -t </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/&quot;</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">build_cmd</span><span class="p">)</span>
+        <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;=== BUILD: </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
+            <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build image </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Push to registry</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Pushing </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> to local registry...&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== PUSH: </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
+            <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to push to registry: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Image pushed to local registry&quot;</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Image </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2"> built successfully&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.build_evaluator_image">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_evaluator_image">[docs]</a>
+    <span class="k">def</span> <span class="nf">build_evaluator_image</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build graflag-evaluator image and push to registry.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Registry image path.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[BUILD] Building graflag-evaluator image...&quot;</span><span class="p">)</span>
+
+        <span class="n">local_image</span> <span class="o">=</span> <span class="s2">&quot;graflag-evaluator:latest&quot;</span>
+        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/graflag-evaluator:latest&quot;</span>
+
+        <span class="c1"># Check if image exists in registry</span>
+        <span class="n">check_cmd</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;docker manifest inspect </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo &#39;exists&#39;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">check_cmd</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;exists&quot;</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Evaluator image already exists in registry&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">registry_image</span>
+
+        <span class="c1"># Build</span>
+        <span class="n">build_cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;cd </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/libs/graflag_evaluator &amp;&amp; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;docker build --network=host -t </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> -t </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> .&quot;</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">build_cmd</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build evaluator image: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Push</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to push evaluator to registry: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Evaluator image pushed to local registry&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">registry_image</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Service Operations (Docker SDK)</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="DockerManager.create_service">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.create_service">[docs]</a>
+    <span class="k">def</span> <span class="nf">create_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span> <span class="n">gpu_required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                       <span class="n">method_params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create Docker service for experiment.&quot;&quot;&quot;</span>
+        <span class="n">method_params</span> <span class="o">=</span> <span class="n">method_params</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="c1"># Save service config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_service_config</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">gpu_required</span><span class="p">,</span>
+                                  <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">)</span>
+
+        <span class="c1"># Build environment variables</span>
+        <span class="n">env_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_service_env</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">)</span>
+
+        <span class="c1"># Mount shared directory</span>
+        <span class="n">shared_mount</span> <span class="o">=</span> <span class="n">Mount</span><span class="p">(</span>
+            <span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+            <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;bind&#39;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># GPU resources</span>
+        <span class="n">resources</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">gpu_required</span><span class="p">:</span>
+            <span class="n">resources</span> <span class="o">=</span> <span class="n">Resources</span><span class="p">(</span>
+                <span class="n">generic_resources</span><span class="o">=</span><span class="p">[{</span>
+                    <span class="s1">&#39;DiscreteResourceSpec&#39;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s1">&#39;Kind&#39;</span><span class="p">:</span> <span class="s1">&#39;NVIDIA-GPU&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="mi">0</span>
+                    <span class="p">}</span>
+                <span class="p">}]</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Creating GPU-enabled service </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[RUN] Creating service </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Create service</span>
+        <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">image</span><span class="o">=</span><span class="n">registry_image</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">exp_name</span><span class="p">,</span>
+            <span class="n">env</span><span class="o">=</span><span class="n">env_vars</span><span class="p">,</span>
+            <span class="n">mounts</span><span class="o">=</span><span class="p">[</span><span class="n">shared_mount</span><span class="p">],</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">ServiceMode</span><span class="p">(</span><span class="s1">&#39;replicated&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">restart_policy</span><span class="o">=</span><span class="n">RestartPolicy</span><span class="p">(</span><span class="n">condition</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">),</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">resources</span><span class="p">,</span>
+            <span class="n">networks</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;host&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Service </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2"> created successfully&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Save service details</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_service_details</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">service</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">exp_name</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.create_evaluation_service">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.create_evaluation_service">[docs]</a>
+    <span class="k">def</span> <span class="nf">create_evaluation_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create Docker service to run evaluation.&quot;&quot;&quot;</span>
+        <span class="n">eval_service_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;eval__</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_service_if_exists</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Creating evaluation service: </span><span class="si">{</span><span class="n">eval_service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">registry_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_evaluator_image</span><span class="p">()</span>
+
+        <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">image</span><span class="o">=</span><span class="n">registry_image</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">eval_service_name</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;/shared/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">],</span>
+            <span class="n">mounts</span><span class="o">=</span><span class="p">[</span><span class="n">Mount</span><span class="p">(</span>
+                <span class="n">target</span><span class="o">=</span><span class="s1">&#39;/shared&#39;</span><span class="p">,</span>
+                <span class="n">source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;bind&#39;</span>
+            <span class="p">)],</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">ServiceMode</span><span class="p">(</span><span class="s1">&#39;replicated&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+            <span class="n">restart_policy</span><span class="o">=</span><span class="n">RestartPolicy</span><span class="p">(</span><span class="n">condition</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">),</span>
+            <span class="n">networks</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;host&#39;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Evaluation service </span><span class="si">{</span><span class="n">eval_service_name</span><span class="si">}</span><span class="s2"> created&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">eval_service_name</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.list_services">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.list_services">[docs]</a>
+    <span class="k">def</span> <span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all Docker services.&quot;&quot;&quot;</span>
+        <span class="n">services</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">svc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">():</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">attrs</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Spec&#39;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Mode&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+            <span class="c1"># Desired replicas</span>
+            <span class="k">if</span> <span class="s1">&#39;Replicated&#39;</span> <span class="ow">in</span> <span class="n">mode</span><span class="p">:</span>
+                <span class="n">desired</span> <span class="o">=</span> <span class="n">mode</span><span class="p">[</span><span class="s1">&#39;Replicated&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Replicas&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">desired</span> <span class="o">=</span> <span class="s1">&#39;global&#39;</span>
+
+            <span class="c1"># Image (strip sha256 digest for display)</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TaskTemplate&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ContainerSpec&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Image&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;@sha256:&#39;</span> <span class="ow">in</span> <span class="n">image</span><span class="p">:</span>
+                <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="c1"># Running task count</span>
+            <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;desired-state&#39;</span><span class="p">:</span> <span class="s1">&#39;running&#39;</span><span class="p">})</span>
+            <span class="n">running</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tasks</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">)</span>
+
+            <span class="n">services</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">image</span><span class="p">,</span>
+                <span class="s1">&#39;replicas&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">running</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">desired</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">desired</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="n">desired</span><span class="p">,</span>
+                <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;running&#39;</span> <span class="k">if</span> <span class="n">running</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;pending&#39;</span><span class="p">,</span>
+            <span class="p">})</span>
+        <span class="k">return</span> <span class="n">services</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.get_service_names">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_service_names">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_service_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get set of all service names.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">svc</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">svc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">()}</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.stop_service">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.stop_service">[docs]</a>
+    <span class="k">def</span> <span class="nf">stop_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stop and remove a service.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> stopped and removed&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to stop service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_remove_service_if_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a service if it exists.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Removed existing service: </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="DockerManager.cleanup_finished_service">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.cleanup_finished_service">[docs]</a>
+    <span class="k">def</span> <span class="nf">cleanup_finished_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a finished service (safe if it doesn&#39;t exist).&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Cleaned up finished service: </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to clean up service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.remove_evaluation_service">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.remove_evaluation_service">[docs]</a>
+    <span class="k">def</span> <span class="nf">remove_evaluation_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove evaluation service for an experiment.&quot;&quot;&quot;</span>
+        <span class="n">eval_service_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;eval__</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_service_if_exists</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Evaluation service </span><span class="si">{</span><span class="n">eval_service_name</span><span class="si">}</span><span class="s2"> removed&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.get_service_logs">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_service_logs">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tail</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get recent logs for a service.</span>
+
+<span class="sd">        Uses SSH + Docker CLI because the Docker SDK log streaming</span>
+<span class="sd">        is unreliable for swarm services.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">service_exists</span><span class="p">(</span><span class="n">service_name</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;docker service logs --tail </span><span class="si">{</span><span class="n">tail</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> 2&gt;&amp;1&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+        <span class="k">return</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.follow_service_logs">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.follow_service_logs">[docs]</a>
+    <span class="k">def</span> <span class="nf">follow_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Follow service logs in real-time until task finishes.</span>
+
+<span class="sd">        Uses SSH + Docker CLI subprocess because the Docker SDK&#39;s</span>
+<span class="sd">        follow mode does not stream reliably for swarm services.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">_time</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">service_exists</span><span class="p">(</span><span class="n">service_name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[INFO] Following service logs (press Ctrl+C to stop)...&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Build SSH command for log following</span>
+        <span class="n">ssh_args</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ssh&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
+            <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+            <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">),</span>
+            <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;StrictHostKeyChecking=no&#39;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;docker service logs -f </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="p">])</span>
+
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">ssh_args</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Poll task state until it finishes</span>
+            <span class="k">while</span> <span class="n">proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">_time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">tasks</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+                    <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;desired-state&#39;</span><span class="p">:</span> <span class="s1">&#39;shutdown&#39;</span><span class="p">})</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">state</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;complete&#39;</span><span class="p">,</span> <span class="s1">&#39;failed&#39;</span><span class="p">,</span> <span class="s1">&#39;shutdown&#39;</span><span class="p">,</span> <span class="s1">&#39;rejected&#39;</span><span class="p">):</span>
+                        <span class="n">_time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># Let final logs flush</span>
+                        <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+                        <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+                        <span class="k">return</span>
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+            <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[INFO] Log following interrupted&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+            <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.service_exists">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.service_exists">[docs]</a>
+    <span class="k">def</span> <span class="nf">service_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a Docker service exists.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.is_service_failed">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.is_service_failed">[docs]</a>
+    <span class="k">def</span> <span class="nf">is_service_failed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a service exists but all its tasks have failed.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tasks</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="c1"># Check if every task is in a terminal failure state</span>
+            <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">state</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;failed&#39;</span><span class="p">,</span> <span class="s1">&#39;rejected&#39;</span><span class="p">,</span> <span class="s1">&#39;shutdown&#39;</span><span class="p">,</span> <span class="s1">&#39;orphaned&#39;</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Cluster Status</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="DockerManager.get_cluster_status">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_cluster_status">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_cluster_status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get Docker Swarm cluster status.&quot;&quot;&quot;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+        <span class="n">swarm</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Swarm&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;swarm_active&#39;</span><span class="p">:</span> <span class="n">swarm</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;LocalNodeState&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;active&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;nodes&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_nodes</span><span class="p">(),</span>
+            <span class="s1">&#39;services&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">list_services</span><span class="p">(),</span>
+        <span class="p">}</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Internal</span>
+    <span class="c1"># ========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_build_service_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build environment variable list for service.&quot;&quot;&quot;</span>
+        <span class="n">method_env</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+
+        <span class="c1"># Build env dict (method .env values as base)</span>
+        <span class="n">env_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">method_env</span><span class="p">)</span>
+
+        <span class="c1"># Add required env vars</span>
+        <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;METHOD_NAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">method_name</span>
+        <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;DATA&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/datasets/</span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2">/&quot;</span>
+        <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;EXP&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/&quot;</span>
+
+        <span class="c1"># Override with method params (prefixed with _)</span>
+        <span class="n">reserved</span> <span class="o">=</span> <span class="n">ReservedEnvVars</span><span class="o">.</span><span class="n">get_names</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">method_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reserved</span><span class="p">:</span>
+                <span class="n">env_dict</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   Setting parameter: _</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">env_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+
+    <span class="k">def</span> <span class="nf">_save_service_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span>
+                             <span class="n">gpu_required</span><span class="p">,</span> <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service configuration to JSON.&quot;&quot;&quot;</span>
+        <span class="n">env_contents</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+
+        <span class="n">reserved</span> <span class="o">=</span> <span class="n">ReservedEnvVars</span><span class="o">.</span><span class="n">get_names</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">method_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reserved</span><span class="p">:</span>
+                <span class="n">env_contents</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="n">service_config</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;experiment_name&quot;</span><span class="p">:</span> <span class="n">exp_name</span><span class="p">,</span>
+            <span class="s2">&quot;method_name&quot;</span><span class="p">:</span> <span class="n">method_name</span><span class="p">,</span>
+            <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">,</span>
+            <span class="s2">&quot;tag&quot;</span><span class="p">:</span> <span class="n">tag</span><span class="p">,</span>
+            <span class="s2">&quot;gpu_required&quot;</span><span class="p">:</span> <span class="n">gpu_required</span><span class="p">,</span>
+            <span class="s2">&quot;registry_image&quot;</span><span class="p">:</span> <span class="n">registry_image</span><span class="p">,</span>
+            <span class="s2">&quot;manager_ip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">,</span>
+            <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+            <span class="s2">&quot;data_path&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/datasets/</span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;exp_path&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;env_contents&quot;</span><span class="p">:</span> <span class="n">env_contents</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">config_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/service_config.json&quot;</span>
+        <span class="n">config_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">service_config</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">config_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved service configuration to </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_save_service_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service details to JSON after creation.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">attrs</span>
+
+            <span class="n">details</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;service_id&quot;</span><span class="p">:</span> <span class="n">service_id</span><span class="p">,</span>
+                <span class="s2">&quot;service_name&quot;</span><span class="p">:</span> <span class="n">exp_name</span><span class="p">,</span>
+                <span class="s2">&quot;created_at&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Spec&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TaskTemplate&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ContainerSpec&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Image&#39;</span><span class="p">),</span>
+                <span class="s2">&quot;created_at_docker&quot;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CreatedAt&#39;</span><span class="p">),</span>
+            <span class="p">}</span>
+
+            <span class="c1"># Get task info</span>
+            <span class="n">tasks</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">tasks</span><span class="p">:</span>
+                <span class="n">task</span> <span class="o">=</span> <span class="n">tasks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">details</span><span class="p">[</span><span class="s2">&quot;worker&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;node_id&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NodeID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                    <span class="s2">&quot;task_id&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                    <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                    <span class="s2">&quot;desired_state&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DesiredState&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="p">}</span>
+
+            <span class="n">details_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/service_details.json&quot;</span>
+            <span class="n">details_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">details_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">details_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved service details to </span><span class="si">{</span><span class="n">details_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to save service details: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

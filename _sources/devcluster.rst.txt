@@ -1,0 +1,50 @@
+Development Cluster
+===================
+
+The ``graflag devcluster`` command deploys a Docker Compose-based virtual cluster
+for local development and testing without a physical multi-node setup.
+
+Usage
+-----
+
+::
+
+    graflag devcluster --hosts hosts.yml [--pubkey ~/.ssh/id_ed25519.pub]
+
+Setup
+-----
+
+1. Create a ``hosts.yml`` with your desired network configuration::
+
+    subnet: 192.168.100.0/24
+    manager: 192.168.100.10
+    workers:
+        - 192.168.100.11
+        - 192.168.100.12
+        - 192.168.100.13
+        - 192.168.100.14
+
+2. Deploy the cluster::
+
+    graflag devcluster --hosts hosts.yml
+
+3. Run the setup wizard (it will ask for the ``hosts.yml`` path)::
+
+    graflag setup
+
+   The wizard stores the hosts file path in ``~/.config/graflag/config.env``
+   so worker IPs are available for Swarm initialization.
+
+Architecture
+------------
+
+The deploy script creates Docker containers running Docker-in-Docker:
+
+- **Manager**: Docker daemon, NFS server, Docker registry, SSH server
+- **Workers**: Docker daemon, NFS client mount, SSH server
+
+All containers join a bridge network with static IPs from ``hosts.yml``.
+GPU resources are passed through via NVIDIA Container Toolkit.
+
+The cluster mirrors a real multi-node setup, allowing full testing of
+the benchmarking pipeline locally.

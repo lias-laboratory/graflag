@@ -1,0 +1,70 @@
+Web Dashboard
+=============
+
+The ``graflag gui`` command starts a web dashboard for monitoring and managing experiments.
+
+Usage
+-----
+
+::
+
+    graflag gui [--host HOST] [--port PORT] [--debug] [--config FILE]
+
+Default: ``http://0.0.0.0:5000``
+
+Features
+--------
+
+- **Cluster status** -- connection and Swarm health in the navbar
+- **Methods and datasets** -- browse available resources with pagination
+- **Run experiments** -- select method, dataset, parameters, and deploy
+- **Real-time logs** -- live log streaming via WebSocket
+- **Evaluation viewer** -- metrics display and plot gallery with lightbox
+- **Notifications** -- browser notifications for experiment status changes
+- **Dark/light theme**
+
+API Endpoints
+-------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Method
+     - Endpoint
+     - Description
+   * - GET
+     - /api/cluster/info
+     - Cluster status
+   * - GET
+     - /api/methods
+     - List methods
+   * - GET
+     - /api/datasets
+     - List datasets
+   * - GET
+     - /api/experiments
+     - List experiments
+   * - GET
+     - /api/experiments/<name>/results
+     - Experiment results
+   * - GET
+     - /api/experiments/<name>/evaluation
+     - Evaluation metrics
+   * - GET
+     - /api/experiments/<name>/logs
+     - Experiment logs
+   * - GET
+     - /api/services
+     - Running services
+   * - POST
+     - /api/run
+     - Run experiment
+   * - POST
+     - /api/experiments/<name>/evaluate
+     - Evaluate experiment
+   * - POST
+     - /api/experiments/<name>/stop
+     - Stop experiment
+   * - POST
+     - /api/experiments/<name>/delete
+     - Delete experiment

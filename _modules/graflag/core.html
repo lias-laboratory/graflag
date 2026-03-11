@@ -1,0 +1,911 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.core &mdash; GraFlag 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../method_integration.html">Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">graflag.core</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for graflag.core</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Core GraFlag functionality.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">GraflagConfig</span>
+<span class="kn">from</span> <span class="nn">.ssh</span> <span class="kn">import</span> <span class="n">SSHManager</span>
+<span class="kn">from</span> <span class="nn">.docker_ops</span> <span class="kn">import</span> <span class="n">DockerManager</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">load_method_env</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ClusterInfo</span><span class="p">,</span> <span class="n">MethodInfo</span><span class="p">,</span> <span class="n">DatasetInfo</span><span class="p">,</span> <span class="n">ExperimentInfo</span><span class="p">,</span>
+    <span class="n">ExperimentResults</span><span class="p">,</span> <span class="n">EvaluationResults</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="GraFlagError">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlagError">[docs]</a>
+<span class="k">class</span> <span class="nc">GraFlagError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom exception for GraFlag errors.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="GraFlag">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag">[docs]</a>
+<span class="k">class</span> <span class="nc">GraFlag</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Main GraFlag orchestration class.</span>
+
+<span class="sd">    All public methods return structured data. No direct printing to stdout</span>
+<span class="sd">    (except follow_logs which streams in real time).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;.env&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize GraFlag with configuration.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">GraflagConfig</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span> <span class="o">=</span> <span class="n">SSHManager</span><span class="p">(</span>
+            <span class="n">manager_ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">,</span>
+            <span class="n">ssh_port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">,</span>
+            <span class="n">ssh_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_key</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span> <span class="o">=</span> <span class="n">DockerManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">hosts_file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span>
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Cluster Management</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.setup">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.setup">[docs]</a>
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup GraFlag cluster: initialize swarm and setup workers.&quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[SETUP] Setting up GraFlag cluster...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">setup_swarm_manager</span><span class="p">()</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">get_swarm_token</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">setup_workers</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">setup_local_registry</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] GraFlag cluster setup completed!&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.status">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.status">[docs]</a>
+    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ClusterInfo</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get cluster status.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ClusterInfo with nodes, services, and shared directory info.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">get_cluster_status</span><span class="p">()</span>
+            <span class="n">shared_contents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">list_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+            <span class="n">nodes</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nodes&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">worker_nodes</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s1">&#39;hostname&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">[</span><span class="s1">&#39;hostname&#39;</span><span class="p">],</span>
+                    <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">[</span><span class="s1">&#39;status&#39;</span><span class="p">],</span>
+                    <span class="s1">&#39;availability&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">[</span><span class="s1">&#39;availability&#39;</span><span class="p">],</span>
+                    <span class="s1">&#39;is_manager&#39;</span><span class="p">:</span> <span class="n">n</span><span class="p">[</span><span class="s1">&#39;is_manager&#39;</span><span class="p">],</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes</span>
+            <span class="p">]</span>
+
+            <span class="k">return</span> <span class="n">ClusterInfo</span><span class="p">(</span>
+                <span class="n">manager_ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">,</span>
+                <span class="n">is_connected</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">swarm_initialized</span><span class="o">=</span><span class="n">cluster</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;swarm_active&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                <span class="n">worker_nodes</span><span class="o">=</span><span class="n">worker_nodes</span><span class="p">,</span>
+                <span class="n">shared_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+                <span class="n">shared_contents</span><span class="o">=</span><span class="n">shared_contents</span><span class="p">,</span>
+                <span class="n">services</span><span class="o">=</span><span class="n">cluster</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;services&#39;</span><span class="p">,</span> <span class="p">[]),</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ClusterInfo</span><span class="p">(</span>
+                <span class="n">manager_ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">,</span>
+                <span class="n">is_connected</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">swarm_initialized</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">),</span>
+            <span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Run</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.run">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.run">[docs]</a>
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
+        <span class="n">build</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">method_params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run experiment.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Experiment name.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            GraFlagError: If run fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">method_name</span> <span class="o">=</span> <span class="n">method_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">method_params</span> <span class="o">=</span> <span class="n">method_params</span> <span class="ow">or</span> <span class="p">{}</span>
+
+        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H%M%S&quot;</span><span class="p">)</span>
+        <span class="n">exp_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;exp__</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[RUN] Starting run: </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Validate method exists</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;methods/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Method </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2"> not found in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/methods/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Validate dataset exists</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;datasets/</span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Dataset </span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2"> not found in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/datasets/</span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Create experiment directory</span>
+        <span class="n">exp_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Experiment directory: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Build image if requested</span>
+        <span class="k">if</span> <span class="n">build</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_status</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="s2">&quot;building&quot;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">build_log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">build_method_image</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write_status</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Build failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Build failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="c1"># Save build log</span>
+            <span class="n">build_log_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">/build.log&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">build_log_path</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;BUILDEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">build_log</span><span class="si">}</span><span class="se">\n</span><span class="s2">BUILDEOF&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Create service</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">create_service</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">gpu</span><span class="p">,</span> <span class="n">method_params</span><span class="p">)</span>
+
+        <span class="c1"># Follow logs (streams to stdout)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] View logs later: graflag logs -e </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">exp_name</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.evaluate">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.evaluate">[docs]</a>
+    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluate an experiment: compute metrics and generate plots.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            GraFlagError: If evaluation fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Evaluating experiment: </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Experiment </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/results.json&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;results.json not found in experiment </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">eval_service_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">create_evaluation_service</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">remove_evaluation_service</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+
+            <span class="n">eval_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/eval&quot;</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Evaluation results saved to: </span><span class="si">{</span><span class="n">eval_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Evaluation failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Resource Discovery</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.list_methods">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_methods">[docs]</a>
+    <span class="k">def</span> <span class="nf">list_methods</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">MethodInfo</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List available methods.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of MethodInfo objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">methods_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/methods&quot;</span>
+
+        <span class="c1"># Single SSH call: list dirs, check files, and cat all .env files</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;for d in </span><span class="si">{</span><span class="n">methods_dir</span><span class="si">}</span><span class="s1">/*/; do &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  name=$(basename &quot;$d&quot;); &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  has_env=$( [ -f &quot;$d/.env&quot; ] &amp;&amp; echo 1 || echo 0 ); &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  has_dockerfile=$( [ -f &quot;$d/Dockerfile&quot; ] &amp;&amp; echo 1 || echo 0 ); &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  echo &quot;METHOD:$name:$has_env:$has_dockerfile&quot;; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  if [ &quot;$has_env&quot; = &quot;1&quot; ]; then &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;    while IFS= read -r line || [ -n &quot;$line&quot; ]; do &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;      case &quot;$line&quot; in &quot;&quot;|</span><span class="se">\\</span><span class="s1">#*) continue;; esac; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;      echo &quot;ENV:$name:$line&quot;; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;    done &lt; &quot;$d/.env&quot;; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  fi; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;done&#39;</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="c1"># Parse output</span>
+        <span class="n">method_meta</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># name -&gt; {has_env, has_dockerfile}</span>
+        <span class="n">method_envs</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># name -&gt; {key: value}</span>
+
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;METHOD:&#39;</span><span class="p">):</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">method_meta</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s1">&#39;has_env&#39;</span><span class="p">:</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;has_dockerfile&#39;</span><span class="p">:</span> <span class="n">parts</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;1&#39;</span><span class="p">,</span>
+                    <span class="p">}</span>
+                    <span class="n">method_envs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ENV:&#39;</span><span class="p">):</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">env_line</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">in</span> <span class="n">env_line</span><span class="p">:</span>
+                        <span class="n">key</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">env_line</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)</span>
+                        <span class="n">method_envs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">{})[</span><span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="n">methods</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">method_meta</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">meta</span> <span class="o">=</span> <span class="n">method_meta</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="n">env_vars</span> <span class="o">=</span> <span class="n">method_envs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">env_vars</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)}</span>
+
+            <span class="n">methods</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MethodInfo</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="n">env_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;DESCRIPTION&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                <span class="n">source_code</span><span class="o">=</span><span class="n">env_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SOURCE_CODE&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                <span class="n">supported_data</span><span class="o">=</span><span class="n">env_vars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SUPPORTED_DATASETS&quot;</span><span class="p">,</span> <span class="s2">&quot;Unknown&quot;</span><span class="p">),</span>
+                <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+                <span class="n">has_dockerfile</span><span class="o">=</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;has_dockerfile&#39;</span><span class="p">],</span>
+                <span class="n">has_env</span><span class="o">=</span><span class="n">meta</span><span class="p">[</span><span class="s1">&#39;has_env&#39;</span><span class="p">],</span>
+            <span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">methods</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.list_datasets">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_datasets">[docs]</a>
+    <span class="k">def</span> <span class="nf">list_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List available datasets.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of DatasetInfo objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">datasets_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/datasets&quot;</span>
+
+        <span class="c1"># Single SSH call: list all datasets with size and file count</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;for d in </span><span class="si">{</span><span class="n">datasets_dir</span><span class="si">}</span><span class="s1">/*/; do &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  [ -d &quot;$d&quot; ] || continue; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  name=$(basename &quot;$d&quot;); &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  size=$(du -sm &quot;$d&quot; 2&gt;/dev/null | cut -f1 || echo 0); &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  count=$(find &quot;$d&quot; -type f 2&gt;/dev/null | wc -l); &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;  echo &quot;$name:$size:$count&quot;; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;done&#39;</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span> <span class="ow">or</span> <span class="s1">&#39;:&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">size_mb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+                    <span class="n">size_mb</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">file_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span>
+                    <span class="n">file_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="n">datasets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DatasetInfo</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">path</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">datasets_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">size_mb</span><span class="o">=</span><span class="n">size_mb</span><span class="p">,</span>
+                    <span class="n">file_count</span><span class="o">=</span><span class="n">file_count</span><span class="p">,</span>
+                <span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">datasets</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.list_experiments">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_experiments">[docs]</a>
+    <span class="k">def</span> <span class="nf">list_experiments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List recent experiments.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of ExperimentInfo (most recent first).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;experiments&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;ls -1 </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/ 2&gt;/dev/null || true&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">exp_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+
+        <span class="c1"># Fetch running services once</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">running_services</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">get_service_names</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">running_services</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="n">experiments</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">exp_names</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_experiment_info</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">running_services</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">info</span><span class="p">:</span>
+                <span class="n">experiments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+
+        <span class="c1"># Sort by timestamp (most recent first)</span>
+        <span class="n">experiments</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">timestamp</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">experiments</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.list_services">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_services">[docs]</a>
+    <span class="k">def</span> <span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List running Docker services.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of service dicts with name, replicas, image, status.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">list_services</span><span class="p">()</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Logs</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.get_logs">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_logs">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tail</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get experiment logs (non-streaming).</span>
+
+<span class="sd">        Tries Docker service logs first, then falls back to method_output.txt.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of log lines.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Try Docker service logs</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">get_service_logs</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">,</span> <span class="n">tail</span><span class="o">=</span><span class="n">tail</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logs</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">logs</span>
+
+        <span class="c1"># Fall back to saved output</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/method_output.txt&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">content</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="n">content</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="n">tail</span><span class="p">:]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">tail</span> <span class="k">else</span> <span class="n">lines</span>
+
+        <span class="k">return</span> <span class="p">[]</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.follow_logs">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.follow_logs">[docs]</a>
+    <span class="k">def</span> <span class="nf">follow_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Follow logs for an experiment (streams to stdout).</span>
+
+<span class="sd">        Shows build log (if exists) + service logs.</span>
+<span class="sd">        Falls back to method_output.txt if the service is gone.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">exp_base</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">output_parts</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Show build log if it exists</span>
+        <span class="n">build_log_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exp_base</span><span class="si">}</span><span class="s2">/build.log&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">build_log_path</span><span class="p">):</span>
+            <span class="n">build_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">build_log_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">build_content</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">build_content</span><span class="p">)</span>
+
+        <span class="c1"># Try Docker service logs (follow mode)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">service_exists</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">output_parts</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=== SERVICE LOGS ===&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_tee</span><span class="p">(</span><span class="n">tee_file</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Service no longer exists -- fall back to method_output.txt</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exp_base</span><span class="si">}</span><span class="s2">/method_output.txt&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[INFO] Service removed. Showing saved output:&quot;</span><span class="p">)</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
+            <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_tee</span><span class="p">(</span><span class="n">tee_file</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">output_parts</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_tee</span><span class="p">(</span><span class="n">tee_file</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No logs found for experiment &#39;</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.show_logs">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.show_logs">[docs]</a>
+    <span class="k">def</span> <span class="nf">show_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Show logs (non-follow mode) — prints to stdout.&quot;&quot;&quot;</span>
+        <span class="n">exp_base</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">output_parts</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Show build log if it exists</span>
+        <span class="n">build_log_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exp_base</span><span class="si">}</span><span class="s2">/build.log&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">build_log_path</span><span class="p">):</span>
+            <span class="n">build_content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">build_log_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">build_content</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">build_content</span><span class="p">)</span>
+
+        <span class="c1"># Try Docker service logs (non-follow)</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">get_service_logs</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">logs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">output_parts</span><span class="p">:</span>
+                <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span>
+                <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;=== SERVICE LOGS ===&quot;</span><span class="p">)</span>
+                <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">output_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">logs</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_tee</span><span class="p">(</span><span class="n">tee_file</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Fall back to method_output.txt</span>
+        <span class="n">output_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exp_base</span><span class="si">}</span><span class="s2">/method_output.txt&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">output_path</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[INFO] Service removed. Showing saved output:&quot;</span><span class="p">)</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">output_path</span><span class="p">)</span>
+            <span class="n">output_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_tee</span><span class="p">(</span><span class="n">tee_file</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">output_parts</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_save_tee</span><span class="p">(</span><span class="n">tee_file</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No logs found for experiment &#39;</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Service Control</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.stop">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.stop">[docs]</a>
+    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">remove</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stop a running experiment/service.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            experiment_name: Name of the experiment</span>
+<span class="sd">            remove: If True, also delete the experiment directory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[STOP] Stopping experiment: </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">stop_service</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Service </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2"> stopped&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] No running service for </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">remove</span><span class="p">:</span>
+            <span class="n">exp_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;rm -rf </span><span class="si">{</span><span class="n">exp_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Deleted experiment directory: </span><span class="si">{</span><span class="n">exp_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Results</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.get_experiment_results">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_experiment_results">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_experiment_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentResults</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get experiment results from results.json.&quot;&quot;&quot;</span>
+        <span class="n">results_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/results.json&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat </span><span class="si">{</span><span class="n">results_path</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">return</span> <span class="n">ExperimentResults</span><span class="p">(</span>
+            <span class="n">experiment_name</span><span class="o">=</span><span class="n">experiment_name</span><span class="p">,</span>
+            <span class="n">method_name</span><span class="o">=</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;method_name&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+            <span class="n">dataset</span><span class="o">=</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">execution_time_ms</span><span class="o">=</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;exec_time_ms&quot;</span><span class="p">),</span>
+            <span class="n">peak_memory_mb</span><span class="o">=</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;peak_memory_mb&quot;</span><span class="p">),</span>
+            <span class="n">peak_gpu_memory_mb</span><span class="o">=</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;peak_gpu_mb&quot;</span><span class="p">),</span>
+            <span class="n">result_type</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result_type&quot;</span><span class="p">),</span>
+            <span class="n">scores_available</span><span class="o">=</span><span class="s2">&quot;scores&quot;</span> <span class="ow">in</span> <span class="n">data</span> <span class="ow">or</span> <span class="s2">&quot;scores_file&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.get_evaluation_results">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_evaluation_results">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_evaluation_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EvaluationResults</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get evaluation results from eval/evaluation.json.&quot;&quot;&quot;</span>
+        <span class="n">eval_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/eval&quot;</span>
+        <span class="n">eval_json</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">eval_path</span><span class="si">}</span><span class="s2">/evaluation.json&quot;</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat </span><span class="si">{</span><span class="n">eval_json</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="c1"># List plot files</span>
+        <span class="n">plots</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ls -1 </span><span class="si">{</span><span class="n">eval_path</span><span class="si">}</span><span class="s2">/*.png 2&gt;/dev/null || true&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                    <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">EvaluationResults</span><span class="p">(</span>
+            <span class="n">experiment_name</span><span class="o">=</span><span class="n">experiment_name</span><span class="p">,</span>
+            <span class="n">metrics</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metrics&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+            <span class="n">plots_available</span><span class="o">=</span><span class="n">plots</span><span class="p">,</span>
+            <span class="n">evaluation_path</span><span class="o">=</span><span class="n">eval_path</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># File Operations</span>
+    <span class="c1"># ========================================================================</span>
+
+<div class="viewcode-block" id="GraFlag.copy_files">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.copy_files">[docs]</a>
+    <span class="k">def</span> <span class="nf">copy_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_paths</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">from_remote</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy files/directories bidirectionally.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">from_remote</span><span class="p">:</span>
+            <span class="n">remote_sources</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="p">(</span><span class="n">source_paths</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source_paths</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">source_paths</span><span class="p">]):</span>
+                <span class="n">clean_src</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+                <span class="n">remote_sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">clean_src</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">copy_files</span><span class="p">(</span><span class="n">remote_sources</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">,</span> <span class="n">recursive</span><span class="p">,</span> <span class="n">from_remote</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">clean_dest</span> <span class="o">=</span> <span class="n">dest_path</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+            <span class="n">remote_dest</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">clean_dest</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">copy_files</span><span class="p">(</span><span class="n">source_paths</span><span class="p">,</span> <span class="n">remote_dest</span><span class="p">,</span> <span class="n">recursive</span><span class="p">,</span> <span class="n">from_remote</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.mount_nfs">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.mount_nfs">[docs]</a>
+    <span class="k">def</span> <span class="nf">mount_nfs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Mount NFS share on local machine.&quot;&quot;&quot;</span>
+        <span class="n">mount_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">shared_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mount_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;[WARN] Stale NFS mount detected, cleaning up...&quot;</span><span class="p">)</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;sudo umount -l </span><span class="si">{</span><span class="n">mount_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">mount_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mountpoint -q </span><span class="si">{</span><span class="n">mount_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] NFS already mounted at </span><span class="si">{</span><span class="n">mount_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="n">mount_cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;sudo mount -t nfs &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-o addr=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">,port=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">nfs_port</span><span class="si">}</span><span class="s2">,&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;vers=3,hard,intr,rsize=8192,wsize=8192,timeo=30,retrans=3 &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:/tmp/shared </span><span class="si">{</span><span class="n">mount_dir</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">mount_cmd</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] NFS mounted at </span><span class="si">{</span><span class="n">mount_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to mount NFS at </span><span class="si">{</span><span class="n">mount_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.sync">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.sync">[docs]</a>
+    <span class="k">def</span> <span class="nf">sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">local_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">is_lib</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sync a local method or library directory to remote shared storage.&quot;&quot;&quot;</span>
+        <span class="n">local_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">local_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">local_dir</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Path is not a directory: </span><span class="si">{</span><span class="n">local_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_lib</span><span class="p">:</span>
+            <span class="n">lib_name</span> <span class="o">=</span> <span class="n">local_dir</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">remote_dest</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/libs/</span><span class="si">{</span><span class="n">lib_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Syncing library &#39;</span><span class="si">{</span><span class="n">lib_name</span><span class="si">}</span><span class="s2">&#39; to remote...&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">env_file</span> <span class="o">=</span> <span class="n">local_dir</span> <span class="o">/</span> <span class="s2">&quot;.env&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">env_file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No .env file found in </span><span class="si">{</span><span class="n">local_dir</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+            <span class="n">method_name</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">env_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;METHOD_NAME=&quot;</span><span class="p">):</span>
+                        <span class="n">method_name</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                        <span class="k">break</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">method_name</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;METHOD_NAME not found in </span><span class="si">{</span><span class="n">env_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">remote_dest</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/methods/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Syncing method &#39;</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">&#39; to remote...&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">copy_files</span><span class="p">(</span>
+            <span class="n">source_paths</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">local_dir</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">],</span>
+            <span class="n">dest_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+            <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">from_remote</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">target_type</span> <span class="o">=</span> <span class="s2">&quot;library&quot;</span> <span class="k">if</span> <span class="n">is_lib</span> <span class="k">else</span> <span class="s2">&quot;method&quot;</span>
+        <span class="n">target_name</span> <span class="o">=</span> <span class="n">lib_name</span> <span class="k">if</span> <span class="n">is_lib</span> <span class="k">else</span> <span class="n">method_name</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Synced </span><span class="si">{</span><span class="n">target_type</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">target_name</span><span class="si">}</span><span class="s2">&#39; to </span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ========================================================================</span>
+    <span class="c1"># Internal Helpers</span>
+    <span class="c1"># ========================================================================</span>
+
+    <span class="k">def</span> <span class="nf">_write_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write status.json to an experiment directory on the remote.&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()}</span>
+        <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">error</span>
+        <span class="n">status_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">status_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">/status.json&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">status_path</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;STATUSEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">status_data</span><span class="si">}</span><span class="se">\n</span><span class="s2">STATUSEOF&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_experiment_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">running_services</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get experiment information.&quot;&quot;&quot;</span>
+        <span class="n">full_exp_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span>
+
+        <span class="c1"># Single SSH call to check all files and read status.json</span>
+        <span class="n">check_cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;echo &quot;EXISTS:$(test -d </span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s1"> &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;echo &quot;RESULTS:$(test -f </span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s1">/results.json &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;echo &quot;EVAL:$(test -f </span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s1">/eval/evaluation.json &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;echo &quot;BUILD_LOG:$(test -f </span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s1">/build.log &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;echo &quot;STATUS_JSON:$(cat </span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s1">/status.json 2&gt;/dev/null || echo </span><span class="se">\&#39;\&#39;</span><span class="s1">)&quot;&#39;</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">check_cmd</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">checks</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">status_json_raw</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;STATUS_JSON:&#39;</span><span class="p">):</span>
+                <span class="n">status_json_raw</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="s1">&#39;STATUS_JSON:&#39;</span><span class="p">):]</span>
+            <span class="k">elif</span> <span class="s1">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">checks</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;1&#39;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">checks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;EXISTS&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">has_results</span> <span class="o">=</span> <span class="n">checks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;RESULTS&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">has_evaluation</span> <span class="o">=</span> <span class="n">checks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;EVAL&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">has_build_log</span> <span class="o">=</span> <span class="n">checks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;BUILD_LOG&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Parse status.json</span>
+        <span class="n">runner_status</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">status_json_raw</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">status_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">status_json_raw</span><span class="p">)</span>
+                <span class="n">runner_status</span> <span class="o">=</span> <span class="n">status_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="k">pass</span>
+
+        <span class="c1"># Parse experiment name</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">exp_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">)</span>
+        <span class="n">method</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;unknown&quot;</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="k">else</span> <span class="s2">&quot;unknown&quot;</span>
+        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="c1"># Check if service exists</span>
+        <span class="k">if</span> <span class="n">running_services</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">service_exists</span> <span class="o">=</span> <span class="n">exp_name</span> <span class="ow">in</span> <span class="n">running_services</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">service_exists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">service_exists</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+
+        <span class="c1"># Check if service tasks all failed</span>
+        <span class="n">service_failed</span> <span class="o">=</span> <span class="n">service_exists</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">is_service_failed</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+
+        <span class="c1"># Determine status</span>
+        <span class="k">if</span> <span class="n">runner_status</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;completed&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">):</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">runner_status</span>
+        <span class="k">elif</span> <span class="n">service_failed</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span>
+        <span class="k">elif</span> <span class="n">runner_status</span> <span class="o">==</span> <span class="s2">&quot;building&quot;</span><span class="p">:</span>
+            <span class="c1"># During build: service doesn&#39;t exist yet (expected).</span>
+            <span class="c1"># Only mark failed if build finished (build.log exists) but no service was created.</span>
+            <span class="k">if</span> <span class="n">service_exists</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;building&quot;</span>
+            <span class="k">elif</span> <span class="n">has_build_log</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span>  <span class="c1"># build finished but service never created</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;building&quot;</span>  <span class="c1"># still building, no service yet</span>
+        <span class="k">elif</span> <span class="n">runner_status</span> <span class="o">==</span> <span class="s2">&quot;running&quot;</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;running&quot;</span> <span class="k">if</span> <span class="n">service_exists</span> <span class="k">else</span> <span class="s2">&quot;stopped&quot;</span>
+        <span class="k">elif</span> <span class="n">service_exists</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;running&quot;</span>
+        <span class="k">elif</span> <span class="n">has_results</span> <span class="ow">or</span> <span class="n">has_evaluation</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;completed&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;unknown&quot;</span>
+
+        <span class="k">return</span> <span class="n">ExperimentInfo</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">exp_name</span><span class="p">,</span>
+            <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span>
+            <span class="n">dataset</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">timestamp</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
+            <span class="n">has_results</span><span class="o">=</span><span class="n">has_results</span><span class="p">,</span>
+            <span class="n">has_evaluation</span><span class="o">=</span><span class="n">has_evaluation</span><span class="p">,</span>
+            <span class="n">results_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s2">/results.json&quot;</span> <span class="k">if</span> <span class="n">has_results</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">evaluation_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s2">/eval&quot;</span> <span class="k">if</span> <span class="n">has_evaluation</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">service_name</span><span class="o">=</span><span class="n">exp_name</span> <span class="k">if</span> <span class="n">service_exists</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_save_tee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save output to file if tee_file is specified.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">tee_file</span><span class="p">:</span>
+            <span class="n">tee_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tee_file</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+            <span class="n">tee_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">tee_path</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_parts</span><span class="p">))</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved to </span><span class="si">{</span><span class="n">tee_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

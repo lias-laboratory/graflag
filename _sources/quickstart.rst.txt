@@ -1,0 +1,65 @@
+Quick Start
+===========
+
+Installation
+------------
+
+Install the GraFlag CLI (includes GUI and devcluster)::
+
+    cd graflag
+    pip install -e .
+
+Configuration
+-------------
+
+Run the interactive setup wizard, which prompts for connection details and stores
+them in ``~/.config/graflag/config.env``::
+
+    graflag setup
+
+The wizard asks for:
+
+- **Manager IP** -- address of the Swarm manager node
+- **SSH port** -- SSH port on the manager (default: 22)
+- **SSH key** -- path to your private key (default: ``~/.ssh/id_ed25519``)
+- **Shared directory** -- NFS-mounted path on the remote (default: ``/shared``)
+- **Hosts file** -- path to ``hosts.yml`` containing worker IPs (default: ``hosts.yml``)
+
+Alternatively, place a ``.env`` file in the working directory to override the
+stored configuration.
+
+For local development without a physical cluster, use the built-in devcluster::
+
+    graflag devcluster --hosts hosts.yml
+    graflag setup
+
+Running an Experiment
+---------------------
+
+Build and run a method on a dataset::
+
+    graflag run -m bond_dominant -d bond_inj_cora --build
+
+With custom parameters::
+
+    graflag run -m taddy -d uci --params MAX_EPOCH=100 LEARNING_RATE=0.001
+
+Evaluating Results
+------------------
+
+Run evaluation on a completed experiment::
+
+    graflag evaluate -e exp__bond_dominant__bond_inj_cora__20260309_120000
+
+This computes AUC-ROC, AUC-PR, and generates plots in the experiment's ``eval/`` directory.
+
+Web Dashboard
+-------------
+
+Start the GUI::
+
+    graflag gui
+
+Open ``http://localhost:5000`` in a browser. Use ``--port`` to change the port::
+
+    graflag gui --port 8080 --debug

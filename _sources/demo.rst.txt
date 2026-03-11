@@ -1,0 +1,31 @@
+Demo Video
+==========
+
+A full walkthrough of GraFlag demonstrating CLI and GUI workflows on a real cluster
+with 1 manager and 4 GPU workers, 26 methods, and 34 datasets.
+
+.. raw:: html
+
+   <video controls width="100%" style="border-radius:8px; margin:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+     <source src="_static/graflag_full_demo.mp4" type="video/mp4">
+     Your browser does not support the video tag.
+   </video>
+
+Scenarios
+---------
+
+**Part 0: Platform Overview**
+   Cluster setup, status, available methods, datasets, and experiments.
+
+**Part 1: Comparative Benchmarking**
+   Comparing DOMINANT vs CONAD on bond_inj_cora with standardized evaluation.
+
+**Part 2: Custom Method Integration**
+   Integrating TADDY with GraFlag using the ``graflag_runner`` framework.
+
+**Part 3: Reproducibility Verification**
+   Reproducing an experiment from its saved ``service_config.json``.
+
+**GUI Dashboard Demo**
+   Live walkthrough of the web dashboard including running DOMINANT on bond_inj_cora,
+   viewing evaluation results, and browsing experiment plots.

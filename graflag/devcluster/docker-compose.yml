@@ -1,0 +1,122 @@
+services:
+  manager:
+    build:
+        context: ./manager
+        dockerfile: Dockerfile.manager
+        args:
+            HOST_PUBKEY: ${HOST_PUBKEY}
+            MANAGER_PRIVKEY: ${MANAGER_PRIVKEY}
+            MANAGER_PUBKEY: ${MANAGER_PUBKEY}
+            MANAGER_IP: 192.168.100.10
+    container_name: manager
+    hostname: manager
+    privileged: true
+    networks:
+      gf-virtual-net:
+        ipv4_address: 192.168.100.10
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  worker1:
+    build:
+        context: ./worker
+        dockerfile: Dockerfile.worker
+        args:
+            MANAGER_PUBKEY: ${MANAGER_PUBKEY}
+            MANAGER_IP: 192.168.100.10
+    container_name: worker1
+    hostname: worker1
+    privileged: true
+    depends_on:
+        - manager
+    networks:
+      gf-virtual-net:
+        ipv4_address: 192.168.100.11
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  worker2:
+    build:
+        context: ./worker
+        dockerfile: Dockerfile.worker
+        args:
+            MANAGER_PUBKEY: ${MANAGER_PUBKEY}
+            MANAGER_IP: 192.168.100.10
+    container_name: worker2
+    hostname: worker2
+    privileged: true
+    depends_on:
+        - manager
+    networks:
+      gf-virtual-net:
+        ipv4_address: 192.168.100.12
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  worker3:
+    build:
+        context: ./worker
+        dockerfile: Dockerfile.worker
+        args:
+            MANAGER_PUBKEY: ${MANAGER_PUBKEY}
+            MANAGER_IP: 192.168.100.10
+    container_name: worker3
+    hostname: worker3
+    privileged: true
+    depends_on:
+        - manager
+    networks:
+      gf-virtual-net:
+        ipv4_address: 192.168.100.13
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  worker4:
+    build:
+        context: ./worker
+        dockerfile: Dockerfile.worker
+        args:
+            MANAGER_PUBKEY: ${MANAGER_PUBKEY}
+            MANAGER_IP: 192.168.100.10
+    container_name: worker4
+    hostname: worker4
+    privileged: true
+    depends_on:
+        - manager
+    networks:
+      gf-virtual-net:
+        ipv4_address: 192.168.100.14
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+networks:
+  gf-virtual-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24

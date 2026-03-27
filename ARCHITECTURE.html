@@ -299,7 +299,7 @@
 <td><p>Start the web dashboard</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">devcluster</span></code></p></td>
-<td><p>Deploy a local Docker Compose development cluster</p></td>
+<td><p>Deploy or tear down a local Docker Compose development cluster</p></td>
 </tr>
 </tbody>
 </table>
@@ -483,7 +483,7 @@
 </section>
 <section id="devcluster-development-cluster-subpackage">
 <h4>devcluster/ – Development Cluster (subpackage)<a class="headerlink" href="#devcluster-development-cluster-subpackage" title="Link to this heading"></a></h4>
-<p>A Docker Compose-based virtual cluster for local development and testing, located in <code class="docutils literal notranslate"><span class="pre">graflag/graflag/devcluster/</span></code>. Accessible via <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">devcluster</span> <span class="pre">--hosts</span> <span class="pre">hosts.yml</span> <span class="pre">[--pubkey</span> <span class="pre">KEY]</span></code>.</p>
+<p>A Docker Compose-based virtual cluster for local development and testing, located in <code class="docutils literal notranslate"><span class="pre">graflag/graflag/devcluster/</span></code>. Accessible via <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">devcluster</span> <span class="pre">--hosts</span> <span class="pre">hosts.yml</span> <span class="pre">[--pubkey</span> <span class="pre">KEY]</span></code>. Use <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">devcluster</span> <span class="pre">--down</span></code> to stop and remove the cluster.</p>
 <p><strong>Components</strong>:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code>: Defines a manager node and multiple worker nodes (up to 4) on a bridged network (<code class="docutils literal notranslate"><span class="pre">192.168.100.0/24</span></code>).</p></li>

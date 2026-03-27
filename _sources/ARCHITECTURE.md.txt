@@ -124,7 +124,7 @@ Entry point for all user-facing commands. Uses `argparse` with the following com
 | `copy`       | Transfer files between local and remote (rsync)  |
 | `sync`       | Sync a method or library directory to remote     |
 | `gui`        | Start the web dashboard                          |
-| `devcluster` | Deploy a local Docker Compose development cluster|
+| `devcluster` | Deploy or tear down a local Docker Compose development cluster|
 
 Key flags for `run`:
 - `--from-config CONFIG_FILE`: Replay an experiment from a saved `service_config.json`.
@@ -253,7 +253,7 @@ A Flask application with a Vue.js frontend, located in `graflag/graflag/gui/`. A
 
 #### devcluster/ -- Development Cluster (subpackage)
 
-A Docker Compose-based virtual cluster for local development and testing, located in `graflag/graflag/devcluster/`. Accessible via `graflag devcluster --hosts hosts.yml [--pubkey KEY]`.
+A Docker Compose-based virtual cluster for local development and testing, located in `graflag/graflag/devcluster/`. Accessible via `graflag devcluster --hosts hosts.yml [--pubkey KEY]`. Use `graflag devcluster --down` to stop and remove the cluster.
 
 **Components**:
 - `docker-compose.yml`: Defines a manager node and multiple worker nodes (up to 4) on a bridged network (`192.168.100.0/24`).

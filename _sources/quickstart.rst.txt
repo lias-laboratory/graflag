@@ -4,10 +4,35 @@ Quick Start
 Installation
 ------------
 
-Install the GraFlag CLI (includes GUI and devcluster)::
+Install from PyPI::
 
+    pip install graflag
+
+Or from source::
+
+    git clone https://github.com/lias-laboratory/graflag.git
     cd graflag
     pip install -e .
+
+Shared Storage Setup
+--------------------
+
+GraFlag uses an NFS-mounted shared directory containing methods, datasets, and
+experiment results. The `graflag-shared <https://github.com/lias-laboratory/graflag-shared>`_
+repository provides this structure.
+
+Clone it on your NFS mount point::
+
+    cd /shared  # or your NFS mount point
+    git clone https://github.com/lias-laboratory/graflag-shared.git .
+    git lfs pull  # download dataset files
+
+The shared directory contains:
+
+- ``methods/`` -- GAD method implementations (Dockerfiles, configs, scripts)
+- ``datasets/`` -- Benchmark datasets (tracked via Git LFS)
+- ``experiments/`` -- Experiment results (created at runtime)
+- ``libs/`` -- Shared Python libraries (graflag_runner, graflag_evaluator, graflag_bond)
 
 Configuration
 -------------
@@ -24,6 +49,10 @@ The wizard asks for:
 - **SSH key** -- path to your private key (default: ``~/.ssh/id_ed25519``)
 - **Shared directory** -- NFS-mounted path on the remote (default: ``/shared``)
 - **Hosts file** -- path to ``hosts.yml`` containing worker IPs (default: ``hosts.yml``)
+
+To reconfigure later::
+
+    graflag setup --reconfigure
 
 Alternatively, place a ``.env`` file in the working directory to override the
 stored configuration.
@@ -43,6 +72,10 @@ Build and run a method on a dataset::
 With custom parameters::
 
     graflag run -m taddy -d uci --params MAX_EPOCH=100 LEARNING_RATE=0.001
+
+From a saved config::
+
+    graflag run --from-config ./experiments/exp__method__dataset__time/service_config.json
 
 Evaluating Results
 ------------------

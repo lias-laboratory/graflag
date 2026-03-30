@@ -1,8 +1,8 @@
 Demo Video
 ==========
 
-A full walkthrough of GraFlag demonstrating CLI and GUI workflows on a real cluster
-with 1 manager and 4 GPU workers, 26 methods, and 34 datasets.
+A full walkthrough of GraFlag demonstrating GUI and CLI workflows on a real cluster
+with GPU-enabled workers.
 
 .. raw:: html
 
@@ -14,18 +14,18 @@ with 1 manager and 4 GPU workers, 26 methods, and 34 datasets.
 Scenarios
 ---------
 
-**Part 0: Platform Overview**
-   Cluster setup, status, available methods, datasets, and experiments.
+**GUI Dashboard**
+   Live walkthrough of the web dashboard: cluster status, launching experiments,
+   streaming logs, and viewing evaluation metrics and plots.
 
-**Part 1: Comparative Benchmarking**
-   Comparing DOMINANT vs CONAD on bond_inj_cora with standardized evaluation.
+**CLI Overview**
+   Cluster setup, status, and browsing available methods and datasets from the terminal.
 
-**Part 2: Custom Method Integration**
-   Integrating TADDY with GraFlag using the ``graflag_runner`` framework.
+**Scenario 1: Comparative Benchmarking**
+   Comparing DOMINANT vs CONAD on bond_inj_cora with automated evaluation.
 
-**Part 3: Reproducibility Verification**
-   Reproducing an experiment from its saved ``service_config.json``.
+**Scenario 2: Custom Method Integration**
+   Integrating TADDY into the framework using the ``graflag_runner`` SDK.
 
-**GUI Dashboard Demo**
-   Live walkthrough of the web dashboard including running DOMINANT on bond_inj_cora,
-   viewing evaluation results, and browsing experiment plots.
+**Scenario 3: Reproducibility Verification**
+   Reproducing an experiment from its saved ``service_config.json`` and comparing results.

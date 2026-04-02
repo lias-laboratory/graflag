@@ -58,6 +58,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.setup"><code class="docutils literal notranslate"><span class="pre">GraFlag.setup()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.status"><code class="docutils literal notranslate"><span class="pre">GraFlag.status()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.run"><code class="docutils literal notranslate"><span class="pre">GraFlag.run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.register_metric"><code class="docutils literal notranslate"><span class="pre">GraFlag.register_metric()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.evaluate"><code class="docutils literal notranslate"><span class="pre">GraFlag.evaluate()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.list_methods"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_methods()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.core.GraFlag.list_datasets"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_datasets()</span></code></a></li>
@@ -159,6 +160,31 @@
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference internal" href="#graflag.core.GraFlagError" title="graflag.core.GraFlagError"><strong>GraFlagError</strong></a> – If run fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.core.GraFlag.register_metric">
+<span class="sig-name descname"><span class="pre">register_metric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric_func</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">experiment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.register_metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.core.GraFlag.register_metric" title="Link to this definition"></a></dt>
+<dd><p>Register a custom metric as a plugin file on the cluster.</p>
+<p>The function source is extracted via <code class="docutils literal notranslate"><span class="pre">inspect.getsource</span></code> and written
+to a <code class="docutils literal notranslate"><span class="pre">.py</span></code> plugin file that the evaluator loads at runtime.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>result_type</strong> – Result type the metric applies to
+(e.g. <code class="docutils literal notranslate"><span class="pre">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span></code>).</p></li>
+<li><p><strong>metric_func</strong> – A function with signature
+<code class="docutils literal notranslate"><span class="pre">(scores,</span> <span class="pre">ground_truth,</span> <span class="pre">**kwargs)</span> <span class="pre">-&gt;</span> <span class="pre">Dict[str,</span> <span class="pre">float]</span></code>.</p></li>
+<li><p><strong>experiment</strong> – If given, the plugin is scoped to that experiment
+(<code class="docutils literal notranslate"><span class="pre">custom_metrics/</span></code> inside the experiment directory).
+Otherwise it is saved to the global plugins directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#graflag.core.GraFlagError" title="graflag.core.GraFlagError"><strong>GraFlagError</strong></a> – If the function source cannot be extracted or the
+    file cannot be written.</p>
 </dd>
 </dl>
 </dd></dl>

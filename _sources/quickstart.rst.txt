@@ -86,6 +86,44 @@ Run evaluation on a completed experiment::
 
 This computes AUC-ROC, AUC-PR, and generates plots in the experiment's ``eval/`` directory.
 
+Custom Metrics
+~~~~~~~~~~~~~~
+
+Register custom metrics via the Python API::
+
+    from graflag import GraFlag
+
+    def hits_at_100(scores, ground_truth, **kw):
+        top = scores.argsort()[-100:]
+        return {"hits@100": ground_truth[top].mean()}
+
+    gf = GraFlag()
+    # Save globally (applied to all future evaluations)
+    gf.register_metric("EDGE_STREAM_ANOMALY_SCORES", hits_at_100)
+
+    # Or scope to a specific experiment
+    gf.register_metric("EDGE_STREAM_ANOMALY_SCORES", hits_at_100,
+                        experiment="exp__taddy__uci__20260309_120000")
+
+This extracts the function source and writes it as a plugin file on the cluster.
+The evaluator loads plugins automatically before computing metrics.
+
+You can also create plugin files manually. Place a ``.py`` file in either:
+
+- ``libs/graflag_evaluator/plugins/`` -- global (all evaluations)
+- ``experiments/<exp_name>/custom_metrics/`` -- per-experiment
+
+Each plugin file should import ``MetricCalculator`` and call ``register_metric()``::
+
+    # custom_metrics/hits_at_100.py
+    from graflag_evaluator import MetricCalculator
+
+    def hits_at_100(scores, ground_truth, **kw):
+        top = scores.argsort()[-100:]
+        return {"hits@100": ground_truth[top].mean()}
+
+    MetricCalculator.register_metric("EDGE_STREAM_ANOMALY_SCORES", hits_at_100)
+
 Web Dashboard
 -------------
 

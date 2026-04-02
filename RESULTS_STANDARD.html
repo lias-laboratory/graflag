@@ -88,6 +88,11 @@
 <li class="toctree-l3"><a class="reference internal" href="#optional-fields">Optional Fields</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#custom-metrics">Custom Metrics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#plugin-files">Plugin Files</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#python-api">Python API</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
@@ -475,6 +480,46 @@
 </tr>
 </tbody>
 </table>
+</section>
+</section>
+<section id="custom-metrics">
+<h2>Custom Metrics<a class="headerlink" href="#custom-metrics" title="Link to this heading"></a></h2>
+<p>The evaluator computes built-in metrics (AUC-ROC, AUC-PR, Precision&#64;K, Recall&#64;K, F1&#64;K, Best F1) for all result types. You can extend this with custom metrics via plugins.</p>
+<section id="plugin-files">
+<h3>Plugin Files<a class="headerlink" href="#plugin-files" title="Link to this heading"></a></h3>
+<p>Place a <code class="docutils literal notranslate"><span class="pre">.py</span></code> file in one of two locations:</p>
+<ul class="simple">
+<li><p><strong>Global</strong> (all evaluations): <code class="docutils literal notranslate"><span class="pre">libs/graflag_evaluator/plugins/</span></code></p></li>
+<li><p><strong>Per-experiment</strong>: <code class="docutils literal notranslate"><span class="pre">experiments/&lt;exp_name&gt;/custom_metrics/</span></code></p></li>
+</ul>
+<p>Each plugin imports <code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> and registers a metric function at module level:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># hits_at_100.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">graflag_evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricCalculator</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hits_at_100</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="o">-</span><span class="mi">100</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()}</span>
+
+<span class="n">MetricCalculator</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The function must accept <code class="docutils literal notranslate"><span class="pre">(scores,</span> <span class="pre">ground_truth,</span> <span class="pre">**kwargs)</span></code> and return a <code class="docutils literal notranslate"><span class="pre">Dict[str,</span> <span class="pre">float]</span></code>.</p>
+</section>
+<section id="python-api">
+<h3>Python API<a class="headerlink" href="#python-api" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">GraFlag.register_metric()</span></code> method extracts a function’s source code and writes it as a plugin file on the cluster:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraFlag</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hits_at_100</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="o">-</span><span class="mi">100</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()}</span>
+
+<span class="n">gf</span> <span class="o">=</span> <span class="n">GraFlag</span><span class="p">()</span>
+<span class="n">gf</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">)</span>
+<span class="n">gf</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="s2">&quot;exp__taddy__uci__20260309_120000&quot;</span><span class="p">)</span>  <span class="c1"># includes hits@100</span>
+</pre></div>
+</div>
+<p>Pass <code class="docutils literal notranslate"><span class="pre">experiment=&quot;exp_name&quot;</span></code> to scope the metric to a single experiment instead of globally.</p>
 </section>
 </section>
 </section>

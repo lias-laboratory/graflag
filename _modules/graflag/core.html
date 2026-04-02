@@ -6,15 +6,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>graflag.core &mdash; GraFlag 1.0.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8d563738"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -58,7 +58,10 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../method_integration.html">Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
 
@@ -89,18 +92,20 @@
   <h1>Source code for graflag.core</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Core GraFlag functionality.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">import</span> <span class="nn">subprocess</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">textwrap</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
-<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">GraflagConfig</span>
-<span class="kn">from</span> <span class="nn">.ssh</span> <span class="kn">import</span> <span class="n">SSHManager</span>
-<span class="kn">from</span> <span class="nn">.docker_ops</span> <span class="kn">import</span> <span class="n">DockerManager</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">load_method_env</span>
-<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraflagConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">SSHManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.docker_ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">DockerManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_method_env</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ClusterInfo</span><span class="p">,</span> <span class="n">MethodInfo</span><span class="p">,</span> <span class="n">DatasetInfo</span><span class="p">,</span> <span class="n">ExperimentInfo</span><span class="p">,</span>
     <span class="n">ExperimentResults</span><span class="p">,</span> <span class="n">EvaluationResults</span><span class="p">,</span>
 <span class="p">)</span>
@@ -110,7 +115,7 @@
 
 <div class="viewcode-block" id="GraFlagError">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlagError">[docs]</a>
-<span class="k">class</span> <span class="nc">GraFlagError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraFlagError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom exception for GraFlag errors.&quot;&quot;&quot;</span>
     <span class="k">pass</span></div>
 
@@ -118,14 +123,14 @@
 
 <div class="viewcode-block" id="GraFlag">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag">[docs]</a>
-<span class="k">class</span> <span class="nc">GraFlag</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GraFlag</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Main GraFlag orchestration class.</span>
 
 <span class="sd">    All public methods return structured data. No direct printing to stdout</span>
 <span class="sd">    (except follow_logs which streams in real time).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;.env&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;.env&quot;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize GraFlag with configuration.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">GraflagConfig</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
@@ -145,7 +150,7 @@
 
 <div class="viewcode-block" id="GraFlag.setup">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.setup">[docs]</a>
-    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup GraFlag cluster: initialize swarm and setup workers.&quot;&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[SETUP] Setting up GraFlag cluster...&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">setup_swarm_manager</span><span class="p">()</span>
@@ -157,7 +162,7 @@
 
 <div class="viewcode-block" id="GraFlag.status">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.status">[docs]</a>
-    <span class="k">def</span> <span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ClusterInfo</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ClusterInfo</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get cluster status.</span>
 
 <span class="sd">        Returns:</span>
@@ -202,7 +207,7 @@
 
 <div class="viewcode-block" id="GraFlag.run">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.run">[docs]</a>
-    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
         <span class="n">build</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">method_params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -263,9 +268,70 @@
         <span class="k">return</span> <span class="n">exp_name</span></div>
 
 
+<div class="viewcode-block" id="GraFlag.register_metric">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.register_metric">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">register_metric</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">result_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metric_func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+        <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Register a custom metric as a plugin file on the cluster.</span>
+
+<span class="sd">        The function source is extracted via ``inspect.getsource`` and written</span>
+<span class="sd">        to a ``.py`` plugin file that the evaluator loads at runtime.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            result_type: Result type the metric applies to</span>
+<span class="sd">                (e.g. ``&quot;EDGE_STREAM_ANOMALY_SCORES&quot;``).</span>
+<span class="sd">            metric_func: A function with signature</span>
+<span class="sd">                ``(scores, ground_truth, **kwargs) -&gt; Dict[str, float]``.</span>
+<span class="sd">            experiment: If given, the plugin is scoped to that experiment</span>
+<span class="sd">                (``custom_metrics/`` inside the experiment directory).</span>
+<span class="sd">                Otherwise it is saved to the global plugins directory.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            GraFlagError: If the function source cannot be extracted or the</span>
+<span class="sd">                file cannot be written.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">func_name</span> <span class="o">=</span> <span class="n">metric_func</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">source</span> <span class="o">=</span> <span class="n">textwrap</span><span class="o">.</span><span class="n">dedent</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsource</span><span class="p">(</span><span class="n">metric_func</span><span class="p">))</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot extract source of </span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;Create the plugin file manually instead.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">plugin_content</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;&quot;&quot;&quot;Auto-generated metric plugin: </span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s1">&quot;&quot;&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s2">&quot;import numpy as np</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;from graflag_evaluator import MetricCalculator</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s1">&#39;MetricCalculator.register_metric(&quot;</span><span class="si">{</span><span class="n">result_type</span><span class="si">}</span><span class="s1">&quot;, </span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">experiment</span><span class="p">:</span>
+            <span class="n">plugin_dir</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2">/custom_metrics&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">plugin_dir</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/libs/&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;graflag_evaluator/plugins&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">plugin_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">plugin_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plugin_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">.py&quot;</span>
+        <span class="c1"># Write via heredoc with a delimiter unlikely to appear in source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">plugin_path</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;PLUGINEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">plugin_content</span><span class="si">}</span><span class="s2">PLUGINEOF&quot;</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Saved metric plugin: </span><span class="si">{</span><span class="n">plugin_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="GraFlag.evaluate">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.evaluate">[docs]</a>
-    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluate an experiment: compute metrics and generate plots.</span>
 
 <span class="sd">        Raises:</span>
@@ -296,7 +362,7 @@
 
 <div class="viewcode-block" id="GraFlag.list_methods">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_methods">[docs]</a>
-    <span class="k">def</span> <span class="nf">list_methods</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">MethodInfo</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_methods</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">MethodInfo</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List available methods.</span>
 
 <span class="sd">        Returns:</span>
@@ -369,7 +435,7 @@
 
 <div class="viewcode-block" id="GraFlag.list_datasets">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_datasets">[docs]</a>
-    <span class="k">def</span> <span class="nf">list_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_datasets</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">DatasetInfo</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List available datasets.</span>
 
 <span class="sd">        Returns:</span>
@@ -419,7 +485,7 @@
 
 <div class="viewcode-block" id="GraFlag.list_experiments">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_experiments">[docs]</a>
-    <span class="k">def</span> <span class="nf">list_experiments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_experiments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List recent experiments.</span>
 
 <span class="sd">        Returns:</span>
@@ -456,7 +522,7 @@
 
 <div class="viewcode-block" id="GraFlag.list_services">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.list_services">[docs]</a>
-    <span class="k">def</span> <span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List running Docker services.</span>
 
 <span class="sd">        Returns:</span>
@@ -471,7 +537,7 @@
 
 <div class="viewcode-block" id="GraFlag.get_logs">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_logs">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tail</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tail</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get experiment logs (non-streaming).</span>
 
 <span class="sd">        Tries Docker service logs first, then falls back to method_output.txt.</span>
@@ -497,7 +563,7 @@
 
 <div class="viewcode-block" id="GraFlag.follow_logs">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.follow_logs">[docs]</a>
-    <span class="k">def</span> <span class="nf">follow_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">follow_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Follow logs for an experiment (streams to stdout).</span>
 
 <span class="sd">        Shows build log (if exists) + service logs.</span>
@@ -541,7 +607,7 @@
 
 <div class="viewcode-block" id="GraFlag.show_logs">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.show_logs">[docs]</a>
-    <span class="k">def</span> <span class="nf">show_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">show_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Show logs (non-follow mode) — prints to stdout.&quot;&quot;&quot;</span>
         <span class="n">exp_base</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="n">output_parts</span> <span class="o">=</span> <span class="p">[]</span>
@@ -586,7 +652,7 @@
 
 <div class="viewcode-block" id="GraFlag.stop">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.stop">[docs]</a>
-    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">remove</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">remove</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Stop a running experiment/service.</span>
 
 <span class="sd">        Args:</span>
@@ -613,7 +679,7 @@
 
 <div class="viewcode-block" id="GraFlag.get_experiment_results">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_experiment_results">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_experiment_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentResults</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_experiment_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentResults</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get experiment results from results.json.&quot;&quot;&quot;</span>
         <span class="n">results_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/results.json&quot;</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat </span><span class="si">{</span><span class="n">results_path</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null&quot;</span><span class="p">)</span>
@@ -641,7 +707,7 @@
 
 <div class="viewcode-block" id="GraFlag.get_evaluation_results">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_evaluation_results">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_evaluation_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EvaluationResults</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_evaluation_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">EvaluationResults</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get evaluation results from eval/evaluation.json.&quot;&quot;&quot;</span>
         <span class="n">eval_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/eval&quot;</span>
         <span class="n">eval_json</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">eval_path</span><span class="si">}</span><span class="s2">/evaluation.json&quot;</span>
@@ -677,7 +743,7 @@
 
 <div class="viewcode-block" id="GraFlag.copy_files">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.copy_files">[docs]</a>
-    <span class="k">def</span> <span class="nf">copy_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_paths</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">from_remote</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_paths</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">from_remote</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy files/directories bidirectionally.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">from_remote</span><span class="p">:</span>
             <span class="n">remote_sources</span> <span class="o">=</span> <span class="p">[]</span>
@@ -693,7 +759,7 @@
 
 <div class="viewcode-block" id="GraFlag.mount_nfs">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.mount_nfs">[docs]</a>
-    <span class="k">def</span> <span class="nf">mount_nfs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mount_nfs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Mount NFS share on local machine.&quot;&quot;&quot;</span>
         <span class="n">mount_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">shared_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
         <span class="k">try</span><span class="p">:</span>
@@ -724,7 +790,7 @@
 
 <div class="viewcode-block" id="GraFlag.sync">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.sync">[docs]</a>
-    <span class="k">def</span> <span class="nf">sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">local_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">is_lib</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sync</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">local_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">is_lib</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sync a local method or library directory to remote shared storage.&quot;&quot;&quot;</span>
         <span class="n">local_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">local_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
@@ -770,7 +836,7 @@
     <span class="c1"># Internal Helpers</span>
     <span class="c1"># ========================================================================</span>
 
-    <span class="k">def</span> <span class="nf">_write_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write status.json to an experiment directory on the remote.&quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()}</span>
         <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
@@ -779,7 +845,7 @@
         <span class="n">status_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">/status.json&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">status_path</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;STATUSEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">status_data</span><span class="si">}</span><span class="se">\n</span><span class="s2">STATUSEOF&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_get_experiment_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">running_services</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_experiment_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">running_services</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get experiment information.&quot;&quot;&quot;</span>
         <span class="n">full_exp_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span>
 
@@ -871,7 +937,7 @@
             <span class="n">service_name</span><span class="o">=</span><span class="n">exp_name</span> <span class="k">if</span> <span class="n">service_exists</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_save_tee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_tee</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tee_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_parts</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save output to file if tee_file is specified.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">tee_file</span><span class="p">:</span>
             <span class="n">tee_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tee_file</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>

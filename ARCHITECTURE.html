@@ -325,6 +325,7 @@
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">get_experiment_results()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">ExperimentResults</span></code> parsed from <code class="docutils literal notranslate"><span class="pre">results.json</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">get_evaluation_results()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">EvaluationResults</span></code> parsed from <code class="docutils literal notranslate"><span class="pre">eval/evaluation.json</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code></strong>: Deploys a <code class="docutils literal notranslate"><span class="pre">graflag-evaluator</span></code> service against a completed experiment.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">register_metric()</span></code></strong>: Saves a custom metric function as a plugin file on the cluster (global or per-experiment) so the evaluator can load it at runtime.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">copy_files()</span></code></strong>: Bidirectional file transfer using rsync over SSH.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">sync()</span></code></strong>: Sync a local method or library directory to the remote shared storage.</p></li>
 <li><p><strong>Status management</strong>: Writes <code class="docutils literal notranslate"><span class="pre">status.json</span></code> to experiment directories during build and on failure.</p></li>
@@ -527,6 +528,7 @@
 <span class="o">+--</span> <span class="n">libs</span><span class="o">/</span>                 <span class="c1"># Shared Python libraries</span>
     <span class="o">+--</span> <span class="n">graflag_runner</span><span class="o">/</span>
     <span class="o">+--</span> <span class="n">graflag_evaluator</span><span class="o">/</span>
+    <span class="o">|</span>   <span class="o">+--</span> <span class="n">plugins</span><span class="o">/</span>      <span class="c1"># Global custom metric plugins</span>
     <span class="o">+--</span> <span class="n">graflag_bond</span><span class="o">/</span>
 </pre></div>
 </div>
@@ -707,10 +709,10 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluator.py</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">Evaluator</span></code> – orchestrator that loads results, computes metrics, generates plots, and saves <code class="docutils literal notranslate"><span class="pre">evaluation.json</span></code>.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Evaluator</span></code> – orchestrator that loads results, computes metrics, generates plots, and saves <code class="docutils literal notranslate"><span class="pre">evaluation.json</span></code>. Loads custom metric plugins on init.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">metrics.py</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> – computes AUC-ROC, AUC-PR, and other metrics based on result type. Handles ragged arrays (e.g., temporal edge scores with varying snapshot sizes).</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> – computes AUC-ROC, AUC-PR, and other metrics based on result type. Handles ragged arrays (e.g., temporal edge scores with varying snapshot sizes). Supports plugin-based custom metrics via <code class="docutils literal notranslate"><span class="pre">register_metric()</span></code> and <code class="docutils literal notranslate"><span class="pre">load_plugins()</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">plots.py</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">PlotGenerator</span></code> – generates ROC curves, PR curves, score distributions, and spot curves from CSV files.</p></td>
@@ -718,8 +720,17 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">run_evaluation.py</span></code></p></td>
 <td><p>Entry point for the evaluation Docker container.</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">plugins/</span></code></p></td>
+<td><p>Directory for global custom metric plugins (<code class="docutils literal notranslate"><span class="pre">.py</span></code> files loaded at evaluation time).</p></td>
+</tr>
 </tbody>
 </table>
+<p><strong>Custom metric plugins</strong>: The evaluator automatically loads <code class="docutils literal notranslate"><span class="pre">.py</span></code> files from two directories before computing metrics:</p>
+<ol class="arabic simple">
+<li><p><strong>Global plugins</strong>: <code class="docutils literal notranslate"><span class="pre">graflag-shared/libs/graflag_evaluator/plugins/</span></code> – applied to all evaluations.</p></li>
+<li><p><strong>Per-experiment plugins</strong>: <code class="docutils literal notranslate"><span class="pre">experiments/&lt;exp_name&gt;/custom_metrics/</span></code> – scoped to a single experiment.</p></li>
+</ol>
+<p>Each plugin file imports <code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> and calls <code class="docutils literal notranslate"><span class="pre">register_metric()</span></code> at module level. Plugins can be created manually or via the Python API (<code class="docutils literal notranslate"><span class="pre">GraFlag.register_metric()</span></code>), which extracts the function source and writes it as a plugin file on the cluster.</p>
 </section>
 </section>
 <hr class="docutils" />
@@ -794,7 +805,10 @@
 </section>
 <section id="evaluation-pipeline">
 <h3>Evaluation Pipeline<a class="headerlink" href="#evaluation-pipeline" title="Link to this heading"></a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">results</span><span class="o">.</span><span class="n">json</span> <span class="o">--&gt;</span> <span class="n">Evaluator</span> <span class="o">--&gt;</span> <span class="n">MetricCalculator</span> <span class="o">--&gt;</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">json</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                   <span class="n">plugins</span><span class="o">/*.</span><span class="n">py</span> <span class="o">------+</span>
+                   <span class="n">custom_metrics</span><span class="o">/*.</span><span class="n">py</span><span class="o">-+-&gt;</span> <span class="n">MetricCalculator</span> <span class="p">(</span><span class="n">load_plugins</span><span class="p">)</span>
+                                       <span class="o">|</span>
+<span class="n">results</span><span class="o">.</span><span class="n">json</span> <span class="o">--&gt;</span> <span class="n">Evaluator</span> <span class="o">-----------&gt;+--&gt;</span> <span class="n">MetricCalculator</span> <span class="o">--&gt;</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">json</span>
                            <span class="o">--&gt;</span> <span class="n">PlotGenerator</span>    <span class="o">--&gt;</span> <span class="n">roc_curve</span><span class="o">.</span><span class="n">png</span>
                                                 <span class="o">--&gt;</span> <span class="n">pr_curve</span><span class="o">.</span><span class="n">png</span>
                                                 <span class="o">--&gt;</span> <span class="n">score_distribution</span><span class="o">.</span><span class="n">png</span>
@@ -802,7 +816,7 @@
 <span class="o">*.</span><span class="n">csv</span> <span class="p">(</span><span class="n">spot</span> <span class="n">files</span><span class="p">)</span> <span class="o">--&gt;</span> <span class="n">PlotGenerator</span> <span class="o">--&gt;</span> <span class="n">spot_curves</span><span class="o">.</span><span class="n">png</span> <span class="p">(</span><span class="n">per</span> <span class="n">metric</span> <span class="n">group</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>The evaluator flattens scores and ground truth arrays, handles ragged temporal data, and computes standard binary classification metrics.</p>
+<p>On initialization the <code class="docutils literal notranslate"><span class="pre">Evaluator</span></code> loads custom metric plugins from the global <code class="docutils literal notranslate"><span class="pre">plugins/</span></code> directory and the experiment’s <code class="docutils literal notranslate"><span class="pre">custom_metrics/</span></code> directory. Each plugin registers additional metric functions that are then included in the evaluation alongside the built-in metrics (AUC-ROC, AUC-PR, etc.). The evaluator flattens scores and ground truth arrays, handles ragged temporal data, and computes all registered metrics.</p>
 </section>
 </section>
 <hr class="docutils" />
@@ -948,6 +962,7 @@
 <span class="o">+--</span> <span class="n">training</span><span class="o">.</span><span class="n">csv</span>           <span class="c1"># Training metrics from writer.spot(&quot;training&quot;, ...)</span>
 <span class="o">+--</span> <span class="n">validation</span><span class="o">.</span><span class="n">csv</span>         <span class="c1"># Validation metrics from writer.spot(&quot;validation&quot;, ...)</span>
 <span class="o">+--</span> <span class="n">resources</span><span class="o">.</span><span class="n">csv</span>          <span class="c1"># Resource usage from ResourceMonitor.spot(&quot;resources&quot;, ...)</span>
+<span class="o">+--</span> <span class="n">custom_metrics</span><span class="o">/</span>        <span class="c1"># Per-experiment custom metric plugins (optional)</span>
 <span class="o">+--</span> <span class="nb">eval</span><span class="o">/</span>                  <span class="c1"># Evaluation output (created by graflag evaluate)</span>
     <span class="o">+--</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">json</span>    <span class="c1"># Computed metrics and plot references</span>
     <span class="o">+--</span> <span class="n">roc_curve</span><span class="o">.</span><span class="n">png</span>      <span class="c1"># ROC curve plot</span>

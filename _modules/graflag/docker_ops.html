@@ -6,15 +6,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>graflag.docker_ops &mdash; GraFlag 1.0.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../../_static/documentation_options.js?v=8d563738"></script>
-      <script src="../../_static/doctools.js?v=9a2dae69"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" /> 
@@ -58,7 +58,10 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../method_integration.html">Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
 
@@ -89,28 +92,28 @@
   <h1>Source code for graflag.docker_ops</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Docker operations for GraFlag using Docker SDK.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">json</span>
-<span class="kn">import</span> <span class="nn">subprocess</span>
-<span class="kn">import</span> <span class="nn">socket</span>
-<span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">import</span> <span class="nn">yaml</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
-<span class="kn">import</span> <span class="nn">docker</span>
-<span class="kn">from</span> <span class="nn">docker.types</span> <span class="kn">import</span> <span class="n">ServiceMode</span><span class="p">,</span> <span class="n">RestartPolicy</span><span class="p">,</span> <span class="n">Resources</span><span class="p">,</span> <span class="n">Mount</span><span class="p">,</span> <span class="n">EndpointSpec</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">docker</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">docker.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServiceMode</span><span class="p">,</span> <span class="n">RestartPolicy</span><span class="p">,</span> <span class="n">Resources</span><span class="p">,</span> <span class="n">Mount</span><span class="p">,</span> <span class="n">EndpointSpec</span>
 
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">load_method_env</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_method_env</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ReservedEnvVars">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ReservedEnvVars">[docs]</a>
-<span class="k">class</span> <span class="nc">ReservedEnvVars</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReservedEnvVars</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Reserved environment variable names that should not be overridden by method parameters.&quot;&quot;&quot;</span>
     <span class="n">DATA</span> <span class="o">=</span> <span class="s1">&#39;DATA&#39;</span>
     <span class="n">EXP</span> <span class="o">=</span> <span class="s1">&#39;EXP&#39;</span>
@@ -121,7 +124,7 @@
 <div class="viewcode-block" id="ReservedEnvVars.get_names">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.get_names">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_names</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">{</span><span class="n">var</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">cls</span><span class="p">}</span></div>
 </div>
 
@@ -129,10 +132,10 @@
 
 <div class="viewcode-block" id="DockerManager">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager">[docs]</a>
-<span class="k">class</span> <span class="nc">DockerManager</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DockerManager</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle Docker Swarm operations via Docker SDK with SSH tunnel.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ssh_manager</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">hosts_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hosts.yml&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ssh_manager</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">hosts_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hosts.yml&quot;</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span> <span class="o">=</span> <span class="n">ssh_manager</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span> <span class="o">=</span> <span class="n">hosts_file</span>
@@ -141,13 +144,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Lazy-initialize Docker client via SSH tunnel.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>
 
-    <span class="k">def</span> <span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Establish SSH tunnel and create Docker client.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
@@ -198,7 +201,7 @@
 
 <div class="viewcode-block" id="DockerManager.close">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.close">[docs]</a>
-    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Close Docker client and SSH tunnel.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
@@ -215,10 +218,10 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 
-    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_load_hosts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_hosts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load hosts configuration from YAML file.&quot;&quot;&quot;</span>
         <span class="n">hosts_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">hosts_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -232,7 +235,7 @@
 
 <div class="viewcode-block" id="DockerManager.setup_swarm_manager">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.setup_swarm_manager">[docs]</a>
-    <span class="k">def</span> <span class="nf">setup_swarm_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup_swarm_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize Docker Swarm on manager node.&quot;&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[SETUP] Initializing Docker Swarm on manager...&quot;</span><span class="p">)</span>
 
@@ -250,7 +253,7 @@
 
 <div class="viewcode-block" id="DockerManager.get_swarm_token">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_swarm_token">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_swarm_token</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_swarm_token</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get Docker Swarm worker join token.&quot;&quot;&quot;</span>
         <span class="n">swarm_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">swarm</span><span class="o">.</span><span class="n">attrs</span>
         <span class="k">return</span> <span class="n">swarm_attrs</span><span class="p">[</span><span class="s1">&#39;JoinTokens&#39;</span><span class="p">][</span><span class="s1">&#39;Worker&#39;</span><span class="p">]</span></div>
@@ -258,7 +261,7 @@
 
 <div class="viewcode-block" id="DockerManager.setup_workers">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.setup_workers">[docs]</a>
-    <span class="k">def</span> <span class="nf">setup_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup worker nodes to join the swarm (requires SSH to each worker).&quot;&quot;&quot;</span>
         <span class="n">hosts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_hosts</span><span class="p">()</span>
         <span class="n">manager_ip</span> <span class="o">=</span> <span class="n">hosts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;manager&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">)</span>
@@ -295,7 +298,7 @@
 
 <div class="viewcode-block" id="DockerManager.get_nodes">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_nodes">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get list of swarm nodes.&quot;&quot;&quot;</span>
         <span class="n">nodes</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">list</span><span class="p">():</span>
@@ -322,7 +325,7 @@
 
 <div class="viewcode-block" id="DockerManager.setup_local_registry">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.setup_local_registry">[docs]</a>
-    <span class="k">def</span> <span class="nf">setup_local_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setup_local_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Setup local Docker registry service on manager.&quot;&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[BUILD] Setting up local Docker registry...&quot;</span><span class="p">)</span>
 
@@ -348,7 +351,7 @@
 
 <div class="viewcode-block" id="DockerManager.build_method_image">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_method_image">[docs]</a>
-    <span class="k">def</span> <span class="nf">build_method_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_method_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build method Docker image and push to local registry.</span>
 
 <span class="sd">        Uses SSH because the build context resides on the remote host.</span>
@@ -400,7 +403,7 @@
 
 <div class="viewcode-block" id="DockerManager.build_evaluator_image">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_evaluator_image">[docs]</a>
-    <span class="k">def</span> <span class="nf">build_evaluator_image</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_evaluator_image</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build graflag-evaluator image and push to registry.</span>
 
 <span class="sd">        Returns:</span>
@@ -444,7 +447,7 @@
 
 <div class="viewcode-block" id="DockerManager.create_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.create_service">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                        <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span> <span class="n">gpu_required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                        <span class="n">method_params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create Docker service for experiment.&quot;&quot;&quot;</span>
@@ -502,7 +505,7 @@
 
 <div class="viewcode-block" id="DockerManager.create_evaluation_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.create_evaluation_service">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_evaluation_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_evaluation_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create Docker service to run evaluation.&quot;&quot;&quot;</span>
         <span class="n">eval_service_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;eval__</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
 
@@ -531,7 +534,7 @@
 
 <div class="viewcode-block" id="DockerManager.list_services">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.list_services">[docs]</a>
-    <span class="k">def</span> <span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List all Docker services.&quot;&quot;&quot;</span>
         <span class="n">services</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">svc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">():</span>
@@ -566,14 +569,14 @@
 
 <div class="viewcode-block" id="DockerManager.get_service_names">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_service_names">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_service_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_service_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get set of all service names.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">{</span><span class="n">svc</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">svc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">()}</span></div>
 
 
 <div class="viewcode-block" id="DockerManager.stop_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.stop_service">[docs]</a>
-    <span class="k">def</span> <span class="nf">stop_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">stop_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Stop and remove a service.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
@@ -585,7 +588,7 @@
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to stop service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_remove_service_if_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_remove_service_if_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a service if it exists.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
@@ -597,7 +600,7 @@
 
 <div class="viewcode-block" id="DockerManager.cleanup_finished_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.cleanup_finished_service">[docs]</a>
-    <span class="k">def</span> <span class="nf">cleanup_finished_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cleanup_finished_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a finished service (safe if it doesn&#39;t exist).&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
@@ -611,7 +614,7 @@
 
 <div class="viewcode-block" id="DockerManager.remove_evaluation_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.remove_evaluation_service">[docs]</a>
-    <span class="k">def</span> <span class="nf">remove_evaluation_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove_evaluation_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove evaluation service for an experiment.&quot;&quot;&quot;</span>
         <span class="n">eval_service_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;eval__</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_remove_service_if_exists</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">):</span>
@@ -620,7 +623,7 @@
 
 <div class="viewcode-block" id="DockerManager.get_service_logs">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_service_logs">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tail</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tail</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get recent logs for a service.</span>
 
 <span class="sd">        Uses SSH + Docker CLI because the Docker SDK log streaming</span>
@@ -639,13 +642,13 @@
 
 <div class="viewcode-block" id="DockerManager.follow_service_logs">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.follow_service_logs">[docs]</a>
-    <span class="k">def</span> <span class="nf">follow_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">follow_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Follow service logs in real-time until task finishes.</span>
 
 <span class="sd">        Uses SSH + Docker CLI subprocess because the Docker SDK&#39;s</span>
 <span class="sd">        follow mode does not stream reliably for swarm services.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="kn">import</span> <span class="nn">time</span> <span class="k">as</span> <span class="nn">_time</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_time</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">service_exists</span><span class="p">(</span><span class="n">service_name</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
@@ -694,7 +697,7 @@
 
 <div class="viewcode-block" id="DockerManager.service_exists">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.service_exists">[docs]</a>
-    <span class="k">def</span> <span class="nf">service_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">service_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a Docker service exists.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
@@ -705,7 +708,7 @@
 
 <div class="viewcode-block" id="DockerManager.is_service_failed">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.is_service_failed">[docs]</a>
-    <span class="k">def</span> <span class="nf">is_service_failed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_service_failed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a service exists but all its tasks have failed.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
@@ -728,7 +731,7 @@
 
 <div class="viewcode-block" id="DockerManager.get_cluster_status">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_cluster_status">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_cluster_status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_cluster_status</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get Docker Swarm cluster status.&quot;&quot;&quot;</span>
         <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
         <span class="n">swarm</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Swarm&#39;</span><span class="p">,</span> <span class="p">{})</span>
@@ -744,7 +747,7 @@
     <span class="c1"># Internal</span>
     <span class="c1"># ========================================================================</span>
 
-    <span class="k">def</span> <span class="nf">_build_service_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_service_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build environment variable list for service.&quot;&quot;&quot;</span>
         <span class="n">method_env</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
 
@@ -765,7 +768,7 @@
 
         <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">env_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
 
-    <span class="k">def</span> <span class="nf">_save_service_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_service_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span>
                              <span class="n">gpu_required</span><span class="p">,</span> <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service configuration to JSON.&quot;&quot;&quot;</span>
         <span class="n">env_contents</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
@@ -794,7 +797,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">config_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved service configuration to </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_save_service_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_save_service_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service details to JSON after creation.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>

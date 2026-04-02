@@ -49,7 +49,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#shared-storage-setup">Shared Storage Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-an-experiment">Running an Experiment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#evaluating-results">Evaluating Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#evaluating-results">Evaluating Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#custom-metrics">Custom Metrics</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#web-dashboard">Web Dashboard</a></li>
 </ul>
 </li>
@@ -183,6 +186,43 @@ stored configuration.</p>
 </pre></div>
 </div>
 <p>This computes AUC-ROC, AUC-PR, and generates plots in the experiment’s <code class="docutils literal notranslate"><span class="pre">eval/</span></code> directory.</p>
+<section id="custom-metrics">
+<h3>Custom Metrics<a class="headerlink" href="#custom-metrics" title="Link to this heading"></a></h3>
+<p>Register custom metrics via the Python API:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraFlag</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hits_at_100</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="o">-</span><span class="mi">100</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()}</span>
+
+<span class="n">gf</span> <span class="o">=</span> <span class="n">GraFlag</span><span class="p">()</span>
+<span class="c1"># Save globally (applied to all future evaluations)</span>
+<span class="n">gf</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">)</span>
+
+<span class="c1"># Or scope to a specific experiment</span>
+<span class="n">gf</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">,</span>
+                    <span class="n">experiment</span><span class="o">=</span><span class="s2">&quot;exp__taddy__uci__20260309_120000&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This extracts the function source and writes it as a plugin file on the cluster.
+The evaluator loads plugins automatically before computing metrics.</p>
+<p>You can also create plugin files manually. Place a <code class="docutils literal notranslate"><span class="pre">.py</span></code> file in either:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">libs/graflag_evaluator/plugins/</span></code> – global (all evaluations)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">experiments/&lt;exp_name&gt;/custom_metrics/</span></code> – per-experiment</p></li>
+</ul>
+<p>Each plugin file should import <code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> and call <code class="docutils literal notranslate"><span class="pre">register_metric()</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># custom_metrics/hits_at_100.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">graflag_evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricCalculator</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">hits_at_100</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="n">top</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="o">-</span><span class="mi">100</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()}</span>
+
+<span class="n">MetricCalculator</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 </section>
 <section id="web-dashboard">
 <h2>Web Dashboard<a class="headerlink" href="#web-dashboard" title="Link to this heading"></a></h2>

@@ -147,6 +147,7 @@ Key responsibilities:
 - **`get_experiment_results()`**: Returns `ExperimentResults` parsed from `results.json`.
 - **`get_evaluation_results()`**: Returns `EvaluationResults` parsed from `eval/evaluation.json`.
 - **`evaluate()`**: Deploys a `graflag-evaluator` service against a completed experiment.
+- **`register_metric()`**: Saves a custom metric function as a plugin file on the cluster (global or per-experiment) so the evaluator can load it at runtime.
 - **`copy_files()`**: Bidirectional file transfer using rsync over SSH.
 - **`sync()`**: Sync a local method or library directory to the remote shared storage.
 - **Status management**: Writes `status.json` to experiment directories during build and on failure.
@@ -296,6 +297,7 @@ graflag-shared/
 +-- libs/                 # Shared Python libraries
     +-- graflag_runner/
     +-- graflag_evaluator/
+    |   +-- plugins/      # Global custom metric plugins
     +-- graflag_bond/
 ```
 
@@ -450,10 +452,18 @@ The evaluation framework that computes metrics and generates plots. Runs as a Do
 
 | Module              | Description                                                 |
 |---------------------|-------------------------------------------------------------|
-| `evaluator.py`      | `Evaluator` -- orchestrator that loads results, computes metrics, generates plots, and saves `evaluation.json`. |
-| `metrics.py`        | `MetricCalculator` -- computes AUC-ROC, AUC-PR, and other metrics based on result type. Handles ragged arrays (e.g., temporal edge scores with varying snapshot sizes). |
+| `evaluator.py`      | `Evaluator` -- orchestrator that loads results, computes metrics, generates plots, and saves `evaluation.json`. Loads custom metric plugins on init. |
+| `metrics.py`        | `MetricCalculator` -- computes AUC-ROC, AUC-PR, and other metrics based on result type. Handles ragged arrays (e.g., temporal edge scores with varying snapshot sizes). Supports plugin-based custom metrics via `register_metric()` and `load_plugins()`. |
 | `plots.py`          | `PlotGenerator` -- generates ROC curves, PR curves, score distributions, and spot curves from CSV files. |
 | `run_evaluation.py` | Entry point for the evaluation Docker container.            |
+| `plugins/`          | Directory for global custom metric plugins (`.py` files loaded at evaluation time). |
+
+**Custom metric plugins**: The evaluator automatically loads `.py` files from two directories before computing metrics:
+
+1. **Global plugins**: `graflag-shared/libs/graflag_evaluator/plugins/` -- applied to all evaluations.
+2. **Per-experiment plugins**: `experiments/<exp_name>/custom_metrics/` -- scoped to a single experiment.
+
+Each plugin file imports `MetricCalculator` and calls `register_metric()` at module level. Plugins can be created manually or via the Python API (`GraFlag.register_metric()`), which extracts the function source and writes it as a plugin file on the cluster.
 
 ---
 
@@ -512,7 +522,10 @@ Optional additional fields: `timestamps`, `node_ids`, `edges`, `graph_ids`.
 ### Evaluation Pipeline
 
 ```
-results.json --> Evaluator --> MetricCalculator --> evaluation.json
+                   plugins/*.py ------+
+                   custom_metrics/*.py-+-> MetricCalculator (load_plugins)
+                                       |
+results.json --> Evaluator ----------->+--> MetricCalculator --> evaluation.json
                            --> PlotGenerator    --> roc_curve.png
                                                 --> pr_curve.png
                                                 --> score_distribution.png
@@ -520,7 +533,7 @@ results.json --> Evaluator --> MetricCalculator --> evaluation.json
 *.csv (spot files) --> PlotGenerator --> spot_curves.png (per metric group)
 ```
 
-The evaluator flattens scores and ground truth arrays, handles ragged temporal data, and computes standard binary classification metrics.
+On initialization the `Evaluator` loads custom metric plugins from the global `plugins/` directory and the experiment's `custom_metrics/` directory. Each plugin registers additional metric functions that are then included in the evaluation alongside the built-in metrics (AUC-ROC, AUC-PR, etc.). The evaluator flattens scores and ground truth arrays, handles ragged temporal data, and computes all registered metrics.
 
 ---
 
@@ -672,6 +685,7 @@ experiments/exp__taddy__uci__20260309_143000/
 +-- training.csv           # Training metrics from writer.spot("training", ...)
 +-- validation.csv         # Validation metrics from writer.spot("validation", ...)
 +-- resources.csv          # Resource usage from ResourceMonitor.spot("resources", ...)
++-- custom_metrics/        # Per-experiment custom metric plugins (optional)
 +-- eval/                  # Evaluation output (created by graflag evaluate)
     +-- evaluation.json    # Computed metrics and plot references
     +-- roc_curve.png      # ROC curve plot

@@ -1,10 +1,12 @@
 """Core GraFlag functionality."""
 
+import inspect
 import json
 import subprocess
+import textwrap
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 import logging
 
 from .config import GraflagConfig
@@ -159,6 +161,64 @@ class GraFlag:
 
         logger.info(f"[INFO] View logs later: graflag logs -e {exp_name}")
         return exp_name
+
+    def register_metric(
+        self, result_type: str, metric_func: Callable,
+        experiment: str = None,
+    ):
+        """Register a custom metric as a plugin file on the cluster.
+
+        The function source is extracted via ``inspect.getsource`` and written
+        to a ``.py`` plugin file that the evaluator loads at runtime.
+
+        Args:
+            result_type: Result type the metric applies to
+                (e.g. ``"EDGE_STREAM_ANOMALY_SCORES"``).
+            metric_func: A function with signature
+                ``(scores, ground_truth, **kwargs) -> Dict[str, float]``.
+            experiment: If given, the plugin is scoped to that experiment
+                (``custom_metrics/`` inside the experiment directory).
+                Otherwise it is saved to the global plugins directory.
+
+        Raises:
+            GraFlagError: If the function source cannot be extracted or the
+                file cannot be written.
+        """
+        func_name = metric_func.__name__
+        try:
+            source = textwrap.dedent(inspect.getsource(metric_func))
+        except (OSError, TypeError) as e:
+            raise GraFlagError(
+                f"Cannot extract source of {func_name}: {e}. "
+                "Create the plugin file manually instead."
+            )
+
+        plugin_content = (
+            f'"""Auto-generated metric plugin: {func_name}"""\n'
+            f"import numpy as np\n"
+            f"from graflag_evaluator import MetricCalculator\n\n"
+            f"{source}\n"
+            f'MetricCalculator.register_metric("{result_type}", {func_name})\n'
+        )
+
+        if experiment:
+            plugin_dir = (
+                f"{self.config.remote_shared_dir}/experiments/"
+                f"{experiment}/custom_metrics"
+            )
+        else:
+            plugin_dir = (
+                f"{self.config.remote_shared_dir}/libs/"
+                f"graflag_evaluator/plugins"
+            )
+
+        self.ssh.execute(f"mkdir -p {plugin_dir}")
+        plugin_path = f"{plugin_dir}/{func_name}.py"
+        # Write via heredoc with a delimiter unlikely to appear in source
+        self.ssh.execute(
+            f"cat > {plugin_path} << 'PLUGINEOF'\n{plugin_content}PLUGINEOF"
+        )
+        logger.info(f"[OK] Saved metric plugin: {plugin_path}")
 
     def evaluate(self, experiment_name: str):
         """Evaluate an experiment: compute metrics and generate plots.

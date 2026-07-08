@@ -6,7 +6,7 @@ across multiple nodes with shared NFS storage.
 """
 
 from .core import GraFlag, GraFlagError
-from .config import GraflagConfig
+from .config import GraflagConfig, CONFIG_FILE
 
 __version__ = "1.0.0"
-__all__ = ["GraFlag", "GraFlagError", "GraflagConfig"]
+__all__ = ["GraFlag", "GraFlagError", "GraflagConfig", "CONFIG_FILE"]

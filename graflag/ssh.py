@@ -54,12 +54,32 @@ class SSHManager:
             ]
         return []
     
-    def copy_to_remote(self, local_paths, remote_dest: str, recursive: bool = False) -> str:
-        """Copy files/directories from local to remote via rsync."""
-        # Handle single string or list of paths
-        if isinstance(local_paths, str):
-            local_paths = [local_paths]
+    def copy_files(self, source_paths, dest_path: str, recursive: bool = False, from_remote: bool = False) -> str:
+        """
+        Copy files/directories bidirectionally via rsync.
         
+        Args:
+            source_paths: Source path(s) - can be single string or list
+            dest_path: Destination path
+            recursive: Include recursive flag (automatically added for directories)
+            from_remote: If True, copy from remote to local; if False (default), copy from local to remote
+        
+        Returns:
+            Destination path
+        """
+        # Handle single string or list of paths
+        if isinstance(source_paths, str):
+            source_paths = [source_paths]
+        
+        if from_remote:
+            # Copy from remote to local
+            return self._copy_from_remote(source_paths, dest_path, recursive)
+        else:
+            # Copy from local to remote
+            return self._copy_to_remote(source_paths, dest_path, recursive)
+    
+    def _copy_to_remote(self, local_paths, remote_dest: str, recursive: bool = False) -> str:
+        """Copy files/directories from local to remote via rsync."""
         # Validate all local paths exist
         local_path_objs = []
         for local_path in local_paths:
@@ -72,7 +92,7 @@ class SSHManager:
         parent_dir = str(Path(remote_dest).parent)
         self.execute(f"mkdir -p {parent_dir}")
         
-        logger.info(f"📤 Copying {len(local_paths)} item(s) to {self.manager_ip}:{remote_dest}")
+        logger.info(f"[INFO] Copying {len(local_paths)} item(s) to {self.manager_ip}:{remote_dest}")
         
         # Build rsync command - more robust than scp
         rsync_parts = ["rsync", "-avz", "--progress", "--force"]
@@ -101,8 +121,49 @@ class SSHManager:
         result = subprocess.run(rsync_parts, capture_output=True, text=True)
         
         if result.returncode == 0:
-            logger.info(f"✅ Successfully copied {len(local_paths)} item(s) to {remote_dest}")
+            logger.info(f"[OK] Successfully copied {len(local_paths)} item(s) to {remote_dest}")
         else:
             raise RuntimeError(f"Failed to copy files with rsync: {result.stderr}")
         
         return remote_dest
+    
+    def _copy_from_remote(self, remote_paths, local_dest: str, recursive: bool = False) -> str:
+        """Copy files/directories from remote to local via rsync."""
+        # Ensure local destination directory exists
+        local_dest_obj = Path(local_dest).expanduser()
+        local_dest_obj.parent.mkdir(parents=True, exist_ok=True)
+        
+        logger.info(f"[INFO] Copying {len(remote_paths)} item(s) from {self.manager_ip} to {local_dest}")
+        
+        # Build rsync command
+        rsync_parts = ["rsync", "-avz", "--progress", "--force"]
+        
+        # SSH options
+        ssh_opts = ["-o", "StrictHostKeyChecking=no"]
+        if self.ssh_key:
+            key_path = Path(self.ssh_key).expanduser()
+            if str(key_path).endswith('.pub'):
+                key_path = key_path.with_suffix('')
+            ssh_opts.extend(["-i", str(key_path)])
+        
+        ssh_opts.extend(["-p", self.ssh_port])
+        
+        rsync_parts.extend(["-e", f"ssh {' '.join(ssh_opts)}"])
+        
+        # Add all source paths (remote)
+        for remote_path in remote_paths:
+            rsync_parts.append(f"root@{self.manager_ip}:{remote_path}")
+        
+        # Add destination (local)
+        rsync_parts.append(str(local_dest_obj))
+        
+        logger.debug(f"Executing rsync command: {' '.join(rsync_parts)}")
+        
+        result = subprocess.run(rsync_parts, capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            logger.info(f"[OK] Successfully copied {len(remote_paths)} item(s) to {local_dest}")
+        else:
+            raise RuntimeError(f"Failed to copy files with rsync: {result.stderr}")
+        
+        return str(local_dest_obj)

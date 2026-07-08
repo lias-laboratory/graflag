@@ -136,6 +136,10 @@ class GraFlag:
                 f"Dataset {dataset} not found in {self.config.remote_shared_dir}/datasets/{dataset}"
             )
 
+        # Hydrate dataset files on demand from their original sources.
+        # No-op for datasets without metadata.json or marked as derived.
+        self._ensure_dataset(dataset)
+
         # Create experiment directory
         exp_dir = f"experiments/{exp_name}"
         self.ssh.mkdir(self.config.remote_shared_dir, exp_dir)
@@ -161,6 +165,34 @@ class GraFlag:
 
         logger.info(f"[INFO] View logs later: graflag logs -e {exp_name}")
         return exp_name
+
+    def _ensure_dataset(self, dataset: str):
+        """Fetch any files listed in ``datasets/<dataset>/metadata.json`` that
+        are missing on the shared NFS mount.
+
+        Runs ``graflag_data`` on the manager so the download lands directly on
+        the shared volume. Silently returns for datasets that have no
+        ``metadata.json`` (backwards compatibility with datasets that still
+        ship as full Git-LFS blobs).
+        """
+        shared = self.config.remote_shared_dir
+        if not self.ssh.path_exists(shared, f"datasets/{dataset}/metadata.json"):
+            logger.debug(
+                f"[INFO] No metadata.json for dataset {dataset}; skipping fetch."
+            )
+            return
+
+        cmd = (
+            f"PYTHONPATH={shared}/libs python3 -m graflag_data "
+            f"--root {shared}/datasets fetch {dataset}"
+        )
+        logger.info(f"[INFO] Ensuring dataset {dataset} is downloaded...")
+        result = self.ssh.execute(cmd)
+        if result.returncode != 0:
+            stderr = (result.stderr or "").strip()
+            raise GraFlagError(
+                f"Failed to fetch dataset {dataset}: {stderr or 'unknown error'}"
+            )
 
     def register_metric(
         self, result_type: str, metric_func: Callable,

@@ -1,11 +1,18 @@
-"""Docker operations for GraFlag."""
+"""Docker operations for GraFlag using Docker SDK."""
 
+import json
+import subprocess
+import socket
 import time
 import yaml
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Optional
 from enum import Enum
+from datetime import datetime
 import logging
+
+import docker
+from docker.types import ServiceMode, RestartPolicy, Resources, Mount, EndpointSpec
 
 from .utils import load_method_env
 
@@ -19,91 +26,134 @@ class ReservedEnvVars(Enum):
     METHOD_NAME = 'METHOD_NAME'
     COMMAND = 'COMMAND'
     MONITOR_INTERVAL = 'MONITOR_INTERVAL'
-    
+
     @classmethod
     def get_names(cls):
-        """Get set of all reserved variable names."""
         return {var.value for var in cls}
 
 
 class DockerManager:
-    """Handle Docker Swarm and registry operations."""
-    
+    """Handle Docker Swarm operations via Docker SDK with SSH tunnel."""
+
     def __init__(self, ssh_manager, config, hosts_file: str = "hosts.yml"):
-        """Initialize Docker manager."""
         self.ssh = ssh_manager
         self.config = config
         self.hosts_file = hosts_file
-    
+        self._client = None
+        self._tunnel_proc = None
+        self._tunnel_port = None
+
+    @property
+    def client(self) -> docker.DockerClient:
+        """Lazy-initialize Docker client via SSH tunnel."""
+        if self._client is None or (self._tunnel_proc and self._tunnel_proc.poll() is not None):
+            self._connect()
+        return self._client
+
+    def _connect(self):
+        """Establish SSH tunnel and create Docker client."""
+        self.close()
+
+        # Find free local port
+        with socket.socket() as s:
+            s.bind(('', 0))
+            self._tunnel_port = s.getsockname()[1]
+
+        # Build SSH tunnel command
+        ssh_args = [
+            'ssh', '-N',
+            '-L', f'{self._tunnel_port}:/var/run/docker.sock',
+            '-o', 'StrictHostKeyChecking=no',
+            '-o', 'ExitOnForwardFailure=yes',
+        ]
+        if self.ssh.ssh_key:
+            ssh_args.extend(['-i', str(Path(self.ssh.ssh_key).expanduser())])
+        ssh_args.extend(['-p', str(self.ssh.ssh_port)])
+        ssh_args.append(f'root@{self.ssh.manager_ip}')
+
+        logger.debug(f"Starting SSH tunnel on port {self._tunnel_port}")
+        self._tunnel_proc = subprocess.Popen(
+            ssh_args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+        )
+
+        # Wait for tunnel to be ready
+        for _ in range(20):
+            time.sleep(0.3)
+            if self._tunnel_proc.poll() is not None:
+                stderr = self._tunnel_proc.stderr.read().decode()
+                raise RuntimeError(f"SSH tunnel failed: {stderr}")
+            try:
+                with socket.socket() as s:
+                    s.settimeout(1)
+                    s.connect(('localhost', self._tunnel_port))
+                break
+            except (ConnectionRefusedError, OSError):
+                continue
+        else:
+            self._tunnel_proc.terminate()
+            raise RuntimeError("SSH tunnel failed to become ready")
+
+        self._client = docker.DockerClient(
+            base_url=f'tcp://localhost:{self._tunnel_port}',
+            timeout=30
+        )
+        logger.debug("Docker client connected via SSH tunnel")
+
+    def close(self):
+        """Close Docker client and SSH tunnel."""
+        if self._client:
+            try:
+                self._client.close()
+            except Exception:
+                pass
+            self._client = None
+        if self._tunnel_proc:
+            self._tunnel_proc.terminate()
+            try:
+                self._tunnel_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._tunnel_proc.kill()
+            self._tunnel_proc = None
+
+    def __del__(self):
+        self.close()
+
     def _load_hosts(self) -> Dict:
         """Load hosts configuration from YAML file."""
         hosts_path = Path(self.hosts_file)
         if not hosts_path.exists():
-            logger.warning(f"Hosts file {self.hosts_file} not found")
             return {}
-
         with open(hosts_path, "r") as f:
-            return yaml.safe_load(f)
-    
-    def get_swarm_token(self) -> str:
-        """Get Docker Swarm join token."""
-        result = self.ssh.execute("docker swarm join-token worker -q")
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to get swarm token: {result.stderr}")
-        return result.stdout.strip()
-    
-    def setup_local_registry(self):
-        """Setup local Docker registry on manager."""
-        logger.info("[BUILD] Setting up local Docker registry...")
-        
-        # Check if registry is already running
-        result = self.ssh.execute("docker ps -a --filter name=registry --format '{{.Names}}'")
-        if "registry" in result.stdout:
-            logger.info("[OK] Local registry already running")
-            return
-        
-        # Start local registry container
-        registry_cmd = """docker service create \
-            --name registry \
-            --publish published=5000,target=5000 \
-            --mount type=volume,source=registry-data,target=/var/lib/registry \
-            --constraint 'node.role==manager' \
-            --replicas 1 \
-            registry:2"""
-        
-        result = self.ssh.execute(registry_cmd)
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to start registry: {result.stderr}")
-        
-        logger.info("[OK] Local registry started on port 5000")
-    
+            return yaml.safe_load(f) or {}
+
+    # ========================================================================
+    # Swarm Management
+    # ========================================================================
+
     def setup_swarm_manager(self):
         """Initialize Docker Swarm on manager node."""
         logger.info("[SETUP] Initializing Docker Swarm on manager...")
 
-        hosts = self._load_hosts()
-        manager_ip = hosts.get("manager")
-
-        # Check if swarm is already initialized
-        result = self.ssh.execute("docker info --format '{{.Swarm.LocalNodeState}}'")
-        if result.stdout.strip() == "active":
-            logger.info("[OK] Docker Swarm already initialized on manager")
+        info = self.client.info()
+        if info.get('Swarm', {}).get('LocalNodeState') == 'active':
+            logger.info("[OK] Docker Swarm already initialized")
             return
 
-        # Initialize swarm
-        swarm_cmd = f"docker swarm init --advertise-addr {manager_ip}"
-        result = self.ssh.execute(swarm_cmd)
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to initialize swarm: {result.stderr}")
-
-        logger.info("[OK] Docker Swarm initialized on manager")
-    
-    def setup_workers(self, token: str):
-        """Setup worker nodes to join the swarm."""
         hosts = self._load_hosts()
-        manager_ip = hosts.get("manager")
+        advertise_addr = hosts.get("manager", self.config.manager_ip)
 
+        self.client.swarm.init(advertise_addr=advertise_addr)
+        logger.info("[OK] Docker Swarm initialized")
+
+    def get_swarm_token(self) -> str:
+        """Get Docker Swarm worker join token."""
+        swarm_attrs = self.client.swarm.attrs
+        return swarm_attrs['JoinTokens']['Worker']
+
+    def setup_workers(self, token: str):
+        """Setup worker nodes to join the swarm (requires SSH to each worker)."""
+        hosts = self._load_hosts()
+        manager_ip = hosts.get("manager", self.config.manager_ip)
         workers = hosts.get("workers", [])
 
         if not workers:
@@ -113,65 +163,98 @@ class DockerManager:
         logger.info(f"[SETUP] Setting up {len(workers)} worker nodes...")
 
         for worker_ip in workers:
-            logger.info(f"Setting up worker {worker_ip}...")
-
-            # Check if worker is already in swarm
-            check_cmd = f"ssh -o StrictHostKeyChecking=no root@{worker_ip} 'docker info --format \"{{{{.Swarm.LocalNodeState}}}}\"'"
+            check_cmd = (
+                f"ssh -o StrictHostKeyChecking=no root@{worker_ip} "
+                f"'docker info --format \"{{{{.Swarm.LocalNodeState}}}}\"'"
+            )
             result = self.ssh.execute(check_cmd)
 
             if result.stdout.strip() == "active":
                 logger.info(f"[OK] Worker {worker_ip} already in swarm")
                 continue
 
-            # Join worker to swarm
-            join_cmd = f"ssh -o StrictHostKeyChecking=no root@{worker_ip} 'docker swarm join --token {token} {manager_ip}:2377'"
+            join_cmd = (
+                f"ssh -o StrictHostKeyChecking=no root@{worker_ip} "
+                f"'docker swarm join --token {token} {manager_ip}:2377'"
+            )
             result = self.ssh.execute(join_cmd)
 
             if result.returncode == 0:
                 logger.info(f"[OK] Worker {worker_ip} joined swarm")
             else:
                 logger.error(f"[ERROR] Failed to join worker {worker_ip}: {result.stderr}")
-    
-    def label_gpu_nodes(self):
-        """Label all nodes with GPU support."""
-        logger.info("[INFO] Labeling all nodes with GPU support...")
-        
-        # Get node IDs and label them
-        result = self.ssh.execute("docker node ls -q")
-        if result.returncode != 0:
-            logger.error(f"[ERROR] Failed to get node list: {result.stderr}")
+
+    def get_nodes(self) -> List[Dict]:
+        """Get list of swarm nodes."""
+        nodes = []
+        for node in self.client.nodes.list():
+            attrs = node.attrs
+            spec = attrs.get('Spec', {})
+            status = attrs.get('Status', {})
+            manager_status = attrs.get('ManagerStatus', {})
+
+            nodes.append({
+                'id': attrs.get('ID', ''),
+                'hostname': attrs.get('Description', {}).get('Hostname', ''),
+                'status': status.get('State', ''),
+                'availability': spec.get('Availability', ''),
+                'role': spec.get('Role', ''),
+                'is_manager': bool(manager_status),
+                'leader': manager_status.get('Leader', False),
+            })
+        return nodes
+
+    # ========================================================================
+    # Registry
+    # ========================================================================
+
+    def setup_local_registry(self):
+        """Setup local Docker registry service on manager."""
+        logger.info("[BUILD] Setting up local Docker registry...")
+
+        existing = self.client.services.list(filters={'name': 'registry'})
+        if existing:
+            logger.info("[OK] Local registry already running")
             return
-        
-        node_ids = result.stdout.strip().split('\n')
-        for node_id in node_ids:
-            if node_id.strip():
-                self.ssh.execute(f"docker node update --label-add gpu=true {node_id}")
-        
-        logger.info("[OK] All nodes labeled with gpu=true")
-    
+
+        self.client.services.create(
+            image='registry:2',
+            name='registry',
+            mode=ServiceMode('replicated', replicas=1),
+            endpoint_spec=EndpointSpec(ports={5000: (5000, 'tcp')}),
+            mounts=[Mount(target='/var/lib/registry', source='registry-data', type='volume')],
+            constraints=['node.role==manager'],
+        )
+        logger.info("[OK] Local registry started on port 5000")
+
+    # ========================================================================
+    # Image Build (SSH — build context is on remote host)
+    # ========================================================================
+
     def build_method_image(self, method_name: str, tag: str = "latest") -> str:
         """Build method Docker image and push to local registry.
+
+        Uses SSH because the build context resides on the remote host.
 
         Returns:
             Combined build and push log output.
         """
-        # Make parameters case-insensitive
         method_name = method_name.lower()
         tag = tag.lower()
-
         logger.info(f"[BUILD] Building image {method_name}:{tag}...")
 
-        hosts = self._load_hosts()
-        manager_ip = hosts.get("manager")
-
         local_image = f"{method_name}:{tag}"
-        registry_image = f"{manager_ip}:5000/{method_name}:{tag}"
+        registry_image = f"{self.config.manager_ip}:5000/{method_name}:{tag}"
 
         build_log = []
 
-        # Build image with both tags
-        # Build context is shared/ to access both methods/ and libs/
-        build_cmd = f"docker build --network=host -f {self.config.remote_shared_dir}/methods/{method_name}/Dockerfile -t {local_image} -t {registry_image} {self.config.remote_shared_dir}/"
+        # Build image
+        build_cmd = (
+            f"docker build --network=host "
+            f"-f {self.config.remote_shared_dir}/methods/{method_name}/Dockerfile "
+            f"-t {local_image} -t {registry_image} "
+            f"{self.config.remote_shared_dir}/"
+        )
         result = self.ssh.execute(build_cmd)
         build_log.append(f"=== BUILD: {method_name}:{tag} ===\n")
         build_log.append(result.stdout or "")
@@ -181,10 +264,9 @@ class DockerManager:
         if result.returncode != 0:
             raise RuntimeError(f"Failed to build image {method_name}:{tag}: {result.stderr}")
 
-        # Push to local registry
+        # Push to registry
         logger.info(f"[INFO] Pushing {registry_image} to local registry...")
-        push_cmd = f"docker push {registry_image}"
-        result = self.ssh.execute(push_cmd)
+        result = self.ssh.execute(f"docker push {registry_image}")
         build_log.append(f"\n=== PUSH: {registry_image} ===\n")
         build_log.append(result.stdout or "")
         if result.stderr:
@@ -193,367 +275,266 @@ class DockerManager:
         if result.returncode != 0:
             logger.warning(f"[WARN] Failed to push to registry: {result.stderr}")
         else:
-            logger.info(f"[OK] Image pushed to local registry")
+            logger.info("[OK] Image pushed to local registry")
 
         logger.info(f"[OK] Image {method_name}:{tag} built successfully")
         return "\n".join(build_log)
-    
+
     def build_evaluator_image(self) -> str:
-        """Build graflag-evaluator Docker image and push to local registry.
-        
+        """Build graflag-evaluator image and push to registry.
+
         Returns:
-            Registry image path for the evaluator
+            Registry image path.
         """
         logger.info("[BUILD] Building graflag-evaluator image...")
-        
-        hosts = self._load_hosts()
-        manager_ip = hosts.get("manager")
-        
+
         local_image = "graflag-evaluator:latest"
-        registry_image = f"{manager_ip}:5000/graflag-evaluator:latest"
-        
+        registry_image = f"{self.config.manager_ip}:5000/graflag-evaluator:latest"
+
         # Check if image exists in registry
         check_cmd = f"docker manifest inspect {registry_image} > /dev/null 2>&1 && echo 'exists'"
         result = self.ssh.execute(check_cmd)
-        
+
         if result.stdout.strip() == "exists":
             logger.info("[OK] Evaluator image already exists in registry")
             return registry_image
-        
-        # Build evaluator image with both tags
-        build_cmd = f"cd {self.config.remote_shared_dir}/libs/graflag_evaluator && docker build --network=host -t {local_image} -t {registry_image} ."
+
+        # Build
+        build_cmd = (
+            f"cd {self.config.remote_shared_dir}/libs/graflag_evaluator && "
+            f"docker build --network=host -t {local_image} -t {registry_image} ."
+        )
         result = self.ssh.execute(build_cmd)
-        
         if result.returncode != 0:
             raise RuntimeError(f"Failed to build evaluator image: {result.stderr}")
-        
-        # Push to local registry
-        logger.info(f"[INFO] Pushing {registry_image} to local registry...")
-        push_cmd = f"docker push {registry_image}"
-        result = self.ssh.execute(push_cmd)
 
+        # Push
+        result = self.ssh.execute(f"docker push {registry_image}")
         if result.returncode != 0:
             logger.warning(f"[WARN] Failed to push evaluator to registry: {result.stderr}")
         else:
-            logger.info(f"[OK] Evaluator image pushed to local registry")
+            logger.info("[OK] Evaluator image pushed to local registry")
 
-        logger.info("[OK] Evaluator image built successfully")
         return registry_image
-    
-    def create_service(self, exp_name: str, method_name: str, dataset: str, tag: str = "latest", 
-                      gpu_required: bool = True, method_params: dict = None) -> str:
-        """Create Docker service for experiment.
-        
-        Args:
-            exp_name: Name of the experiment/service
-            method_name: Name of the method
-            dataset: Name of the dataset
-            tag: Docker image tag
-            gpu_required: Whether GPU support is required
-            method_params: Dictionary of method-specific parameters (excluding DATA and EXP)
-        """
-        hosts = self._load_hosts()
-        manager_ip = hosts.get("manager")
+
+    # ========================================================================
+    # Service Operations (Docker SDK)
+    # ========================================================================
+
+    def create_service(self, exp_name: str, method_name: str, dataset: str,
+                       tag: str = "latest", gpu_required: bool = True,
+                       method_params: dict = None) -> str:
+        """Create Docker service for experiment."""
         method_params = method_params or {}
-        
-        # Create service using image from local registry (one-time task)
-        registry_image = f"{manager_ip}:5000/{method_name}:{tag}"
-        
-        # Save service configuration before launching
-        self._save_service_config(exp_name, method_name, dataset, tag, gpu_required, 
-                                   method_params, registry_image, manager_ip)
-        
-        # Base service command
-        service_cmd = f"docker service create --quiet -d --name {exp_name} --restart-condition none"
-        
-        # Use host's network for DNS resolution (allows internet access like worker containers)
-        service_cmd += " --network host"
-        
-        # Add GPU constraints and resources if required
+        registry_image = f"{self.config.manager_ip}:5000/{method_name}:{tag}"
+
+        # Save service config
+        self._save_service_config(exp_name, method_name, dataset, tag, gpu_required,
+                                  method_params, registry_image)
+
+        # Build environment variables
+        env_vars = self._build_service_env(method_name, dataset, exp_name, method_params)
+
+        # Mount shared directory
+        shared_mount = Mount(
+            target=self.config.remote_shared_dir,
+            source=self.config.remote_shared_dir,
+            type='bind'
+        )
+
+        # GPU resources
+        resources = None
         if gpu_required:
-            service_cmd += " --generic-resource NVIDIA-GPU=0"
+            resources = Resources(
+                generic_resources=[{
+                    'DiscreteResourceSpec': {
+                        'Kind': 'NVIDIA-GPU',
+                        'Value': 0
+                    }
+                }]
+            )
             logger.info(f"[INFO] Creating GPU-enabled service {exp_name}...")
         else:
             logger.info(f"[RUN] Creating service {exp_name}...")
-        
-        # Add environment and mount options
-        service_cmd += f" --env-file {self.config.remote_shared_dir}/methods/{method_name}/.env"
-        service_cmd += f" --env METHOD_NAME={method_name}"  # For logging utilities
-        service_cmd += f" --env DATA={self.config.remote_shared_dir}/datasets/{dataset}/"
-        service_cmd += f" --env EXP={self.config.remote_shared_dir}/experiments/{exp_name}/"
-        
-        # Add method-specific parameters as environment variables
-        # Filter out reserved variables
-        for key, value in method_params.items():
-            if key.upper() not in ReservedEnvVars.get_names():
-                service_cmd += f" --env _{key}={value}"
-                logger.info(f"   Setting parameter: _{key}={value}")
-        
-        service_cmd += f" --mount type=bind,source={self.config.remote_shared_dir},target={self.config.remote_shared_dir}"
-        service_cmd += f" {registry_image}"
 
-        result = self.ssh.execute(service_cmd)
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to create service {exp_name}: {result.stderr}")
+        # Create service
+        service = self.client.services.create(
+            image=registry_image,
+            name=exp_name,
+            env=env_vars,
+            mounts=[shared_mount],
+            mode=ServiceMode('replicated', replicas=1),
+            restart_policy=RestartPolicy(condition='none'),
+            resources=resources,
+            networks=['host'],
+        )
 
         logger.info(f"[OK] Service {exp_name} created successfully")
-        
-        # Save service details after creation
-        service_id = result.stdout.strip()
-        self._save_service_details(exp_name, service_id)
-        
+
+        # Save service details
+        self._save_service_details(exp_name, service.id)
+
         return exp_name
-    
+
     def create_evaluation_service(self, experiment_name: str) -> str:
-        """Create Docker service to run evaluation for an experiment.
-        
-        Args:
-            experiment_name: Name of the experiment to evaluate
-            
-        Returns:
-            Service name for the evaluation task
-        """
+        """Create Docker service to run evaluation."""
         eval_service_name = f"eval__{experiment_name}"
-        
-        # Remove existing evaluation service if it exists (from previous run)
+
         self._remove_service_if_exists(eval_service_name)
-        
         logger.info(f"[INFO] Creating evaluation service: {eval_service_name}")
-        
-        # Build evaluator image if needed and get registry path
+
         registry_image = self.build_evaluator_image()
-        
-        # Create one-time evaluation service
-        service_cmd = f"docker service create --quiet -d --name {eval_service_name} --restart-condition none"
-        
-        # Use host network
-        service_cmd += " --network host"
-        
-        # Mount shared directory
-        service_cmd += f" --mount type=bind,source={self.config.remote_shared_dir},target=/shared"
-        
-        # Use evaluator image from registry with experiment path as argument
-        service_cmd += f" {registry_image} /shared/experiments/{experiment_name}"
-        
-        result = self.ssh.execute(service_cmd)
-        
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to create evaluation service: {result.stderr}")
-        
-        logger.info(f"[OK] Evaluation service {eval_service_name} created successfully")
-        
+
+        service = self.client.services.create(
+            image=registry_image,
+            name=eval_service_name,
+            args=[f"/shared/experiments/{experiment_name}"],
+            mounts=[Mount(
+                target='/shared',
+                source=self.config.remote_shared_dir,
+                type='bind'
+            )],
+            mode=ServiceMode('replicated', replicas=1),
+            restart_policy=RestartPolicy(condition='none'),
+            networks=['host'],
+        )
+
+        logger.info(f"[OK] Evaluation service {eval_service_name} created")
         return eval_service_name
-    
-    def _remove_service_if_exists(self, service_name: str) -> bool:
-        """Remove a service if it exists.
-        
-        Args:
-            service_name: Name of the service to remove
-            
-        Returns:
-            True if service was removed, False if it didn't exist
-        """
-        check_cmd = f"docker service ls --filter name={service_name} --format '{{{{.Name}}}}'"
-        result = self.ssh.execute(check_cmd)
-        
-        if result.stdout.strip() == service_name:
-            logger.info(f"[INFO] Removing existing service: {service_name}")
-            remove_cmd = f"docker service rm {service_name}"
-            self.ssh.execute(remove_cmd)
-            return True
-        return False
-    
-    def cleanup_finished_service(self, service_name: str):
-        """Remove a Docker service after it has finished running.
 
-        Safe to call even if the service no longer exists.
-        """
-        check_cmd = f"docker service ls --filter name={service_name} --format '{{{{.Name}}}}'"
-        result = self.ssh.execute(check_cmd)
+    def list_services(self) -> List[Dict]:
+        """List all Docker services."""
+        services = []
+        for svc in self.client.services.list():
+            attrs = svc.attrs
+            spec = attrs.get('Spec', {})
+            mode = spec.get('Mode', {})
 
-        if result.stdout.strip() == service_name:
-            remove_cmd = f"docker service rm {service_name}"
-            result = self.ssh.execute(remove_cmd)
-            if result.returncode == 0:
-                logger.info(f"[INFO] Cleaned up finished service: {service_name}")
+            # Desired replicas
+            if 'Replicated' in mode:
+                desired = mode['Replicated'].get('Replicas', 0)
             else:
-                logger.warning(f"[WARN] Failed to clean up service {service_name}: {result.stderr}")
+                desired = 'global'
+
+            # Image (strip sha256 digest for display)
+            image = spec.get('TaskTemplate', {}).get('ContainerSpec', {}).get('Image', '')
+            if '@sha256:' in image:
+                image = image.split('@')[0]
+
+            # Running task count
+            tasks = svc.tasks(filters={'desired-state': 'running'})
+            running = sum(1 for t in tasks if t.get('Status', {}).get('State') == 'running')
+
+            services.append({
+                'name': spec.get('Name', ''),
+                'id': attrs.get('ID', ''),
+                'image': image,
+                'replicas': f"{running}/{desired}" if isinstance(desired, int) else desired,
+                'status': 'running' if running > 0 else 'pending',
+            })
+        return services
+
+    def get_service_names(self) -> set:
+        """Get set of all service names."""
+        return {svc.name for svc in self.client.services.list()}
+
+    def stop_service(self, service_name: str):
+        """Stop and remove a service."""
+        try:
+            service = self.client.services.get(service_name)
+            service.remove()
+            logger.info(f"[OK] Service {service_name} stopped and removed")
+        except docker.errors.NotFound:
+            raise ValueError(f"Service {service_name} not found")
+        except docker.errors.APIError as e:
+            raise RuntimeError(f"Failed to stop service {service_name}: {e}")
+
+    def _remove_service_if_exists(self, service_name: str) -> bool:
+        """Remove a service if it exists."""
+        try:
+            service = self.client.services.get(service_name)
+            service.remove()
+            logger.info(f"[INFO] Removed existing service: {service_name}")
+            return True
+        except docker.errors.NotFound:
+            return False
+
+    def cleanup_finished_service(self, service_name: str):
+        """Remove a finished service (safe if it doesn't exist)."""
+        try:
+            service = self.client.services.get(service_name)
+            service.remove()
+            logger.info(f"[INFO] Cleaned up finished service: {service_name}")
+        except docker.errors.NotFound:
+            pass
+        except docker.errors.APIError as e:
+            logger.warning(f"[WARN] Failed to clean up service {service_name}: {e}")
 
     def remove_evaluation_service(self, experiment_name: str):
-        """Remove evaluation service for an experiment.
-        
-        Args:
-            experiment_name: Name of the experiment
-        """
+        """Remove evaluation service for an experiment."""
         eval_service_name = f"eval__{experiment_name}"
         if self._remove_service_if_exists(eval_service_name):
             logger.info(f"[OK] Evaluation service {eval_service_name} removed")
-    
-    def _save_service_config(self, exp_name: str, method_name: str, dataset: str, tag: str,
-                            gpu_required: bool, method_params: dict, registry_image: str, 
-                            manager_ip: str) -> None:
-        """Save service configuration to JSON before launching.
-        
-        Args:
-            exp_name: Experiment name
-            method_name: Method name
-            dataset: Dataset name
-            tag: Docker image tag
-            gpu_required: Whether GPU is required
-            method_params: Optional method-specific parameters passed by user
-            registry_image: Registry image path
-            manager_ip: Manager IP address
+
+    def get_service_logs(self, service_name: str, tail: int = 100) -> List[str]:
+        """Get recent logs for a service.
+
+        Uses SSH + Docker CLI because the Docker SDK log streaming
+        is unreliable for swarm services.
         """
-        import json
-        from datetime import datetime
-        
-        # Load .env file contents using utility function
-        env_file_path = f"{self.config.remote_shared_dir}/methods/{method_name}/.env"
-        env_contents = load_method_env(self.ssh, self.config.remote_shared_dir, method_name)
-        
-        # Override env_contents with method_params (same behavior as in create_service)
-        # Filter out reserved variables
-        for key, value in method_params.items():
-            if key.upper() not in ReservedEnvVars.get_names():
-                env_contents[key] = value
-        
-        # Prepare service configuration for logging
-        service_config = {
-            "experiment_name": exp_name,
-            "method_name": method_name,
-            "dataset": dataset,
-            "tag": tag,
-            "gpu_required": gpu_required,
-            "registry_image": registry_image,
-            "manager_ip": manager_ip,
-            "timestamp": datetime.now().isoformat(),
-            "data_path": f"{self.config.remote_shared_dir}/datasets/{dataset}/",
-            "exp_path": f"{self.config.remote_shared_dir}/experiments/{exp_name}/",
-            "env_file_path": env_file_path,
-            "env_contents": env_contents  # Parameters from .env with method_params overrides
-        }
-        
-        # Save service configuration to JSON file before launching
-        config_file = f"{self.config.remote_shared_dir}/experiments/{exp_name}/service_config.json"
-        config_json = json.dumps(service_config, indent=2)
-        # Use cat with heredoc to avoid quote escaping issues
-        save_config_cmd = f"cat > {config_file} << 'EOF'\n{config_json}\nEOF"
-        self.ssh.execute(save_config_cmd)
-        logger.info(f"[INFO] Saved service configuration to {config_file}")
-    
-    def _save_service_details(self, exp_name: str, service_id: str) -> None:
-        """Save service details to JSON after creation."""
-        import json
-        
-        service_details = self._get_service_details(exp_name, service_id)
-        
-        # Save service details to JSON file
-        details_file = f"{self.config.remote_shared_dir}/experiments/{exp_name}/service_details.json"
-        details_json = json.dumps(service_details, indent=2)
-        # Use cat with heredoc to avoid quote escaping issues
-        save_details_cmd = f"cat > {details_file} << 'EOF'\n{details_json}\nEOF"
-        self.ssh.execute(save_details_cmd)
-        logger.info(f"[INFO] Saved service details to {details_file}")
-    
-    def _get_service_details(self, exp_name: str, service_id: str) -> dict:
-        """Get detailed service information including worker node."""
-        import json
-        from datetime import datetime
-        
-        # Get service inspect output
-        inspect_cmd = f"docker service inspect {exp_name}"
-        result = self.ssh.execute(inspect_cmd)
-        
-        service_details = {
-            "service_id": service_id,
-            "service_name": exp_name,
-            "created_at": datetime.now().isoformat()
-        }
-        
-        if result.returncode == 0:
-            try:
-                inspect_data = json.loads(result.stdout)
-                if inspect_data and len(inspect_data) > 0:
-                    service_info = inspect_data[0]
-                    
-                    # Extract key information
-                    service_details.update({
-                        "image": service_info.get("Spec", {}).get("TaskTemplate", {}).get("ContainerSpec", {}).get("Image"),
-                        "created_at_docker": service_info.get("CreatedAt"),
-                        "updated_at": service_info.get("UpdatedAt"),
-                        "version": service_info.get("Version", {}).get("Index"),
-                        "endpoint": service_info.get("Endpoint", {}),
-                        "replicas": service_info.get("Spec", {}).get("Mode", {}),
-                        "resources": service_info.get("Spec", {}).get("TaskTemplate", {}).get("Resources", {}),
-                        "restart_policy": service_info.get("Spec", {}).get("TaskTemplate", {}).get("RestartPolicy", {}),
-                        "placement": service_info.get("Spec", {}).get("TaskTemplate", {}).get("Placement", {}),
-                    })
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse service inspect output")
-        
-        # Get worker/node information where the service is running
-        ps_cmd = f"docker service ps {exp_name} --format '{{{{json .}}}}'"
-        ps_result = self.ssh.execute(ps_cmd)
-        logger.info(ps_result.stdout.strip())
-        
-        if ps_result.returncode == 0 and ps_result.stdout.strip():
-            try:
-                # Parse first task (current running task)
-                task_lines = ps_result.stdout.strip().split('\n')
-                if task_lines:
-                    task_info = json.loads(task_lines[0])
-                    service_details["worker"] = {
-                        "node": task_info.get("Node"),
-                        "task_id": task_info.get("ID"),
-                        "task_name": task_info.get("Name"),
-                        "current_state": task_info.get("CurrentState"),
-                        "desired_state": task_info.get("DesiredState"),
-                        "error": task_info.get("Error", "")
-                    }
-            except json.JSONDecodeError:
-                logger.warning("Failed to parse service ps output")
-        
-        return service_details
-    
-    def follow_service_logs(self, experiment_name: str):
-        """Follow service logs in real-time, exiting when the task finishes.
+        if not self.service_exists(service_name):
+            return []
 
-        Args:
-            experiment_name: Name of the experiment/service
+        result = self.ssh.execute(
+            f"docker service logs --tail {tail} {service_name} 2>&1"
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return [line for line in result.stdout.strip().split('\n') if line.strip()]
+        return []
+
+    def follow_service_logs(self, service_name: str):
+        """Follow service logs in real-time until task finishes.
+
+        Uses SSH + Docker CLI subprocess because the Docker SDK's
+        follow mode does not stream reliably for swarm services.
         """
-        import subprocess as sp
+        import time as _time
 
-        # Check if service exists
-        check_cmd = f"docker service ls --filter name={experiment_name} --format '{{{{.Name}}}}'"
-        result = self.ssh.execute(check_cmd)
+        if not self.service_exists(service_name):
+            raise ValueError(f"Service {service_name} not found")
 
-        if not result.stdout.strip():
-            raise ValueError(f"Service {experiment_name} not found")
-
-        logger.info(f"[INFO] Following service logs (press Ctrl+C to stop)...")
+        logger.info("[INFO] Following service logs (press Ctrl+C to stop)...")
 
         # Build SSH command for log following
-        ssh_opts = f"-i {self.ssh.ssh_key} -p {self.ssh.ssh_port} -o StrictHostKeyChecking=no"
-        logs_ssh_cmd = f"ssh {ssh_opts} root@{self.ssh.manager_ip} 'docker service logs -f {experiment_name}'"
+        ssh_args = ['ssh']
+        if self.ssh.ssh_key:
+            ssh_args.extend(['-i', str(Path(self.ssh.ssh_key).expanduser())])
+        ssh_args.extend([
+            '-p', str(self.ssh.ssh_port),
+            '-o', 'StrictHostKeyChecking=no',
+            f'root@{self.ssh.manager_ip}',
+            f'docker service logs -f {service_name}',
+        ])
 
-        # Start log following in background
-        proc = sp.Popen(logs_ssh_cmd, shell=True)
+        proc = subprocess.Popen(ssh_args)
 
         try:
             # Poll task state until it finishes
             while proc.poll() is None:
-                time.sleep(3)
-                ps_result = self.ssh.execute(
-                    f"docker service ps {experiment_name} --format '{{{{.CurrentState}}}}' --filter desired-state=shutdown"
-                )
-                state = ps_result.stdout.strip().lower()
-                if state and ("complete" in state or "failed" in state or "shutdown" in state):
-                    # Task finished -- wait a moment for final logs to flush, then stop
-                    time.sleep(2)
-                    proc.terminate()
-                    proc.wait(timeout=5)
-                    break
+                _time.sleep(3)
+                tasks = []
+                try:
+                    svc = self.client.services.get(service_name)
+                    tasks = svc.tasks(filters={'desired-state': 'shutdown'})
+                except Exception:
+                    pass
+                for task in tasks:
+                    state = task.get('Status', {}).get('State', '').lower()
+                    if state in ('complete', 'failed', 'shutdown', 'rejected'):
+                        _time.sleep(2)  # Let final logs flush
+                        proc.terminate()
+                        proc.wait(timeout=5)
+                        return
         except KeyboardInterrupt:
             proc.terminate()
             proc.wait(timeout=5)
@@ -562,98 +543,128 @@ class DockerManager:
             proc.terminate()
             proc.wait(timeout=5)
             raise
-    
-    def get_service_logs(self, experiment_name: str, follow: bool = False, tee_file: str = None):
-        """Show logs for an experiment/service."""
-        logger.info(f"[INFO] Getting logs for experiment: {experiment_name}")
-        
-        # Check if service exists (active or completed)
-        check_cmd = f"docker service ls --filter name={experiment_name} --format '{{{{.Name}}}}'"
-        result = self.ssh.execute(check_cmd)
-        
-        if not result.stdout.strip():
-            raise ValueError(f"Service {experiment_name} not found")
-        
-        # Build logs command
-        logs_cmd = f"docker service logs"
-        if follow:
-            logs_cmd += " -f"
-            logger.info(f"[INFO] Following logs for {experiment_name} (press Ctrl+C to stop)...")
-        else:
-            logger.info(f"[INFO] Showing logs for {experiment_name}...")
-            
-        logs_cmd += f" {experiment_name}"
-        
-        # Build SSH command
-        ssh_cmd = f"ssh -i {self.ssh.ssh_key} -p {self.ssh.ssh_port} -o StrictHostKeyChecking=no root@{self.ssh.manager_ip} '{logs_cmd}'"
-        
-        # Add local tee functionality if output file specified
-        if tee_file:
-            # Expand local path and ensure directory exists
-            tee_path = Path(tee_file).expanduser().resolve()
-            tee_path.parent.mkdir(parents=True, exist_ok=True)
-            ssh_cmd += f" | tee {tee_path}"
-            logger.info(f"[INFO] Saving logs to local file: {tee_path}")
-        
-        # Execute SSH command with local tee
-        import subprocess
-        logger.debug(f"Executing command: {ssh_cmd}")
-        result = subprocess.run(ssh_cmd, shell=True, text=True)
-        
-        if not follow:
-            if tee_file:
-                logger.info(f"[OK] Logs displayed and saved to {tee_file} for {experiment_name}")
-            else:
-                logger.info(f"[OK] Logs displayed for {experiment_name}")
-    
-    def stop_service(self, experiment_name: str):
-        """Stop and remove a running service/experiment."""
-        logger.info(f"[STOP] Stopping service: {experiment_name}")
-        
-        # Check if service exists
-        check_cmd = f"docker service ls --filter name={experiment_name} --format '{{{{.Name}}}}'"
-        result = self.ssh.execute(check_cmd)
-        
-        if not result.stdout.strip():
-            raise ValueError(f"Service {experiment_name} not found")
-        
-        # Remove the service
-        remove_cmd = f"docker service rm {experiment_name}"
-        result = self.ssh.execute(remove_cmd)
-        
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to stop service {experiment_name}: {result.stderr}")
-        
-        logger.info(f"[OK] Service {experiment_name} stopped and removed")
-    
-    def get_running_services(self):
-        """Get list of running services/experiments."""
-        result = self.ssh.execute("docker service ls --format '{{.Name}}\t{{.Mode}}\t{{.Replicas}}\t{{.Image}}'")
-        if result.returncode == 0 and result.stdout.strip():
-            print("\n[INFO] Running Services/Experiments:")
-            print(f"{'NAME':<50} {'MODE':<15} {'REPLICAS':<15} {'IMAGE':<30}")
-            print("-" * 110)
-            for line in result.stdout.strip().split('\n'):
-                if line.strip():
-                    parts = line.split('\t')
-                    if len(parts) >= 4:
-                        name = parts[0][:49]
-                        mode = parts[1][:14]
-                        replicas = parts[2][:14]
-                        image = parts[3][:29]
-                        print(f"{name:<50} {mode:<15} {replicas:<15} {image:<30}")
-        else:
-            print("\n[INFO] Running Services/Experiments: None")
-    
-    def get_cluster_status(self):
-        """Get Docker Swarm cluster status."""
-        logger.info("[INFO] Cluster Status:")
 
-        # Show swarm nodes
-        result = self.ssh.execute("docker node ls")
-        if result.returncode == 0:
-            print("\n[INFO] Swarm Nodes:")
-            print(result.stdout)
-        
-        # Show running services
-        self.get_running_services()
+    def service_exists(self, service_name: str) -> bool:
+        """Check if a Docker service exists."""
+        try:
+            self.client.services.get(service_name)
+            return True
+        except docker.errors.NotFound:
+            return False
+
+    def is_service_failed(self, service_name: str) -> bool:
+        """Check if a service exists but all its tasks have failed."""
+        try:
+            svc = self.client.services.get(service_name)
+            tasks = svc.tasks()
+            if not tasks:
+                return False
+            # Check if every task is in a terminal failure state
+            for task in tasks:
+                state = task.get('Status', {}).get('State', '').lower()
+                if state not in ('failed', 'rejected', 'shutdown', 'orphaned'):
+                    return False
+            return True
+        except docker.errors.NotFound:
+            return False
+
+    # ========================================================================
+    # Cluster Status
+    # ========================================================================
+
+    def get_cluster_status(self) -> Dict:
+        """Get Docker Swarm cluster status."""
+        info = self.client.info()
+        swarm = info.get('Swarm', {})
+
+        return {
+            'swarm_active': swarm.get('LocalNodeState') == 'active',
+            'nodes': self.get_nodes(),
+            'services': self.list_services(),
+        }
+
+    # ========================================================================
+    # Internal
+    # ========================================================================
+
+    def _build_service_env(self, method_name, dataset, exp_name, method_params):
+        """Build environment variable list for service."""
+        method_env = load_method_env(self.ssh, self.config.remote_shared_dir, method_name)
+
+        # Build env dict (method .env values as base)
+        env_dict = dict(method_env)
+
+        # Add required env vars
+        env_dict['METHOD_NAME'] = method_name
+        env_dict['DATA'] = f"{self.config.remote_shared_dir}/datasets/{dataset}/"
+        env_dict['EXP'] = f"{self.config.remote_shared_dir}/experiments/{exp_name}/"
+
+        # Override with method params (prefixed with _)
+        reserved = ReservedEnvVars.get_names()
+        for key, value in method_params.items():
+            if key.upper() not in reserved:
+                env_dict[f"_{key}"] = value
+                logger.info(f"   Setting parameter: _{key}={value}")
+
+        return [f"{k}={v}" for k, v in env_dict.items()]
+
+    def _save_service_config(self, exp_name, method_name, dataset, tag,
+                             gpu_required, method_params, registry_image):
+        """Save service configuration to JSON."""
+        env_contents = load_method_env(self.ssh, self.config.remote_shared_dir, method_name)
+
+        reserved = ReservedEnvVars.get_names()
+        for key, value in method_params.items():
+            if key.upper() not in reserved:
+                env_contents[key] = value
+
+        service_config = {
+            "experiment_name": exp_name,
+            "method_name": method_name,
+            "dataset": dataset,
+            "tag": tag,
+            "gpu_required": gpu_required,
+            "registry_image": registry_image,
+            "manager_ip": self.config.manager_ip,
+            "timestamp": datetime.now().isoformat(),
+            "data_path": f"{self.config.remote_shared_dir}/datasets/{dataset}/",
+            "exp_path": f"{self.config.remote_shared_dir}/experiments/{exp_name}/",
+            "env_contents": env_contents,
+        }
+
+        config_file = f"{self.config.remote_shared_dir}/experiments/{exp_name}/service_config.json"
+        config_json = json.dumps(service_config, indent=2)
+        self.ssh.execute(f"cat > {config_file} << 'EOF'\n{config_json}\nEOF")
+        logger.info(f"[INFO] Saved service configuration to {config_file}")
+
+    def _save_service_details(self, exp_name, service_id):
+        """Save service details to JSON after creation."""
+        try:
+            service = self.client.services.get(exp_name)
+            attrs = service.attrs
+
+            details = {
+                "service_id": service_id,
+                "service_name": exp_name,
+                "created_at": datetime.now().isoformat(),
+                "image": attrs.get('Spec', {}).get('TaskTemplate', {}).get('ContainerSpec', {}).get('Image'),
+                "created_at_docker": attrs.get('CreatedAt'),
+            }
+
+            # Get task info
+            tasks = service.tasks()
+            if tasks:
+                task = tasks[0]
+                details["worker"] = {
+                    "node_id": task.get('NodeID', ''),
+                    "task_id": task.get('ID', ''),
+                    "state": task.get('Status', {}).get('State', ''),
+                    "desired_state": task.get('DesiredState', ''),
+                }
+
+            details_file = f"{self.config.remote_shared_dir}/experiments/{exp_name}/service_details.json"
+            details_json = json.dumps(details, indent=2)
+            self.ssh.execute(f"cat > {details_file} << 'EOF'\n{details_json}\nEOF")
+            logger.info(f"[INFO] Saved service details to {details_file}")
+        except Exception as e:
+            logger.warning(f"[WARN] Failed to save service details: {e}")

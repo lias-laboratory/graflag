@@ -1,6 +1,6 @@
 # GraFlag CLI
 
-Command-line interface for orchestrating GAD benchmarks on Docker Swarm clusters.
+Command-line interface for orchestrating GAD experiments on Docker Swarm clusters. Includes the web GUI and development cluster as subpackages.
 
 ## Installation
 
@@ -12,14 +12,27 @@ This installs the `graflag` command.
 
 ## Configuration
 
-Create a `.env` file in the working directory:
+Run interactive setup to store configuration in `~/.config/graflag/config.env`:
+
+```bash
+graflag setup
+```
+
+Or place a `.env` file in the working directory:
 
 ```
 MANAGER_IP=192.168.100.10
 SSH_PORT=22
-SHARED_DIR=/shared
 SSH_KEY=~/.ssh/id_ed25519
+SHARED_DIR=/shared
+HOSTS_FILE=hosts.yml
 ```
+
+## Dependencies
+
+- `pyyaml` -- hosts.yml parsing for cluster setup
+- `docker` -- Docker SDK for Python (service management via SSH tunnel)
+- `flask`, `flask-socketio` -- Web GUI backend
 
 ## Commands
 
@@ -29,12 +42,12 @@ SSH_KEY=~/.ssh/id_ed25519
 graflag setup
 ```
 
-### Run benchmark
+### Run experiment
 
 ```bash
-graflag benchmark -m bond_dominant -d bond_inj_cora --build
-graflag benchmark -m taddy -d uci --params MAX_EPOCH=100 LEARNING_RATE=0.001
-graflag benchmark --from-config ./experiments/exp__method__dataset__time/service_config.json
+graflag run -m bond_dominant -d bond_inj_cora --build
+graflag run -m taddy -d uci --params MAX_EPOCH=100 LEARNING_RATE=0.001
+graflag run --from-config ./experiments/exp__method__dataset__time/service_config.json
 ```
 
 ### List resources
@@ -88,15 +101,34 @@ graflag sync --path ./my-method/    # sync specific directory
 graflag sync --lib --path ./my-lib/ # sync as shared library
 ```
 
+### Web GUI
+
+```bash
+graflag gui
+graflag gui --port 8080 --debug
+```
+
+### Development cluster
+
+```bash
+graflag devcluster --hosts hosts.yml
+graflag devcluster --hosts hosts.yml --pubkey ~/.ssh/id_ed25519.pub
+graflag devcluster --down
+```
+
 ## Module Structure
 
 ```
 graflag/
     __init__.py      Package exports
-    cli.py           Argument parsing and command dispatch
-    core.py          GraFlag orchestration class
-    config.py        Configuration loading from .env
-    ssh.py           SSH and rsync operations
-    docker_ops.py    Docker Swarm service management
-    api.py           Python API for GUI integration
+    cli.py           Argument parsing, command dispatch, output formatting
+    core.py          GraFlag orchestration class (returns structured data)
+    models.py        Dataclass models (ClusterInfo, MethodInfo, ExperimentInfo, ...)
+    config.py        Configuration loading (~/.config/graflag/config.env or .env)
+    ssh.py           SSH and rsync file operations
+    docker_ops.py    Docker Swarm operations via Docker SDK (SSH tunnel)
+    api.py           Python API for GUI integration (wraps core)
+    utils.py         Shared utility functions
+    gui/             Web dashboard subpackage (Flask + Vue.js)
+    devcluster/      Virtual cluster subpackage (Docker Compose)
 ```

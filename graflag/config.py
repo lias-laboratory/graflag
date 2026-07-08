@@ -21,6 +21,7 @@ PROMPTS = [
     ("SSH_PORT", "SSH port", "22"),
     ("SSH_KEY", "SSH private key path", "~/.ssh/id_ed25519"),
     ("SHARED_DIR", "Remote shared directory", "/shared"),
+    ("HOSTS_FILE", "Hosts file (hosts.yml) path", "hosts.yml"),
 ]
 
 
@@ -121,3 +122,7 @@ class GraflagConfig:
     @property
     def nfs_port(self) -> str:
         return self.get("NFS_PORT", "2049")
+
+    @property
+    def hosts_file(self) -> Optional[str]:
+        return self.get("HOSTS_FILE", "hosts.yml")

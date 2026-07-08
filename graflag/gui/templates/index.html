@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraFlag Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        {% raw %}
+        <!-- Loading Overlay -->
+        <div v-if="isLoading" class="loading-overlay">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading GraFlag Dashboard...</div>
+            </div>
+        </div>
+
+        <nav class="navbar">
+            <div class="brand">
+                <div class="brand-icon">⚡</div>
+                GraFlag
+            </div>
+
+            <!-- Cluster Status inline -->
+            <cluster-status :cluster-info="clusterInfo"></cluster-status>
+
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <button class="theme-toggle" @click="toggleNotifications"
+                    :title="notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled'"
+                    :style="{ opacity: notificationsEnabled ? 1 : 0.5 }">
+                    {{ notificationsEnabled ? '🔔' : '🔕' }}
+                </button>
+                <button class="theme-toggle" @click="toggleTheme" :title="isDarkMode ? 'Light Mode' : 'Dark Mode'">
+                    {{ isDarkMode ? '☀️' : '🌙' }}
+                </button>
+            </div>
+        </nav>
+
+        <div class="container">
+            <!-- Run Form -->
+            <run-form :methods="methods" :datasets="datasets" @submit="loadExperiments">
+            </run-form>
+
+            <!-- Methods & Datasets -->
+            <div class="grid-2">
+                <data-table title="Methods" icon="🔬" :data="methods" :page="methodPage"
+                    @update:page="methodPage = $event" key-field="name" :columns="[
+                    { key: 'name', label: 'Method' },
+                    { key: 'description', label: 'Description' },
+                    { key: 'source_code', label: 'Source' },
+                    { key: 'features', label: 'Features' }
+                ]">
+                    <template #cell-name="{ item }">
+                        <span style="font-weight:600;">{{ item.name }}</span>
+                    </template>
+                    <template #cell-description="{ item }">
+                        <span style="display:block; min-width:60px; max-width:15vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.7rem;" :title="item.description">{{ item.description || '-' }}</span>
+                    </template>
+                    <template #cell-source_code="{ item }">
+                        <a v-if="item.source_code" :href="item.source_code" target="_blank" rel="noopener noreferrer"
+                           style="color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:0.15rem;"
+                           :title="item.source_code">
+                            <span>Link</span>
+                            <span style="font-size:0.65rem;">↗</span>
+                        </a>
+                        <span v-else style="color:var(--text-muted);">-</span>
+                    </template>
+                    <template #cell-features="{ item }">
+                        <span class="tag">{{ item.has_dockerfile ? 'Dockerfile' : 'No Dockerfile' }}</span>
+                    </template>
+                </data-table>
+
+                <data-table title="Datasets" icon="📁" :data="datasets" :page="datasetPage"
+                    @update:page="datasetPage = $event" key-field="name" :columns="[
+                    { key: 'name', label: 'Dataset' },
+                    { key: 'size_mb', label: 'Size (MB)' },
+                    { key: 'file_count', label: 'Files' }
+                ]">
+                    <template #cell-name="{ item }">
+                        <span style="font-weight:600;">{{ item.name }}</span>
+                    </template>
+                    <template #cell-size_mb="{ item }">
+                        {{ item.size_mb.toFixed(2) }}
+                    </template>
+                </data-table>
+            </div>
+
+            <!-- Running Services -->
+            <data-table title="Running Services" icon="⚡" :data="services" :page="servicePage"
+                @update:page="servicePage = $event" key-field="name" :columns="[
+                { key: 'name', label: 'Service' },
+                { key: 'status', label: 'Status' },
+                { key: 'replicas', label: 'Replicas' },
+                { key: 'image', label: 'Image' }
+            ]">
+                <template #cell-name="{ item }">
+                    <span style="font-weight:500;">{{ item.name }}</span>
+                </template>
+                <template #cell-status="{ item }">
+                    <span class="badge badge-sm" :class="{'badge-running': item.status === 'running', 'badge-pending': item.status === 'pending', 'badge-stopped': item.status === 'partially running'}">{{ item.status }}</span>
+                </template>
+                <template #cell-image="{ item }">
+                    <code
+                        style="background:var(--bg-secondary); padding:0.1rem 0.3rem; border-radius:3px; font-size:0.7rem; color:var(--text-main);">{{ item.image }}</code>
+                </template>
+            </data-table>
+
+            <!-- Experiments + Detail Panel -->
+            <div class="section experiments-split">
+                <div class="section-header">
+                    <h2>🧪 Experiments <span style="color:var(--text-muted); font-weight:400; font-size:0.7rem;">{{ experiments.length }}</span></h2>
+                </div>
+                <div class="experiments-split-body">
+                    <!-- Table Side -->
+                    <div class="experiments-table-side">
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Experiment</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="item in paginatedExperiments" :key="item.name" :class="{ 'row-selected': viewExperiment === item.name }">
+                                        <td>
+                                            <span style="font-weight:500; font-size:0.7rem; display:block; max-width:20vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" :title="'Method: ' + item.method + '\nDataset: ' + item.dataset + '\nTime: ' + item.timestamp">{{ item.name }}</span>
+                                        </td>
+                                        <td>
+                                            <div style="display:flex; align-items:center; gap:0.2rem; flex-wrap:wrap;">
+                                                <span class="badge badge-sm" :class="'badge-' + item.status">{{ item.status }}</span>
+                                                <span v-if="item.has_results" class="badge badge-sm badge-completed">Results</span>
+                                                <span v-if="item.has_evaluation" class="badge badge-sm badge-eval">Eval</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button v-if="item.status === 'running'" class="btn-icon btn-danger"
+                                                    @click.stop="stopExperiment(item.name)" title="Stop Experiment">
+                                                    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none"/></svg>
+                                                </button>
+                                                <button v-if="item.has_results && !item.has_evaluation && evaluatingExperiment !== item.name"
+                                                    class="btn-icon btn-success"
+                                                    @click.stop="evaluateExperiment(item.name)" title="Run Evaluation">
+                                                    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-9"/></svg>
+                                                </button>
+                                                <button v-if="evaluatingExperiment === item.name"
+                                                    class="btn-icon btn-success" disabled
+                                                    style="cursor:wait;" title="Evaluating...">
+                                                    <span class="btn-spinner"></span>
+                                                </button>
+                                                <button v-if="item.has_evaluation" class="btn-icon" style="background:#8B5CF6; color:white;"
+                                                    @click.stop="showEvaluation(item.name)" title="View Evaluation">
+                                                    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 12l4-5 4 3 5-6"/><circle cx="20" cy="4" r="1.5" fill="currentColor" stroke="none"/></svg>
+                                                </button>
+                                                <button class="btn-icon" style="background:#4B5563; color:white;"
+                                                    @click.stop="viewLogs(item.name)" title="View Logs">
+                                                    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h7"/></svg>
+                                                </button>
+                                                <button v-if="item.status !== 'running'" class="btn-icon" style="background:#991B1B; color:white;"
+                                                    @click.stop="deleteExperiment(item.name)" title="Delete Experiment">
+                                                    <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div v-if="experimentTotalPages > 1" style="display:flex; justify-content:space-between; align-items:center; padding:0.3rem 0.5rem; border-top:1px solid var(--border);">
+                                <div style="color:var(--text-muted); font-size:0.7rem;">
+                                    {{ (experimentPage - 1) * 5 + 1 }}-{{ Math.min(experimentPage * 5, experiments.length) }} of {{ experiments.length }}
+                                </div>
+                                <div style="display:flex; gap:0.3rem; align-items:center;">
+                                    <button class="btn-page" :disabled="experimentPage === 1"
+                                            @click="experimentPage = Math.max(1, experimentPage - 1)">
+                                        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+                                    </button>
+                                    <span style="font-size:0.7rem; color:var(--text-muted); padding:0 0.25rem;">
+                                        {{ experimentPage }}/{{ experimentTotalPages }}
+                                    </span>
+                                    <button class="btn-page" :disabled="experimentPage === experimentTotalPages"
+                                            @click="experimentPage = Math.min(experimentTotalPages, experimentPage + 1)">
+                                        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Divider -->
+                    <div class="experiments-divider"></div>
+
+                    <!-- View Side -->
+                    <div class="experiments-view-side">
+                        <!-- Empty state -->
+                        <div v-if="!viewMode" style="color:var(--text-muted); padding:1.5rem; text-align:center; font-size:0.75rem;">
+                            Select an experiment to view logs or evaluation.
+                        </div>
+
+                        <!-- Header with close -->
+                        <div v-if="viewMode" style="display:flex; justify-content:space-between; align-items:center; padding:0.25rem 0.5rem; border-bottom:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:0.4rem;">
+                                <span style="font-size:0.65rem; font-family:'JetBrains Mono',monospace; color:var(--text-muted); text-transform:uppercase;">{{ viewMode === 'logs' ? 'Logs' : 'Evaluation' }}</span>
+                                <span v-if="viewMode === 'logs'" :style="{fontSize:'0.6rem', color: viewLogsPaused ? '#F59E0B' : 'var(--success)'}">
+                                    {{ viewLogsPaused ? '⏸ Paused' : '● Live' }}
+                                </span>
+                            </div>
+                            <div style="display:flex; gap:0.25rem;">
+                                <button v-if="viewMode === 'logs'" class="btn-icon" style="background:#6B7280; color:white; min-width:24px; height:24px;"
+                                    @click="viewLogsPaused = !viewLogsPaused">
+                                    <svg v-if="viewLogsPaused" viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;stroke:none;"><path d="M8 5v14l11-7z"/></svg>
+                                    <svg v-else viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;stroke:none;"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+                                </button>
+                                <button class="btn-icon" style="background:#6B7280; color:white; min-width:24px; height:24px;"
+                                    @click="closeDetailPanel">
+                                    <svg viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Logs View -->
+                        <div v-if="viewMode === 'logs'">
+                            <pre class="terminal" style="max-height:300px; overflow-y:auto; margin:0; border-radius:0; font-size:0.65rem;">{{ viewLogs_text }}</pre>
+                        </div>
+
+                        <!-- Evaluation View -->
+                        <div v-if="viewMode === 'eval'" style="padding:0.5rem;">
+                            <div v-if="!viewEval_data" style="color:var(--text-muted); text-align:center; padding:1rem; font-size:0.75rem;">
+                                Loading...
+                            </div>
+
+                            <div v-else-if="viewEval_data.error" style="color:#EF4444; padding:0.5rem; font-size:0.75rem;">
+                                Error: {{ viewEval_data.error }}
+                            </div>
+
+                            <div v-else>
+                                <!-- Metrics two-column grid -->
+                                <div v-if="viewEval_data.metrics" class="eval-two-col">
+                                    <div v-for="(value, key) in viewEval_data.metrics" :key="key" class="eval-row">
+                                        <span class="ek">{{ key.replace(/_/g, ' ') }}</span>
+                                        <span class="ev">{{ typeof value === 'number' ? value.toFixed(4) : value }}</span>
+                                    </div>
+                                    <div v-if="viewResults_data && viewResults_data.execution_time_ms" class="eval-row">
+                                        <span class="ek">time</span>
+                                        <span class="ev">{{ (viewResults_data.execution_time_ms / 1000).toFixed(1) }}s</span>
+                                    </div>
+                                    <div v-if="viewResults_data && viewResults_data.peak_memory_mb" class="eval-row">
+                                        <span class="ek">mem</span>
+                                        <span class="ev">{{ viewResults_data.peak_memory_mb.toFixed(0) }}MB</span>
+                                    </div>
+                                    <div v-if="viewResults_data && viewResults_data.peak_gpu_memory_mb" class="eval-row">
+                                        <span class="ek">gpu</span>
+                                        <span class="ev">{{ viewResults_data.peak_gpu_memory_mb.toFixed(0) }}MB</span>
+                                    </div>
+                                </div>
+
+                                <!-- Plots Slider -->
+                                <div v-if="viewEval_data.plots_available && viewEval_data.plots_available.length > 0" class="plots-slider" style="margin-top:0.4rem;">
+                                    <div class="plots-slider-track">
+                                        <img v-for="(plot, idx) in viewEval_data.plots_available" :key="plot"
+                                            :src="'/api/experiments/' + viewExperiment + '/plot/' + plot"
+                                            class="plots-slider-img"
+                                            :alt="plot" @click="openLightbox(idx)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plot Lightbox -->
+            <div v-if="lightboxOpen && viewEval_data && viewEval_data.plots_available" class="lightbox-overlay" @click="closeLightbox">
+                <div class="lightbox-content" @click.stop>
+                    <button class="lightbox-close" @click="closeLightbox">
+                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:white;stroke-width:2.5;fill:none;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                    <button class="lightbox-nav lightbox-prev" @click="lightboxPrev">
+                        <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:white;stroke-width:2.5;fill:none;"><path d="M15 18l-6-6 6-6"/></svg>
+                    </button>
+                    <img :src="'/api/experiments/' + viewExperiment + '/plot/' + viewEval_data.plots_available[lightboxIndex]"
+                         :alt="viewEval_data.plots_available[lightboxIndex]"
+                         class="lightbox-img">
+                    <button class="lightbox-nav lightbox-next" @click="lightboxNext">
+                        <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:white;stroke-width:2.5;fill:none;"><path d="M9 18l6-6-6-6"/></svg>
+                    </button>
+                    <div class="lightbox-caption">
+                        {{ viewEval_data.plots_available[lightboxIndex].replace('.png','').replace(/_/g,' ') }}
+                        <span style="color:var(--text-muted); margin-left:0.5rem;">{{ lightboxIndex + 1 }}/{{ viewEval_data.plots_available.length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endraw %}
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

@@ -11,7 +11,7 @@ pip install graflag
 Or from source:
 
 ```bash
-git clone https://github.com/lias-laboratory/graflag.git
+git clone https://github.com/gbay7/graflag.git
 cd graflag
 pip install -e .
 ```
@@ -20,8 +20,8 @@ This installs the `graflag` command (includes CLI, web GUI, and devcluster).
 
 ## Related Repositories
 
-- [graflag-shared](https://github.com/lias-laboratory/graflag-shared) -- Methods, datasets, and shared libraries (NFS-mounted storage)
-- [Documentation](https://lias-laboratory.github.io/graflag/) -- Full documentation (Sphinx)
+- [graflag-shared](https://github.com/gbay7/graflag-shared) -- Methods, datasets, and shared libraries (NFS-mounted storage)
+- [Documentation](https://gbay7.github.io/graflag/) -- Full documentation (Sphinx)
 
 ## Quick Start
 
@@ -31,8 +31,11 @@ Clone the shared storage repository on your NFS mount:
 
 ```bash
 cd /shared  # or your NFS mount point
-git clone https://github.com/lias-laboratory/graflag-shared.git .
-git lfs pull  # download dataset files
+git clone https://github.com/gbay7/graflag-shared.git .
+# Dataset files are not committed; they download on demand when you run
+# `graflag run` (via the graflag_data library). Optional prefetch:
+#   pip install graflag-shared/libs/graflag_data
+#   graflag-data fetch         # all datasets
 ```
 
 ### 2. Configure

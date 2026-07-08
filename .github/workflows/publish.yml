@@ -8,6 +8,11 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/graflag
+    permissions:
+      id-token: write  # OIDC token for PyPI Trusted Publisher
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,7 +29,4 @@ jobs:
         run: python -m build
 
       - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: pip install twine && twine upload dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1

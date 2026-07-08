@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="graflag",
-    version="1.0.0",
+    version="1.0.1",
     description="Distributed benchmarking framework for Graph Anomaly Detection",
     author="gbay7",
     packages=find_packages(),

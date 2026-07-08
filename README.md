@@ -1,21 +1,52 @@
-# GraFlag CLI
+# GraFlag
 
-Command-line interface for orchestrating GAD experiments on Docker Swarm clusters. Includes the web GUI and development cluster as subpackages.
+Distributed benchmarking framework for Graph Anomaly Detection (GAD). Orchestrates experiments on Docker Swarm clusters with NFS-based shared storage.
 
 ## Installation
 
 ```bash
+pip install graflag
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/lias-laboratory/graflag.git
+cd graflag
 pip install -e .
 ```
 
-This installs the `graflag` command.
+This installs the `graflag` command (includes CLI, web GUI, and devcluster).
 
-## Configuration
+## Related Repositories
 
-Run interactive setup to store configuration in `~/.config/graflag/config.env`:
+- [graflag-shared](https://github.com/lias-laboratory/graflag-shared) -- Methods, datasets, and shared libraries (NFS-mounted storage)
+- [Documentation](https://lias-laboratory.github.io/graflag/) -- Full documentation (Sphinx)
+
+## Quick Start
+
+### 1. Set up the shared directory
+
+Clone the shared storage repository on your NFS mount:
+
+```bash
+cd /shared  # or your NFS mount point
+git clone https://github.com/lias-laboratory/graflag-shared.git .
+git lfs pull  # download dataset files
+```
+
+### 2. Configure
+
+Run the interactive setup wizard:
 
 ```bash
 graflag setup
+```
+
+This stores configuration in `~/.config/graflag/config.env`. To reconfigure later:
+
+```bash
+graflag setup --reconfigure
 ```
 
 Or place a `.env` file in the working directory:
@@ -28,93 +59,50 @@ SHARED_DIR=/shared
 HOSTS_FILE=hosts.yml
 ```
 
-## Dependencies
-
-- `pyyaml` -- hosts.yml parsing for cluster setup
-- `docker` -- Docker SDK for Python (service management via SSH tunnel)
-- `flask`, `flask-socketio` -- Web GUI backend
-
-## Commands
-
-### Setup cluster
-
-```bash
-graflag setup
-```
-
-### Run experiment
+### 3. Run an experiment
 
 ```bash
 graflag run -m bond_dominant -d bond_inj_cora --build
 graflag run -m taddy -d uci --params MAX_EPOCH=100 LEARNING_RATE=0.001
-graflag run --from-config ./experiments/exp__method__dataset__time/service_config.json
 ```
 
-### List resources
-
-```bash
-graflag list methods
-graflag list datasets
-graflag list experiments
-graflag list services
-```
-
-### Cluster status
-
-```bash
-graflag status
-```
-
-### View logs
-
-```bash
-graflag logs -e exp__bond_dominant__bond_inj_cora__20260309_120000
-graflag logs -e exp__bond_dominant__bond_inj_cora__20260309_120000 -f
-graflag logs -e exp__bond_dominant__bond_inj_cora__20260309_120000 --tee ./output.log
-```
-
-### Stop experiment
-
-```bash
-graflag stop -e exp__bond_dominant__bond_inj_cora__20260309_120000
-graflag stop -e exp__bond_dominant__bond_inj_cora__20260309_120000 --rm
-```
-
-### Evaluate
+### 4. Evaluate
 
 ```bash
 graflag evaluate -e exp__bond_dominant__bond_inj_cora__20260309_120000
 ```
 
-### Copy files
+## Commands
 
-```bash
-graflag copy -s ./data -d datasets -r
-graflag copy --from-remote -s experiments/exp_name -d ./local_results
-```
+| Command | Description |
+|---------|-------------|
+| `graflag setup` | Interactive cluster configuration |
+| `graflag run -m METHOD -d DATASET` | Run an experiment |
+| `graflag status` | Show cluster status |
+| `graflag list methods\|datasets\|experiments\|services` | List resources |
+| `graflag logs -e EXP [-f]` | View experiment logs |
+| `graflag stop -e EXP [--rm]` | Stop an experiment |
+| `graflag evaluate -e EXP` | Evaluate experiment results |
+| `graflag copy -s SRC -d DST [-r]` | Copy files to/from remote |
+| `graflag sync [--lib] [--path PATH]` | Sync method or library |
+| `graflag gui [--port PORT]` | Start web dashboard |
+| `graflag devcluster --hosts FILE` | Deploy virtual cluster |
+| `graflag devcluster --down` | Stop virtual cluster |
 
-### Sync method or library
+## Development Cluster
 
-```bash
-graflag sync                        # sync current directory as method
-graflag sync --path ./my-method/    # sync specific directory
-graflag sync --lib --path ./my-lib/ # sync as shared library
-```
-
-### Web GUI
-
-```bash
-graflag gui
-graflag gui --port 8080 --debug
-```
-
-### Development cluster
+For local development without a physical cluster:
 
 ```bash
 graflag devcluster --hosts hosts.yml
-graflag devcluster --hosts hosts.yml --pubkey ~/.ssh/id_ed25519.pub
-graflag devcluster --down
+graflag setup
 ```
+
+## Dependencies
+
+- `pyyaml` -- hosts.yml parsing for cluster setup
+- `docker` -- Docker SDK for Python (service management via SSH tunnel)
+- `flask`, `flask-socketio` -- Web GUI backend
 
 ## Module Structure
 

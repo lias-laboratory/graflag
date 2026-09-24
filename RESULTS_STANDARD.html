@@ -423,10 +423,18 @@
     <span class="n">node_ids</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">anomaly_scores</span><span class="p">)))</span>  <span class="c1"># optional</span>
 <span class="p">)</span>
 
-<span class="c1"># Add metadata</span>
+<span class="c1"># Add metadata. `summary` says which split was scored and how many scores</span>
+<span class="c1"># there are, and carries the method&#39;s own AUC over them: the contract tests</span>
+<span class="c1"># require the first two, and `graflag verify` compares the third with the</span>
+<span class="c1"># evaluator&#39;s.</span>
 <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span>
     <span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;your_method&quot;</span><span class="p">,</span>
-    <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;cora&quot;</span>
+    <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;cora&quot;</span><span class="p">,</span>
+    <span class="n">summary</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span>
+                         <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">anomaly_scores</span><span class="p">)},</span>
+        <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="n">test_auc</span><span class="p">},</span>
+    <span class="p">},</span>
 <span class="p">)</span>
 
 <span class="c1"># Finalize: writes results.json to the EXP directory, atomically</span>

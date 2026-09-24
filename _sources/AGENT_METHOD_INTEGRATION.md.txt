@@ -453,8 +453,13 @@ from graflag_runner import ResultWriter
 
 writer = ResultWriter()  # Auto-reads EXP env var
 
-# Add metadata (call before or after save_scores)
-writer.add_metadata(method_name="taddy", dataset="uci", learning_rate=0.001)
+# Add metadata (call before or after save_scores). The summary says which split
+# the scores cover and how many there are -- gate 1 checks -- and carries the
+# method's own AUC over them, which `graflag verify` compares with the evaluator's.
+writer.add_metadata(method_name="taddy", dataset="uci", learning_rate=0.001,
+                    summary={"dataset_info": {"scored_split": "test",
+                                              "scored_samples": 1200},
+                             "results": {"test_auc": 0.93}})
 
 # Resource metrics: rarely needed, and not what gets reported. The runner
 # measures exec time, peak memory and peak GPU from outside the method and
@@ -523,6 +528,7 @@ Source: {GitHub URL} at {SOURCE_REF}
 from dataclasses import asdict, dataclass
 
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 from graflag_runner import (
     ResultWriter, device, info, load_dataset, params, paths, seed_all, upstream,
@@ -584,13 +590,19 @@ def main():
     # over one class produces a null AUC rather than an error.
     scores = np.zeros(len(edges))   # replace
     ground_truth = labels           # replace
+    test_auc = float(roc_auc_score(ground_truth, scores))   # the method's own number
 
     writer.save_scores(
         result_type="EDGE_STREAM_ANOMALY_SCORES",   # adjust per method
         scores=scores.tolist(),
         ground_truth=list(ground_truth),
     )
-    writer.add_metadata(dataset=run.dataset, **asdict(config))
+    # Which split the scores cover and how many there are (gate 1 checks), and
+    # the method's own AUC over exactly these scores (gate 4 compares).
+    writer.add_metadata(dataset=run.dataset, **asdict(config), summary={
+        "dataset_info": {"scored_split": "test", "scored_samples": len(scores)},
+        "results": {"test_auc": test_auc},      # replace
+    })
     writer.finalize()               # atomic; writes results.json
 
 
@@ -856,7 +868,8 @@ Create `graflag-shared/methods/{method_name}/` with these files:
 - Call `writer.spot("training", ...)` during training loop
 - Generate predictions on TEST data (contains anomalies)
 - Call `writer.save_scores()` with correct result_type and ground_truth
-- Call `writer.add_metadata()` with all hyperparameters
+- Call `writer.add_metadata()` with all hyperparameters and a `summary` holding
+  `scored_split`, `scored_samples` and the method's own AUC over the published scores
 - Call `writer.finalize()`
 
 ### Step 4: Describe the Dataset (only if it is new)

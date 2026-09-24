@@ -660,8 +660,13 @@ ones reported</strong>; anything you record yourself is kept beside them as
 
 <span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>  <span class="c1"># Auto-reads EXP env var</span>
 
-<span class="c1"># Add metadata (call before or after save_scores)</span>
-<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;taddy&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;uci&quot;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
+<span class="c1"># Add metadata (call before or after save_scores). The summary says which split</span>
+<span class="c1"># the scores cover and how many there are -- gate 1 checks -- and carries the</span>
+<span class="c1"># method&#39;s own AUC over them, which `graflag verify` compares with the evaluator&#39;s.</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;taddy&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;uci&quot;</span><span class="p">,</span> <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+                    <span class="n">summary</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span>
+                                              <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="mi">1200</span><span class="p">},</span>
+                             <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="mf">0.93</span><span class="p">}})</span>
 
 <span class="c1"># Resource metrics: rarely needed, and not what gets reported. The runner</span>
 <span class="c1"># measures exec time, peak memory and peak GPU from outside the method and</span>
@@ -728,6 +733,7 @@ rather than this block – the real file is annotated and stays current.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">roc_auc_score</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ResultWriter</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">load_dataset</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">paths</span><span class="p">,</span> <span class="n">seed_all</span><span class="p">,</span> <span class="n">upstream</span><span class="p">,</span>
@@ -789,13 +795,19 @@ rather than this block – the real file is annotated and stays current.</p>
     <span class="c1"># over one class produces a null AUC rather than an error.</span>
     <span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">))</span>   <span class="c1"># replace</span>
     <span class="n">ground_truth</span> <span class="o">=</span> <span class="n">labels</span>           <span class="c1"># replace</span>
+    <span class="n">test_auc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">ground_truth</span><span class="p">,</span> <span class="n">scores</span><span class="p">))</span>   <span class="c1"># the method&#39;s own number</span>
 
     <span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
         <span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>   <span class="c1"># adjust per method</span>
         <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
         <span class="n">ground_truth</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">ground_truth</span><span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+    <span class="c1"># Which split the scores cover and how many there are (gate 1 checks), and</span>
+    <span class="c1"># the method&#39;s own AUC over exactly these scores (gate 4 compares).</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">),</span> <span class="n">summary</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)},</span>
+        <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="n">test_auc</span><span class="p">},</span>      <span class="c1"># replace</span>
+    <span class="p">})</span>
     <span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>               <span class="c1"># atomic; writes results.json</span>
 
 
@@ -1086,7 +1098,8 @@ Create <span class="sb">`graflag-shared/methods/{method_name}/`</span> with thes
 <span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.spot(&quot;training&quot;, ...)`</span> during training loop
 <span class="k">-</span><span class="w"> </span>Generate predictions on TEST data (contains anomalies)
 <span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.save_scores()`</span> with correct result_type and ground_truth
-<span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.add_metadata()`</span> with all hyperparameters
+<span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.add_metadata()`</span> with all hyperparameters and a <span class="sb">`summary`</span> holding
+  <span class="sb">`scored_split`</span>, <span class="sb">`scored_samples`</span> and the method&#39;s own AUC over the published scores
 <span class="k">-</span><span class="w"> </span>Call <span class="sb">`writer.finalize()`</span>
 
 <span class="gu">### Step 4: Describe the Dataset (only if it is new)</span>

@@ -387,7 +387,11 @@ template, it is 172 lines, and it uses every helper below.
 4. **Add metadata**
    ```python
    from dataclasses import asdict
-   writer.add_metadata(dataset=run.dataset, **asdict(config))
+   writer.add_metadata(dataset=run.dataset, **asdict(config), summary={
+       # required by the contract tests, read by `graflag verify`
+       "dataset_info": {"scored_split": "test", "scored_samples": len(scores)},
+       "results": {"test_auc": test_auc},  # the method's own AUC, same scores
+   })
    ```
 
 5. **Save results using the standardized format**
@@ -451,6 +455,7 @@ Source: https://github.com/author/repo at <SOURCE_REF>
 from dataclasses import asdict, dataclass
 
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 from graflag_runner import (
     ResultWriter, device, info, load_dataset, params, paths, seed_all, upstream,
@@ -500,13 +505,19 @@ def main():
     # --- score the TEST split ----------------------------------------------
     scores = np.zeros(len(edges))   # replace with model.predict(...)
     ground_truth = labels           # replace with the test labels
+    test_auc = float(roc_auc_score(ground_truth, scores))   # the method's own number
 
     writer.save_scores(
         result_type="EDGE_STREAM_ANOMALY_SCORES",   # adjust per method
         scores=scores.tolist(),
         ground_truth=list(ground_truth),
     )
-    writer.add_metadata(dataset=run.dataset, **asdict(config))
+    # Which split the scores cover and how many there are (gate 1 checks), and
+    # the method's own AUC over exactly these scores (gate 4 compares).
+    writer.add_metadata(dataset=run.dataset, **asdict(config), summary={
+        "dataset_info": {"scored_split": "test", "scored_samples": len(scores)},
+        "results": {"test_auc": test_auc},      # replace
+    })
     writer.finalize()               # atomic; writes results.json
 
 
@@ -805,7 +816,10 @@ error("Error message")
 # Result writing
 writer = ResultWriter()
 writer.save_scores(result_type="...", scores=[...], ground_truth=[...])
-writer.add_metadata(method_name="...", dataset="...", ...)
+writer.add_metadata(method_name="...", dataset="...", summary={
+    "dataset_info": {"scored_split": "test", "scored_samples": ...},
+    "results": {"test_auc": ...},
+})
 # Rarely needed. graflag_runner measures exec time, peak memory and peak GPU
 # from outside the method, and its numbers win; anything passed here is kept
 # beside them as method_reported_<key>.
@@ -854,6 +868,7 @@ graflag evaluate -e exp__your_method__dataset__timestamp
 - [ ] Ran `python3 -m unittest discover -s tests` in `graflag-shared/` -- it checks
       every one of the above
 - [ ] Saved results with appropriate result_type and ground_truth, from the test split
+- [ ] Recorded `scored_split`, `scored_samples` and the method's own AUC in `metadata.summary`
 - [ ] Called `writer.finalize()`
 - [ ] Wrote `README.md`: what upstream does, what the integration changes, which split is scored
 - [ ] Synced, then ran with `graflag run -m ... -d ... --build`
@@ -920,6 +935,7 @@ day -- the silent float the pin exists to remove.
 from dataclasses import asdict, dataclass
 
 import numpy as np
+from sklearn.metrics import roc_auc_score
 
 from graflag_runner import ResultWriter, info, load_dataset, params, paths, seed_all
 
@@ -942,13 +958,19 @@ def main():
 
     writer = ResultWriter()
     scores = np.random.rand(len(edges))          # replace with your detector
+    test_auc = float(roc_auc_score(labels, scores))   # the method's own number
 
     writer.save_scores(
         result_type="EDGE_STREAM_ANOMALY_SCORES",
         scores=scores.tolist(),
         ground_truth=list(labels),
     )
-    writer.add_metadata(dataset=run.dataset, **asdict(config))
+    # Which split the scores cover and how many there are (gate 1 checks), and
+    # the method's own AUC over exactly these scores (gate 4 compares).
+    writer.add_metadata(dataset=run.dataset, **asdict(config), summary={
+        "dataset_info": {"scored_split": "test", "scored_samples": len(scores)},
+        "results": {"test_auc": test_auc},      # replace
+    })
     writer.finalize()
 
 

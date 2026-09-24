@@ -579,7 +579,11 @@ built the device string themselves and died on
 </li>
 <li><p><strong>Add metadata</strong></p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span>
-<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">),</span> <span class="n">summary</span><span class="o">=</span><span class="p">{</span>
+    <span class="c1"># required by the contract tests, read by `graflag verify`</span>
+    <span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)},</span>
+    <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="n">test_auc</span><span class="p">},</span>  <span class="c1"># the method&#39;s own AUC, same scores</span>
+<span class="p">})</span>
 </pre></div>
 </div>
 </li>
@@ -676,6 +680,7 @@ this block – the real file is annotated and stays current.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">roc_auc_score</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ResultWriter</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">load_dataset</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">paths</span><span class="p">,</span> <span class="n">seed_all</span><span class="p">,</span> <span class="n">upstream</span><span class="p">,</span>
@@ -725,13 +730,19 @@ this block – the real file is annotated and stays current.</p>
     <span class="c1"># --- score the TEST split ----------------------------------------------</span>
     <span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">))</span>   <span class="c1"># replace with model.predict(...)</span>
     <span class="n">ground_truth</span> <span class="o">=</span> <span class="n">labels</span>           <span class="c1"># replace with the test labels</span>
+    <span class="n">test_auc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">ground_truth</span><span class="p">,</span> <span class="n">scores</span><span class="p">))</span>   <span class="c1"># the method&#39;s own number</span>
 
     <span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
         <span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>   <span class="c1"># adjust per method</span>
         <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
         <span class="n">ground_truth</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">ground_truth</span><span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+    <span class="c1"># Which split the scores cover and how many there are (gate 1 checks), and</span>
+    <span class="c1"># the method&#39;s own AUC over exactly these scores (gate 4 compares).</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">),</span> <span class="n">summary</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)},</span>
+        <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="n">test_auc</span><span class="p">},</span>      <span class="c1"># replace</span>
+    <span class="p">})</span>
     <span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>               <span class="c1"># atomic; writes results.json</span>
 
 
@@ -1041,7 +1052,10 @@ trains on nothing and a run that reports <code class="docutils literal notransla
 <span class="c1"># Result writing</span>
 <span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>
 <span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span><span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">scores</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span> <span class="n">ground_truth</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">])</span>
-<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">summary</span><span class="o">=</span><span class="p">{</span>
+    <span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="o">...</span><span class="p">},</span>
+    <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="o">...</span><span class="p">},</span>
+<span class="p">})</span>
 <span class="c1"># Rarely needed. graflag_runner measures exec time, peak memory and peak GPU</span>
 <span class="c1"># from outside the method, and its numbers win; anything passed here is kept</span>
 <span class="c1"># beside them as method_reported_&lt;key&gt;.</span>
@@ -1093,6 +1107,7 @@ the directories with <code class="docutils literal notranslate"><span class="pre
 <li><p>[ ] Ran <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">unittest</span> <span class="pre">discover</span> <span class="pre">-s</span> <span class="pre">tests</span></code> in <code class="docutils literal notranslate"><span class="pre">graflag-shared/</span></code> – it checks
 every one of the above</p></li>
 <li><p>[ ] Saved results with appropriate result_type and ground_truth, from the test split</p></li>
+<li><p>[ ] Recorded <code class="docutils literal notranslate"><span class="pre">scored_split</span></code>, <code class="docutils literal notranslate"><span class="pre">scored_samples</span></code> and the method’s own AUC in <code class="docutils literal notranslate"><span class="pre">metadata.summary</span></code></p></li>
 <li><p>[ ] Called <code class="docutils literal notranslate"><span class="pre">writer.finalize()</span></code></p></li>
 <li><p>[ ] Wrote <code class="docutils literal notranslate"><span class="pre">README.md</span></code>: what upstream does, what the integration changes, which split is scored</p></li>
 <li><p>[ ] Synced, then ran with <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span> <span class="pre">-m</span> <span class="pre">...</span> <span class="pre">-d</span> <span class="pre">...</span> <span class="pre">--build</span></code></p></li>
@@ -1155,6 +1170,7 @@ day – the silent float the pin exists to remove.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">roc_auc_score</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span><span class="p">,</span> <span class="n">info</span><span class="p">,</span> <span class="n">load_dataset</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">paths</span><span class="p">,</span> <span class="n">seed_all</span>
 
@@ -1177,13 +1193,19 @@ day – the silent float the pin exists to remove.</p>
 
     <span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>
     <span class="n">scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">edges</span><span class="p">))</span>          <span class="c1"># replace with your detector</span>
+    <span class="n">test_auc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">scores</span><span class="p">))</span>   <span class="c1"># the method&#39;s own number</span>
 
     <span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span>
         <span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
         <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span>
         <span class="n">ground_truth</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">labels</span><span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+    <span class="c1"># Which split the scores cover and how many there are (gate 1 checks), and</span>
+    <span class="c1"># the method&#39;s own AUC over exactly these scores (gate 4 compares).</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">config</span><span class="p">),</span> <span class="n">summary</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;dataset_info&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;scored_split&quot;</span><span class="p">:</span> <span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)},</span>
+        <span class="s2">&quot;results&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;test_auc&quot;</span><span class="p">:</span> <span class="n">test_auc</span><span class="p">},</span>      <span class="c1"># replace</span>
+    <span class="p">})</span>
     <span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>
 
 

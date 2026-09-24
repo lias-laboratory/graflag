@@ -261,10 +261,18 @@ writer.save_scores(
     node_ids=list(range(len(anomaly_scores)))  # optional
 )
 
-# Add metadata
+# Add metadata. `summary` says which split was scored and how many scores
+# there are, and carries the method's own AUC over them: the contract tests
+# require the first two, and `graflag verify` compares the third with the
+# evaluator's.
 writer.add_metadata(
     method_name="your_method",
-    dataset="cora"
+    dataset="cora",
+    summary={
+        "dataset_info": {"scored_split": "test",
+                         "scored_samples": len(anomaly_scores)},
+        "results": {"test_auc": test_auc},
+    },
 )
 
 # Finalize: writes results.json to the EXP directory, atomically

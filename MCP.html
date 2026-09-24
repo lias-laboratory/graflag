@@ -1,0 +1,331 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Agents (MCP) &mdash; GraFlag 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=6efca38a"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Development Cluster" href="devcluster.html" />
+    <link rel="prev" title="Web Dashboard" href="gui.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">AI Agents (MCP)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installing">Installing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#connecting-a-client">Connecting a client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tools">Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-a-run-proceeds">How a run proceeds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#what-an-agent-can-and-cannot-send">What an agent can and cannot send</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#for-maintainers-stdout-is-the-protocol">For maintainers: stdout is the protocol</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/mcp_server.html">graflag.mcp_server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">AI Agents (MCP)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/MCP.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ai-agents-mcp">
+<h1>AI Agents (MCP)<a class="headerlink" href="#ai-agents-mcp" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">mcp</span></code> serves GraFlag over the <a class="reference external" href="https://modelcontextprotocol.io">Model Context Protocol</a>,
+so an AI agent can manage the platform with the same operations as the CLI:
+list methods and datasets, launch and watch runs, evaluate and verify them,
+and read what they produced. It runs on your machine beside the client and
+drives the cluster the same way the CLI does, over SSH.</p>
+<section id="installing">
+<h2>Installing<a class="headerlink" href="#installing" title="Link to this heading"></a></h2>
+<p>The server needs the MCP SDK, an optional dependency that needs Python 3.10 or
+later (the rest of GraFlag runs on 3.8):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;graflag[mcp]&quot;</span>
+</pre></div>
+</div>
+<p>The extra pins the SDK below 2.0. Version 2 removed the <code class="docutils literal notranslate"><span class="pre">FastMCP</span></code> API the
+server is built on, and other MCP servers installed in the same environment may
+still import it.</p>
+</section>
+<section id="connecting-a-client">
+<h2>Connecting a client<a class="headerlink" href="#connecting-a-client" title="Link to this heading"></a></h2>
+<p>The server speaks MCP on stdio: the client starts <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">mcp</span></code> and talks to it
+over its stdin and stdout. It uses the same configuration as the CLI
+(see <a class="reference internal" href="quickstart.html"><span class="doc">Quick Start</span></a>), or the file given with <code class="docutils literal notranslate"><span class="pre">--config</span></code>.</p>
+<p><strong>Claude Code</strong>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>graflag<span class="w"> </span>--<span class="w"> </span>graflag<span class="w"> </span>mcp
+claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>graflag<span class="w"> </span>--<span class="w"> </span>graflag<span class="w"> </span>mcp<span class="w"> </span>--config<span class="w"> </span>~/.config/graflag/lab.env<span class="w">   </span><span class="c1"># another cluster</span>
+</pre></div>
+</div>
+<p>Add <code class="docutils literal notranslate"><span class="pre">--scope</span> <span class="pre">user</span></code> to have it in every project rather than only the current one.</p>
+<p><strong>Claude Desktop</strong>, and other clients configured with JSON:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;graflag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;graflag&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;mcp&quot;</span><span class="p">]}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The server never prompts. SSH runs in batch mode, so the key it uses must work
+without a passphrase prompt (an unencrypted key, or one loaded in <code class="docutils literal notranslate"><span class="pre">ssh-agent</span></code>),
+and an unreachable manager fails after 15 seconds instead of hanging a tool
+call. A configuration problem is reported on the first tool call, with how to
+fix it; listing the tools works without one.</p>
+</section>
+<section id="tools">
+<h2>Tools<a class="headerlink" href="#tools" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Tool</p></th>
+<th class="head"><p>What it does</p></th>
+<th class="head"><p></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cluster_status</span></code></p></td>
+<td><p>The manager, the Swarm, its nodes and services, the shared directory</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">list_methods</span></code></p></td>
+<td><p>Every method: description, <code class="docutils literal notranslate"><span class="pre">upstream</span></code> or <code class="docutils literal notranslate"><span class="pre">reimplementation</span></code>, accepted datasets, image</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">method_details</span></code></p></td>
+<td><p>One method’s parameters with their defaults, source and README</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">list_datasets</span></code></p></td>
+<td><p>Every dataset, with size and file count</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">list_experiments</span></code></p></td>
+<td><p>Recent experiments, filtered by method, dataset or status</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">get_experiment</span></code></p></td>
+<td><p>One experiment’s status, and any run or evaluation this server started for it</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">run_experiment</span></code></p></td>
+<td><p>Start a run and return its name at once</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code></p></td>
+<td><p>Wait, up to a timeout, until the experiment and its jobs have finished</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">get_logs</span></code></p></td>
+<td><p>The last lines of a run’s output</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">stop_experiment</span></code></p></td>
+<td><p>Stop a run; its directory is kept</p></td>
+<td><p>destructive</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate_experiment</span></code></p></td>
+<td><p>Start computing metrics and plots, and return at once</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">get_results</span></code></p></td>
+<td><p>Result type, run time, peak memory, the method’s own summary; never the scores</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">get_evaluation</span></code></p></td>
+<td><p>The metrics, and the names of the plots</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">get_plot</span></code></p></td>
+<td><p>One plot, as an image</p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">verify_experiment</span></code></p></td>
+<td><p>The checks of <a class="reference internal" href="cli.html#cli-verify"><span class="std std-ref">graflag verify</span></a></p></td>
+<td><p>read-only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cleanup_services</span></code></p></td>
+<td><p>Remove the services of finished runs (see <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">cleanup</span></code>)</p></td>
+<td><p>destructive</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">storage_report</span></code></p></td>
+<td><p>What <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">clear</span></code> would reclaim; removes nothing</p></td>
+<td><p>read-only</p></td>
+</tr>
+</tbody>
+</table>
+<p>The last column is sent to the client as tool annotations, which is what lets a
+client ask before a destructive call.</p>
+<p><strong>Deliberately not offered:</strong> <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">clear</span> <span class="pre">--apply</span></code> and <code class="docutils literal notranslate"><span class="pre">--gc</span></code>, <code class="docutils literal notranslate"><span class="pre">stop</span> <span class="pre">--rm</span></code>
+(which deletes the experiment directory), <code class="docutils literal notranslate"><span class="pre">setup</span></code>, <code class="docutils literal notranslate"><span class="pre">copy</span></code>, <code class="docutils literal notranslate"><span class="pre">sync</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">register_metric</span></code>, which writes code that the evaluator runs on the cluster as
+root. Those stay with a person at the CLI.</p>
+</section>
+<section id="how-a-run-proceeds">
+<h2>How a run proceeds<a class="headerlink" href="#how-a-run-proceeds" title="Link to this heading"></a></h2>
+<p>A run takes seconds to hours, longer than a client will wait for one tool call.
+<code class="docutils literal notranslate"><span class="pre">run_experiment</span></code> checks that the method and dataset exist, starts the run in the
+background and returns the experiment name. <code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code> then blocks
+for up to <code class="docutils literal notranslate"><span class="pre">timeout_seconds</span></code> (at most 600, default 120) and returns the status
+either way, with <code class="docutils literal notranslate"><span class="pre">finished</span></code> saying which; an agent calls it again to keep
+waiting. When the run ends, its service is removed, as <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span></code> does.</p>
+<p><code class="docutils literal notranslate"><span class="pre">evaluate_experiment</span></code> works the same way, and <code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code> also waits
+for an evaluation this server started. A failure that happens before the run
+has written anything – a build that fails, say – is reported by
+<code class="docutils literal notranslate"><span class="pre">get_experiment</span></code> and <code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code> from the job itself.</p>
+<p>A session that runs AnoGraph on the ISCX stream, recorded on the development
+cluster (timings from the start of the session):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">run_experiment</span>      <span class="p">{</span><span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;anograph&quot;</span><span class="p">,</span> <span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="s2">&quot;anograph_iscx&quot;</span><span class="p">}</span>
+                    <span class="o">-&gt;</span> <span class="n">exp__anograph__anograph_iscx__20260924_132705</span><span class="p">,</span> <span class="n">started</span>      <span class="mf">2.8</span> <span class="n">s</span>
+<span class="n">wait_for_experiment</span> <span class="o">-&gt;</span> <span class="n">completed</span><span class="p">,</span> <span class="n">finished</span>                                      <span class="mf">13.7</span> <span class="n">s</span>
+<span class="n">evaluate_experiment</span> <span class="o">-&gt;</span> <span class="n">evaluating</span>
+<span class="n">wait_for_experiment</span> <span class="o">-&gt;</span> <span class="n">completed</span><span class="p">,</span> <span class="n">finished</span>                                      <span class="mf">30.5</span> <span class="n">s</span>
+<span class="n">get_evaluation</span>      <span class="o">-&gt;</span> <span class="n">auc_roc</span> <span class="mf">0.948</span><span class="p">,</span> <span class="n">auc_pr</span> <span class="mf">0.523</span><span class="p">,</span> <span class="mi">2751</span> <span class="n">samples</span>
+<span class="n">verify_experiment</span>   <span class="o">-&gt;</span> <span class="mi">0</span> <span class="n">failed</span><span class="p">,</span> <span class="mi">1</span> <span class="n">warned</span><span class="p">,</span> <span class="mi">3</span> <span class="n">passed</span>
+</pre></div>
+</div>
+<p>The session left nothing running: both services were removed when their jobs
+ended.</p>
+<p>On a development cluster, run one method at a time: its nodes share one host’s
+memory. The server does not enforce this.</p>
+</section>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">run_experiment</span></code> takes <code class="docutils literal notranslate"><span class="pre">params</span></code> as an object, e.g. <code class="docutils literal notranslate"><span class="pre">{&quot;EPOCHS&quot;:</span> <span class="pre">5}</span></code>. Names are
+those of the method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> with or without the leading underscore, in any
+case; they are sent upper-case, as the <code class="docutils literal notranslate"><span class="pre">.env</span></code> declares them. Values must be
+strings, numbers or booleans. A name GraFlag sets itself (<code class="docutils literal notranslate"><span class="pre">DATA</span></code>, <code class="docutils literal notranslate"><span class="pre">EXP</span></code>,
+<code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code>, <code class="docutils literal notranslate"><span class="pre">MONITOR_INTERVAL</span></code>) is refused with an error, where
+the CLI would drop it.</p>
+</section>
+<section id="what-an-agent-can-and-cannot-send">
+<h2>What an agent can and cannot send<a class="headerlink" href="#what-an-agent-can-and-cannot-send" title="Link to this heading"></a></h2>
+<p>Everything an agent sends is treated as untrusted, like a request to the web
+dashboard. Method, dataset, experiment, tag and plot names must be plain
+identifiers (letters, digits, <code class="docutils literal notranslate"><span class="pre">.</span></code>, <code class="docutils literal notranslate"><span class="pre">_</span></code>, <code class="docutils literal notranslate"><span class="pre">-</span></code>); anything else is refused before
+it reaches a command that runs on the manager.</p>
+</section>
+<section id="for-maintainers-stdout-is-the-protocol">
+<h2>For maintainers: stdout is the protocol<a class="headerlink" href="#for-maintainers-stdout-is-the-protocol" title="Link to this heading"></a></h2>
+<p>A stdio MCP server’s stdout carries its replies and its stdin carries the
+client’s requests, so anything else that writes to one or reads the other breaks
+the session. <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">mcp</span></code> guards both: it gives the protocol private copies of
+the two pipes, points file descriptor 1 at stderr and 0 at <code class="docutils literal notranslate"><span class="pre">/dev/null</span></code>, and
+moves <code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code> to stderr once the transport has started. Separately, every
+core call it makes waits without streaming (<code class="docutils literal notranslate"><span class="pre">follow=False</span></code>), and every ssh and
+rsync GraFlag starts has its stdin closed. <code class="docutils literal notranslate"><span class="pre">tests/test_mcp.py</span></code> runs a real
+stdio session against a backend that prints and starts a subprocess writing to
+stdout and reading stdin, and checks that the session survives. Keep new
+server code off <code class="docutils literal notranslate"><span class="pre">print()</span></code>; log instead, which goes to stderr.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="gui.html" class="btn btn-neutral float-left" title="Web Dashboard" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="devcluster.html" class="btn btn-neutral float-right" title="Development Cluster" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

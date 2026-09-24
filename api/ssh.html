@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.ssh &mdash; GraFlag 1.1.0 documentation</title>
+  <title>graflag.ssh &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=fc837d61"></script>
+      <script src="../_static/documentation_options.js?v=6efca38a"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
 </ul>
@@ -69,6 +70,7 @@
 <li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.ssh</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.remote_path"><code class="docutils literal notranslate"><span class="pre">remote_path()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.NON_INTERACTIVE_OPTS"><code class="docutils literal notranslate"><span class="pre">NON_INTERACTIVE_OPTS</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.SSHManager"><code class="docutils literal notranslate"><span class="pre">SSHManager</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.execute"><code class="docutils literal notranslate"><span class="pre">SSHManager.execute()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.path_exists"><code class="docutils literal notranslate"><span class="pre">SSHManager.path_exists()</span></code></a></li>
@@ -81,6 +83,8 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
 </ul>
 
@@ -124,9 +128,18 @@ component is never altered, so a name that happens to contain <code class="docut
 intact (and quoted) rather than being silently rewritten.</p>
 </dd></dl>
 
+<dl class="py data">
+<dt class="sig sig-object py" id="graflag.ssh.NON_INTERACTIVE_OPTS">
+<span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">NON_INTERACTIVE_OPTS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['-o',</span> <span class="pre">'BatchMode=yes',</span> <span class="pre">'-o',</span> <span class="pre">'ConnectTimeout=15']</span></span><a class="headerlink" href="#graflag.ssh.NON_INTERACTIVE_OPTS" title="Link to this definition"></a></dt>
+<dd><p>Options that make ssh fail instead of asking. A client with nobody at the
+keyboard – the MCP server, whose stdin and stdout are the protocol – must
+not wait on a password or passphrase prompt: the tool call would hang until
+the client gave up, with nothing saying why.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.ssh.SSHManager">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">SSHManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manager_ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'22'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">SSHManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manager_ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'22'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Handle SSH operations to remote manager.</p>
 <dl class="py method">

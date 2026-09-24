@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Method Integration Skill &mdash; GraFlag 1.1.0 documentation</title>
+  <title>Method Integration Skill &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=fc837d61"></script>
+      <script src="_static/documentation_options.js?v=6efca38a"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
@@ -58,7 +59,9 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Method Integration Skill</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#using-it">Using it</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-four-gates">The four gates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#verify-run-py">verify_run.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag-verify">graflag verify</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#recording-the-result">Recording the result</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#through-mcp">Through MCP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#the-rules-it-enforces">The rules it enforces</a></li>
 </ul>
 </li>
@@ -75,6 +78,8 @@
 <li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
 </ul>
 
@@ -112,7 +117,7 @@ graflag-shared repository:</p>
 ├── SKILL.md               # the procedure and its four gates
 ├── reference/sdk.md       # the graflag_runner API for integration scripts
 ├── reference/traps.md     # failures that reported success, and their fixes
-└── scripts/verify_run.py  # gate 3: does the published result hold up?
+└── scripts/verify_run.py  # gate 4 under its old name, a shim over graflag verify
 </pre></div>
 </div>
 <p>The layout is Claude Code’s: a <code class="docutils literal notranslate"><span class="pre">SKILL.md</span></code> whose front matter names the skill and
@@ -137,7 +142,8 @@ same procedure, with complete templates and a worked integration.</p>
 <section id="the-four-gates">
 <h2>The four gates<a class="headerlink" href="#the-four-gates" title="Link to this heading"></a></h2>
 <p>A method is not reported as integrated until all four pass, in order. Each one
-catches what the one before it cannot.</p>
+catches what the one before it cannot, and each needs the one before it: gate 4
+compares the AUC the method reported with the one gate 3 computed.</p>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Gate</p></th>
@@ -148,31 +154,30 @@ catches what the one before it cannot.</p>
 <tbody>
 <tr class="row-even"><td><p>1. Contract</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">unittest</span> <span class="pre">discover</span> <span class="pre">-s</span> <span class="pre">tests</span></code>, in graflag-shared</p></td>
-<td><p>The <code class="docutils literal notranslate"><span class="pre">.env</span></code> and Dockerfile schema, unpinned clones, <code class="docutils literal notranslate"><span class="pre">sed</span> <span class="pre">-i</span></code> on cloned source, <code class="docutils literal notranslate"><span class="pre">COPY</span></code> paths, GPU conventions, provenance</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">.env</span></code> and Dockerfile schema, unpinned clones, <code class="docutils literal notranslate"><span class="pre">sed</span> <span class="pre">-i</span></code> on cloned source, <code class="docutils literal notranslate"><span class="pre">COPY</span></code> paths, GPU conventions, provenance, a README with no <code class="docutils literal notranslate"><span class="pre">##</span> <span class="pre">Verification</span></code> section</p></td>
 </tr>
 <tr class="row-odd"><td><p>2. Build and run</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">sync</span></code>, then <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span> <span class="pre">-m</span> <span class="pre">METHOD</span> <span class="pre">-d</span> <span class="pre">DATASET</span> <span class="pre">--build</span></code></p></td>
 <td><p>Anything that only exists on the share</p></td>
 </tr>
-<tr class="row-even"><td><p>3. Result integrity</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">.claude/skills/method-integration/scripts/verify_run.py</span> <span class="pre">EXP</span></code></p></td>
-<td><p>Empty, one-class or constant scores, a length mismatch, published scores that disagree with the AUC the method reported</p></td>
-</tr>
-<tr class="row-odd"><td><p>4. Evaluation</p></td>
+<tr class="row-even"><td><p>3. Evaluation</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">evaluate</span> <span class="pre">-e</span> <span class="pre">EXP</span></code></p></td>
-<td><p>Metrics and plots</p></td>
+<td><p>Metrics and plots, from the scores exactly as published</p></td>
+</tr>
+<tr class="row-odd"><td><p>4. Result integrity</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">verify</span> <span class="pre">-e</span> <span class="pre">EXP</span></code></p></td>
+<td><p>Empty, one-class or constant scores, a length mismatch, an undeclared or non-test split, published scores that disagree with the AUC the method reported</p></td>
 </tr>
 </tbody>
 </table>
-<p>Run <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">evaluate</span></code> before <code class="docutils literal notranslate"><span class="pre">verify_run.py</span></code>: gate 3 compares the AUC the
-method reported with the one the evaluator computed.</p>
 </section>
-<section id="verify-run-py">
-<h2>verify_run.py<a class="headerlink" href="#verify-run-py" title="Link to this heading"></a></h2>
+<section id="graflag-verify">
+<h2>graflag verify<a class="headerlink" href="#graflag-verify" title="Link to this heading"></a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">status.json</span></code> saying <code class="docutils literal notranslate"><span class="pre">completed</span></code> means the method exited 0 and wrote a
 <code class="docutils literal notranslate"><span class="pre">results.json</span></code> that parses. It does not mean the numbers are the method’s, that
 they cover the test split, or that they are the scores whose AUC the method
-printed. The checker tests the generic half of that:</p>
+printed. <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">verify</span></code> (graflag 1.2.0 or later) tests the generic half of
+that:</p>
 <ul class="simple">
 <li><p>the sample is usable: scores and ground truth have the same length, both
 classes are present, and something is left after the evaluator’s filtering;</p></li>
@@ -184,10 +189,30 @@ a method;</p></li>
 </ul>
 <p>It exits 1 when a check fails; warnings do not fail it, and each one should be
 read. It needs no agent: it runs on any finished experiment, reading it on the
-manager through the installed <code class="docutils literal notranslate"><span class="pre">graflag</span></code> client (<code class="docutils literal notranslate"><span class="pre">--config</span></code> selects a
-configuration file). What it cannot check is whether the method’s own number is
-right, only that the published scores reproduce it.
-<code class="docutils literal notranslate"><span class="pre">tests/test_verify_run.py</span></code> in graflag-shared covers the checker itself.</p>
+manager in one SSH call, and the scores never leave the manager. What it cannot
+check is whether the method’s own number is right, only that the published
+scores reproduce it. The skill’s <code class="docutils literal notranslate"><span class="pre">scripts/verify_run.py</span> <span class="pre">EXP</span></code> is the same check
+under its old name. graflag’s <code class="docutils literal notranslate"><span class="pre">tests/test_verify.py</span></code> covers the checks, and
+graflag-shared’s <code class="docutils literal notranslate"><span class="pre">tests/test_verify_run.py</span></code> holds the probe’s plain-Python
+counting to the evaluator’s.</p>
+</section>
+<section id="recording-the-result">
+<h2>Recording the result<a class="headerlink" href="#recording-the-result" title="Link to this heading"></a></h2>
+<p>The last step of an integration writes the gates down: the method’s README gets
+a <code class="docutils literal notranslate"><span class="pre">##</span> <span class="pre">Verification</span></code> section with, per dataset, the parameters, gate 2 (status,
+run time, peak memory), gate 3 (<code class="docutils literal notranslate"><span class="pre">auc_roc</span></code>) and gate 4 (failed / warned /
+passed). A method that cannot run on the cluster gets the same section saying
+so, with the traceback and what was tried, and one never run says that too.
+Gate 1 refuses a method with no such section and no row in <code class="docutils literal notranslate"><span class="pre">VERIFICATION.md</span></code>,
+so “integrated” always means something a reader can check.</p>
+</section>
+<section id="through-mcp">
+<h2>Through MCP<a class="headerlink" href="#through-mcp" title="Link to this heading"></a></h2>
+<p>With the <a class="reference internal" href="MCP.html"><span class="doc">MCP server</span></a> configured, an agent can run gates 2 to 4 as
+tools: <code class="docutils literal notranslate"><span class="pre">run_experiment</span></code> (with <code class="docutils literal notranslate"><span class="pre">build:</span> <span class="pre">true</span></code>) and <code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code>,
+<code class="docutils literal notranslate"><span class="pre">get_logs</span></code> while it runs, <code class="docutils literal notranslate"><span class="pre">evaluate_experiment</span></code> and <code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code>
+again, then <code class="docutils literal notranslate"><span class="pre">verify_experiment</span></code>. Gate 1 and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">sync</span></code> stay on the command
+line, because they read the local checkout.</p>
 </section>
 <section id="the-rules-it-enforces">
 <h2>The rules it enforces<a class="headerlink" href="#the-rules-it-enforces" title="Link to this heading"></a></h2>

@@ -6,20 +6,20 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.api &mdash; GraFlag 1.1.0 documentation</title>
+  <title>graflag.api &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=fc837d61"></script>
+      <script src="../_static/documentation_options.js?v=6efca38a"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="graflag.docker_ops" href="docker_ops.html" /> 
+    <link rel="prev" title="graflag.mcp_server" href="mcp_server.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,6 +46,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
 </ul>
@@ -68,6 +69,8 @@
 <li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.api</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.api.GraFlagAPI"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.api.GraFlagAPI.get_cluster_info"><code class="docutils literal notranslate"><span class="pre">GraFlagAPI.get_cluster_info()</span></code></a></li>
@@ -186,12 +189,18 @@ experiments = api.list_experiments()</p>
 <dt class="sig sig-object py" id="graflag.api.GraFlagAPI.get_experiment_details">
 <span class="sig-name descname"><span class="pre">get_experiment_details</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.get_experiment_details"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.get_experiment_details" title="Link to this definition"></a></dt>
 <dd><p>Get details for a specific experiment.</p>
+<p>One probe of that experiment; this used to list 500 and search them,
+which also missed any experiment older than the 500 newest.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.api.GraFlagAPI.run">
 <span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_progress</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.RunProgress" title="graflag.models.RunProgress"><span class="pre">RunProgress</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.run" title="Link to this definition"></a></dt>
 <dd><p>Run an experiment. Returns experiment name.</p>
+<p>Waits for the run without streaming its output (<cite>follow=False</cite>): the
+dashboard calls this from a background thread, where the stream only
+reached the server’s console, and following it kept a Docker SDK call
+in a loop for the whole run.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -209,7 +218,7 @@ experiments = api.list_experiments()</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.api.GraFlagAPI.evaluate_experiment">
 <span class="sig-name descname"><span class="pre">evaluate_experiment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/api.html#GraFlagAPI.evaluate_experiment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.api.GraFlagAPI.evaluate_experiment" title="Link to this definition"></a></dt>
-<dd><p>Run evaluation on an experiment.</p>
+<dd><p>Run evaluation on an experiment (quietly, see <a class="reference internal" href="#graflag.api.GraFlagAPI.run" title="graflag.api.GraFlagAPI.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a>).</p>
 </dd></dl>
 
 <dl class="py method">
@@ -278,7 +287,7 @@ raise here would take the page down over housekeeping.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="docker_ops.html" class="btn btn-neutral float-left" title="graflag.docker_ops" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mcp_server.html" class="btn btn-neutral float-left" title="graflag.mcp_server" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

@@ -1,0 +1,204 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.verify &mdash; GraFlag 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="graflag.mcp_server" href="mcp_server.html" />
+    <link rel="prev" title="graflag.docker_ops" href="docker_ops.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../MCP.html">AI Agents (MCP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.verify</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.verify.remote_script"><code class="docutils literal notranslate"><span class="pre">remote_script()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.verify.check"><code class="docutils literal notranslate"><span class="pre">check()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.verify.probe"><code class="docutils literal notranslate"><span class="pre">probe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.verify.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.verify.format_report"><code class="docutils literal notranslate"><span class="pre">format_report()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mcp_server.html">graflag.mcp_server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">graflag.verify</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/verify.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-graflag.verify">
+<span id="graflag-verify"></span><h1>graflag.verify<a class="headerlink" href="#module-graflag.verify" title="Link to this heading"></a></h1>
+<p>Check that a finished experiment published a result worth believing.</p>
+<p><cite>status.json</cite> saying <cite>completed</cite> means the process exited 0 and wrote a
+<cite>results.json</cite> that parses. It does not mean the numbers are the method’s, that
+they cover the test split, or that the scores are the ones whose AUC the method
+printed. Every scientific-validity defect recorded in graflag-shared passed
+<cite>completed</cite>.</p>
+<p>The checks here are the generic half of that – the part that does not need to
+know what the method computes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>the sample is usable at all: scores and ground truth the same length, both
+classes present, something left after the evaluator’s filtering</p></li>
+<li><p>the scores vary (a constant column scores AUC 0.5 and looks like a method)</p></li>
+<li><p>what the method says it measured is what it published: every <cite>*auc*</cite> in
+<cite>metadata.summary</cite> is compared against <cite>eval/evaluation.json</cite>, and
+<cite>scored_samples</cite> against the actual count</p></li>
+<li><p>the split is declared, and declared to be the test one</p></li>
+</ul>
+</div></blockquote>
+<p>What it cannot check is whether the method’s own number is right – only that
+the published scores reproduce it. A method that measures the wrong thing
+consistently passes every check below. Read the run’s log as well.</p>
+<p>This is the last of the method-integration skill’s four gates, after
+<cite>graflag evaluate</cite>. It began as the skill’s <cite>scripts/verify_run.py</cite>, which is
+now a shim over <a class="reference internal" href="#graflag.verify.main" title="graflag.verify.main"><code class="xref py py-func docutils literal notranslate"><span class="pre">main()</span></code></a>; <cite>graflag verify -e EXP</cite> and the MCP server’s
+<cite>verify_experiment</cite> tool reach the same checks through
+<a class="reference internal" href="core.html#graflag.core.GraFlag.verify" title="graflag.core.GraFlag.verify"><code class="xref py py-meth docutils literal notranslate"><span class="pre">graflag.core.GraFlag.verify()</span></code></a>.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.verify.remote_script">
+<span class="sig-prename descclassname"><span class="pre">graflag.verify.</span></span><span class="sig-name descname"><span class="pre">remote_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exp_dir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/verify.html#remote_script"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.verify.remote_script" title="Link to this definition"></a></dt>
+<dd><p>The probe, as a self-contained program to run on the manager.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.verify.check">
+<span class="sig-prename descclassname"><span class="pre">graflag.verify.</span></span><span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/verify.html#check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.verify.check" title="Link to this definition"></a></dt>
+<dd><p>Turn a probe summary into findings. Pure, so it is testable offline.</p>
+<p>Returns a list of (level, message); level is “ERROR”, “WARN” or “OK”.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.verify.probe">
+<span class="sig-prename descclassname"><span class="pre">graflag.verify.</span></span><span class="sig-name descname"><span class="pre">probe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">experiment</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/verify.html#probe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.verify.probe" title="Link to this definition"></a></dt>
+<dd><p>Run the probe on the manager through GraFlag’s SSH layer.</p>
+<p>Returns the probe summary, or raises RuntimeError with what the manager
+said when it could not be produced.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.verify.main">
+<span class="sig-prename descclassname"><span class="pre">graflag.verify.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">argv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/verify.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.verify.main" title="Link to this definition"></a></dt>
+<dd><p>The original command line: <code class="docutils literal notranslate"><span class="pre">verify_run.py</span> <span class="pre">EXP</span> <span class="pre">[--config</span> <span class="pre">F]</span> <span class="pre">[--json]</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.verify.format_report">
+<span class="sig-prename descclassname"><span class="pre">graflag.verify.</span></span><span class="sig-name descname"><span class="pre">format_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/verify.html#format_report"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.verify.format_report" title="Link to this definition"></a></dt>
+<dd><p>The report as the lines <cite>graflag verify</cite> prints.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="docker_ops.html" class="btn btn-neutral float-left" title="graflag.docker_ops" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mcp_server.html" class="btn btn-neutral float-right" title="graflag.mcp_server" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

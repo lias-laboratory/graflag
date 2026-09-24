@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.ssh &mdash; GraFlag 1.1.0 documentation</title>
+  <title>graflag.ssh &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
+      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -44,6 +44,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
@@ -66,6 +67,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
 </ul>
 
@@ -133,27 +136,47 @@
 
 
 
+<span class="c1">#: Options that make ssh fail instead of asking. A client with nobody at the</span>
+<span class="c1">#: keyboard -- the MCP server, whose stdin and stdout are the protocol -- must</span>
+<span class="c1">#: not wait on a password or passphrase prompt: the tool call would hang until</span>
+<span class="c1">#: the client gave up, with nothing saying why.</span>
+<span class="n">NON_INTERACTIVE_OPTS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;BatchMode=yes&quot;</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;ConnectTimeout=15&quot;</span><span class="p">]</span>
+
+
 <div class="viewcode-block" id="SSHManager">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SSHManager</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle SSH operations to remote manager.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager_ip</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ssh_port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;22&quot;</span><span class="p">,</span> <span class="n">ssh_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize SSH manager.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager_ip</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ssh_port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;22&quot;</span><span class="p">,</span> <span class="n">ssh_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">batch_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize SSH manager.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            batch_mode: Never prompt (see :data:`NON_INTERACTIVE_OPTS`). Off by</span>
+<span class="sd">                default, so a CLI user whose key needs a passphrase still gets</span>
+<span class="sd">                asked for it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span> <span class="o">=</span> <span class="n">manager_ip</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span> <span class="o">=</span> <span class="n">ssh_port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span> <span class="o">=</span> <span class="n">ssh_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_mode</span> <span class="o">=</span> <span class="n">batch_mode</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_option_args</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The -o options every ssh this manager starts carries.&quot;&quot;&quot;</span>
+        <span class="n">opts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_mode</span><span class="p">:</span>
+            <span class="n">opts</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">NON_INTERACTIVE_OPTS</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">opts</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ssh_args</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build the ssh argv prefix shared by execute() and log following.&quot;&quot;&quot;</span>
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ssh&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
             <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-i&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
-        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
-            <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">),</span>
-            <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-        <span class="p">])</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">)])</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_option_args</span><span class="p">())</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">args</span>
 
 <div class="viewcode-block" id="SSHManager.execute">
@@ -171,8 +194,15 @@
         <span class="n">ssh_args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ssh_args</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="n">command</span><span class="p">]</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing SSH command: </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
+        <span class="c1"># stdin is /dev/null because ssh forwards whatever it can read from its</span>
+        <span class="c1"># own stdin to the remote command, and reads eagerly. Nothing here</span>
+        <span class="c1"># sends data that way (heredocs carry it inside `command`), so all an</span>
+        <span class="c1"># inherited stdin could do is be consumed: the rest of a shell loop&#39;s</span>
+        <span class="c1"># input (`while read m; do graflag run -m &quot;$m&quot; ...; done &lt; list`), or,</span>
+        <span class="c1"># under the MCP server, the client&#39;s next requests.</span>
         <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="n">capture_output</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="n">capture_output</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
@@ -270,7 +300,7 @@
         <span class="n">rsync_parts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;rsync&quot;</span><span class="p">,</span> <span class="s2">&quot;-avz&quot;</span><span class="p">,</span> <span class="s2">&quot;--progress&quot;</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">]</span>
         
         <span class="c1"># SSH options</span>
-        <span class="n">ssh_opts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span><span class="p">]</span>
+        <span class="n">ssh_opts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_option_args</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
             <span class="n">key_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
             <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">key_path</span><span class="p">)</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.pub&#39;</span><span class="p">):</span>
@@ -296,7 +326,8 @@
         
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing rsync command: </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
-        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">)</span>  <span class="c1"># see execute()</span>
         
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Successfully copied </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">local_paths</span><span class="p">)</span><span class="si">}</span><span class="s2"> item(s) to </span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -317,7 +348,7 @@
         <span class="n">rsync_parts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;rsync&quot;</span><span class="p">,</span> <span class="s2">&quot;-avz&quot;</span><span class="p">,</span> <span class="s2">&quot;--progress&quot;</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">]</span>
         
         <span class="c1"># SSH options</span>
-        <span class="n">ssh_opts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span><span class="p">]</span>
+        <span class="n">ssh_opts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_option_args</span><span class="p">()</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
             <span class="n">key_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
             <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">key_path</span><span class="p">)</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.pub&#39;</span><span class="p">):</span>
@@ -337,7 +368,8 @@
         
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing rsync command: </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
-        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">)</span>  <span class="c1"># see execute()</span>
         
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Successfully copied </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">remote_paths</span><span class="p">)</span><span class="si">}</span><span class="s2"> item(s) to </span><span class="si">{</span><span class="n">local_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>

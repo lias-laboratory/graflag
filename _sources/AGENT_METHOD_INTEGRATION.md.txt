@@ -869,7 +869,8 @@ Pass the four gates, in order, and report each for every method:
 - [ ] Contract: `python3 -m unittest discover -s tests` in `graflag-shared/`
 - [ ] Build and run: `graflag sync`, then `graflag run -m {method} -d {dataset} --build` completes
 - [ ] Evaluation: `graflag evaluate -e {experiment}`
-- [ ] Result integrity: `python3 .claude/skills/method-integration/scripts/verify_run.py {experiment}` reports no failure, and every `[WARN]` it prints is explained in the method's README
+- [ ] Result integrity: `graflag verify -e {experiment}` reports no failure, and every `[WARN]` it prints is explained in the method's README
+- [ ] Recorded: the README's `## Verification` section gives each gate's result (or why the method cannot run here); gate 1 refuses a method that records nothing
 
 ## Critical Requirements
 

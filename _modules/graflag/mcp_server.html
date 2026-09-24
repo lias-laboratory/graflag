@@ -1,0 +1,774 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.mcp_server &mdash; GraFlag 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../MCP.html">AI Agents (MCP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mcp_server.html">graflag.mcp_server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">graflag.mcp_server</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for graflag.mcp_server</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;GraFlag as an MCP server: the platform&#39;s operations as tools for AI agents.</span>
+
+<span class="sd">``graflag mcp`` serves the Model Context Protocol over stdio, so an MCP client</span>
+<span class="sd">-- Claude Code (``claude mcp add graflag -- graflag mcp``), Claude Desktop or</span>
+<span class="sd">any other -- can list methods and datasets, launch and watch runs, evaluate and</span>
+<span class="sd">verify them, and read what they produced.</span>
+
+<span class="sd">Three rules shape this module.</span>
+
+<span class="sd">**stdout is the protocol.** Nothing else may write to it, and nothing may read</span>
+<span class="sd">the client&#39;s requests off stdin. :func:`_claim_stdio` gives the protocol private</span>
+<span class="sd">copies of both pipes and points file descriptors 0 and 1 elsewhere, and every</span>
+<span class="sd">core call made here waits quietly (``follow=False``) instead of streaming logs.</span>
+
+<span class="sd">**Long operations do not hold a tool call.** ``run_experiment`` and</span>
+<span class="sd">``evaluate_experiment`` start a background job and return at once;</span>
+<span class="sd">``wait_for_experiment`` blocks for a bounded time, so an agent can wait without</span>
+<span class="sd">polling in a loop.</span>
+
+<span class="sd">**What an LLM sends is screened like what a browser sends.** Every name goes</span>
+<span class="sd">through :func:`graflag.utils.valid_name` and every parameter through</span>
+<span class="sd">:func:`_clean_params` before anything builds a remote command. Operations that</span>
+<span class="sd">delete data, set up the cluster or run arbitrary code (``clear --apply``,</span>
+<span class="sd">``stop --rm``, ``setup``, ``register_metric``) are not offered at all.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Annotated</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">anyio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mcp.server.fastmcp</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastMCP</span><span class="p">,</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mcp.server.fastmcp.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mcp.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolAnnotations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">Field</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">__version__</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraFlag</span><span class="p">,</span> <span class="n">GraFlagError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.docker_ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReservedEnvVars</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">valid_name</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">#: Ceilings on what one tool call returns or waits for. An agent reads every</span>
+<span class="c1">#: byte of a reply, and a client gives up on a call that takes too long.</span>
+<span class="n">MAX_LIST</span> <span class="o">=</span> <span class="mi">200</span>
+<span class="n">MAX_LOG_LINES</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">MAX_LINE_CHARS</span> <span class="o">=</span> <span class="mi">2000</span>
+<span class="n">MAX_README_CHARS</span> <span class="o">=</span> <span class="mi">20000</span>
+<span class="n">MAX_PLOT_BYTES</span> <span class="o">=</span> <span class="mi">5</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>
+<span class="n">MAX_WAIT_SECONDS</span> <span class="o">=</span> <span class="mi">600</span>
+<span class="n">WAIT_POLL_SECONDS</span> <span class="o">=</span> <span class="mf">5.0</span>
+
+<span class="n">TERMINAL_STATUSES</span> <span class="o">=</span> <span class="n">GraFlag</span><span class="o">.</span><span class="n">TERMINAL_STATUSES</span>
+
+<span class="n">_PARAM_NAME</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[A-Za-z][A-Za-z0-9_]*$&quot;</span><span class="p">)</span>
+
+<span class="n">INSTRUCTIONS</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s2">GraFlag benchmarks graph anomaly detection (GAD) methods on a Docker Swarm</span>
+<span class="s2">cluster. A typical session: list_methods and list_datasets to choose a pair</span>
+<span class="s2">(a method&#39;s supported_datasets says which datasets it accepts, and</span>
+<span class="s2">method_details has its parameters and README, which states what the published</span>
+<span class="s2">number means); run_experiment, which returns an experiment name at once;</span>
+<span class="s2">wait_for_experiment until it has finished; evaluate_experiment, then</span>
+<span class="s2">wait_for_experiment again; get_evaluation for AUC-ROC, AUC-PR and F1; and</span>
+<span class="s2">verify_experiment, which checks that the published scores reproduce the AUC</span>
+<span class="s2">the method reported. A run can take minutes or hours: wait_for_experiment</span>
+<span class="s2">returns after its timeout with the current status, so call it again. On a</span>
+<span class="s2">development cluster run one method at a time. No tool here deletes data.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_annotations</span><span class="p">(</span><span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">read_only</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">destructive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">idempotent</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ToolAnnotations</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">ToolAnnotations</span><span class="p">(</span>
+        <span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">,</span>
+        <span class="n">readOnlyHint</span><span class="o">=</span><span class="n">read_only</span><span class="p">,</span>
+        <span class="n">destructiveHint</span><span class="o">=</span><span class="n">destructive</span><span class="p">,</span>
+        <span class="n">idempotentHint</span><span class="o">=</span><span class="n">read_only</span> <span class="k">if</span> <span class="n">idempotent</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">idempotent</span><span class="p">,</span>
+        <span class="c1"># The cluster is the user&#39;s own, not the open world.</span>
+        <span class="n">openWorldHint</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Input screening</span>
+<span class="c1"># ============================================================================</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_name</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">what</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return `value` if it is safe to put in a remote command, else refuse.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_name</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2"> name </span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">: names use letters, digits, &quot;</span>
+            <span class="s2">&quot;&#39;.&#39;, &#39;_&#39; and &#39;-&#39; only&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_clean_params</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Method parameters as `run` takes them: upper-case names, string values.</span>
+
+<span class="sd">    Names may be given with or without the leading underscore the method&#39;s</span>
+<span class="sd">    `.env` uses (`EPOCHS` and `_EPOCHS` are the same parameter), and in any</span>
+<span class="sd">    case: they are sent upper-case, as the `.env` declares them, because an</span>
+<span class="sd">    override spelt `_epochs` beside the default `_EPOCHS` would reach the</span>
+<span class="sd">    container as two variables. Names GraFlag sets itself are refused rather</span>
+<span class="sd">    than dropped, so the agent learns its value was not used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reserved</span> <span class="o">=</span> <span class="n">ReservedEnvVars</span><span class="o">.</span><span class="n">get_names</span><span class="p">()</span>
+    <span class="n">cleaned</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">params</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_PARAM_NAME</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid parameter name </span><span class="si">{</span><span class="n">key</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">reserved</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is set by GraFlag itself and cannot be a parameter&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="n">value</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parameter </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be a string, number or boolean&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">value</span> <span class="ow">or</span> <span class="s2">&quot;</span><span class="se">\x00</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parameter </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be a single line&quot;</span><span class="p">)</span>
+        <span class="n">cleaned</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">cleaned</span>
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># Background jobs</span>
+<span class="c1"># ============================================================================</span>
+
+<div class="viewcode-block" id="Job">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.Job">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Job</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A run or an evaluation this server started and has not forgotten.&quot;&quot;&quot;</span>
+    <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>                       <span class="c1"># &quot;run&quot; or &quot;evaluate&quot;</span>
+    <span class="n">state</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;running&quot;</span>          <span class="c1"># &quot;running&quot;, &quot;done&quot; or &quot;failed&quot;</span>
+    <span class="n">error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">started</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">finished</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">thread</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">repr</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Job.to_dict">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.Job.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">,</span>
+                <span class="s2">&quot;seconds&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">finished</span> <span class="ow">or</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">,</span> <span class="mi">1</span><span class="p">)}</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="JobRegistry">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.JobRegistry">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JobRegistry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What this server has started, so a failure is reported even when it</span>
+<span class="sd">    happened before the experiment wrote anything to disk.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">Job</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="JobRegistry.start">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.JobRegistry.start">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">work</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Job</span><span class="p">:</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">experiment</span><span class="p">,</span> <span class="n">kind</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">current</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">current</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;running&quot;</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> is already in progress&quot;</span><span class="p">)</span>
+            <span class="n">job</span> <span class="o">=</span> <span class="n">Job</span><span class="p">(</span><span class="n">experiment</span><span class="o">=</span><span class="n">experiment</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="p">[(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">kind</span><span class="p">)]</span> <span class="o">=</span> <span class="n">job</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">target</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">work</span><span class="p">()</span>
+                <span class="n">job</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;done&quot;</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>                      <span class="c1"># noqa: BLE001</span>
+                <span class="n">job</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span>
+                <span class="n">job</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] </span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="n">job</span><span class="o">.</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="n">job</span><span class="o">.</span><span class="n">finished</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">job</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">target</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                      <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;graflag-</span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">job</span><span class="o">.</span><span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">job</span></div>
+
+
+<div class="viewcode-block" id="JobRegistry.for_experiment">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.JobRegistry.for_experiment">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">for_experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Job</span><span class="p">]:</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">j</span> <span class="k">for</span> <span class="p">(</span><span class="n">exp</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">exp</span> <span class="o">==</span> <span class="n">experiment</span><span class="p">]</span></div>
+</div>
+
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># The server</span>
+<span class="c1"># ============================================================================</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_State</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;One GraFlag, created on first use, and the jobs started through it.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Any</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_factory</span> <span class="o">=</span> <span class="n">factory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_gf</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span> <span class="o">=</span> <span class="n">JobRegistry</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">gf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Created lazily, so a client can list the tools of a server that has</span>
+        <span class="c1"># no configuration yet and be told how to fix it on the first call.</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gf</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_gf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_factory</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">GraFlagError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">. Configure GraFlag with `graflag setup`, or &quot;</span>
+                        <span class="s2">&quot;start the server with `graflag mcp --config FILE`.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_gf</span>
+
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_blocking</span><span class="p">(</span><span class="n">fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run a blocking core call off the event loop; errors become tool errors.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">anyio</span><span class="o">.</span><span class="n">to_thread</span><span class="o">.</span><span class="n">run_sync</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ToolError</span><span class="p">:</span>
+        <span class="k">raise</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">GraFlagError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>                              <span class="c1"># noqa: BLE001</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;[ERROR] </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">())</span>
+        <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_experiment_view</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">jobs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Job</span><span class="p">],</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An experiment as the tools report it, with this server&#39;s jobs for it.</span>
+
+<span class="sd">    Before a run has written anything the directory does not exist yet: the</span>
+<span class="sd">    job is then all there is, and says whether it is starting or has failed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">view</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">running</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;running&quot;</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">)</span>
+        <span class="n">view</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;starting&quot;</span> <span class="k">if</span> <span class="n">running</span> <span class="k">else</span> <span class="s2">&quot;failed&quot;</span><span class="p">}</span>
+    <span class="n">view</span><span class="p">[</span><span class="s2">&quot;jobs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">view</span>
+
+
+<div class="viewcode-block" id="build_server">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.build_server">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">build_server</span><span class="p">(</span><span class="n">factory</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">Any</span><span class="p">],</span> <span class="n">guard_stdout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FastMCP</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The MCP server, over a GraFlag made by `factory` on first use.</span>
+
+<span class="sd">    `guard_stdout` moves ``sys.stdout`` to stderr once the stdio transport</span>
+<span class="sd">    holds the protocol pipe (see :func:`_claim_stdio`); tests that drive the</span>
+<span class="sd">    server in memory leave it off.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">_State</span><span class="p">(</span><span class="n">factory</span><span class="p">)</span>
+
+    <span class="nd">@asynccontextmanager</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">_server</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">guard_stdout</span><span class="p">:</span>
+            <span class="c1"># The stdio transport has its handle on the protocol pipe by now,</span>
+            <span class="c1"># so from here a stray print() lands on stderr, not in a reply.</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span>
+        <span class="k">yield</span> <span class="p">{}</span>
+
+    <span class="n">mcp</span> <span class="o">=</span> <span class="n">FastMCP</span><span class="p">(</span><span class="s2">&quot;graflag&quot;</span><span class="p">,</span> <span class="n">instructions</span><span class="o">=</span><span class="n">INSTRUCTIONS</span><span class="p">,</span> <span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+    <span class="n">mcp</span><span class="o">.</span><span class="n">graflag_state</span> <span class="o">=</span> <span class="n">state</span>   <span class="c1"># the jobs, for tests and for introspection</span>
+    <span class="c1"># Report GraFlag&#39;s version in serverInfo rather than the SDK&#39;s.</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">mcp</span><span class="p">,</span> <span class="s2">&quot;_mcp_server&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="s2">&quot;version&quot;</span><span class="p">):</span>
+        <span class="n">mcp</span><span class="o">.</span><span class="n">_mcp_server</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">__version__</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">shared</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span>
+
+    <span class="c1"># -- cluster and catalogue ---------------------------------------------</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Cluster status&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">cluster_status</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The manager, whether the Swarm is up, its worker nodes, the running</span>
+<span class="sd">        services and the top of the shared directory.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">status</span><span class="p">()))</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;List methods&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_methods</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Every method on the cluster: its description, whether its image runs</span>
+<span class="sd">        the authors&#39; code (&quot;upstream&quot;) or GraFlag&#39;s own (&quot;reimplementation&quot;),</span>
+<span class="sd">        the datasets it accepts (shell patterns) and the image it runs in.</span>
+<span class="sd">        `example` is the annotated template new integrations start from.&quot;&quot;&quot;</span>
+        <span class="n">methods</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">list_methods</span><span class="p">())</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">methods</span><span class="p">),</span> <span class="s2">&quot;methods&quot;</span><span class="p">:</span> <span class="p">[{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;integration&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">integration</span> <span class="ow">or</span> <span class="s2">&quot;unstated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;supported_datasets&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">supported_data</span> <span class="ow">or</span> <span class="s2">&quot;*&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="n">m</span><span class="o">.</span><span class="n">image</span> <span class="ow">or</span> <span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">}</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">]}</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Method details&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">method_details</span><span class="p">(</span><span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;One method&#39;s full record: its parameters with their defaults (what</span>
+<span class="sd">        run_experiment&#39;s `params` can override), source repository and README.</span>
+<span class="sd">        The README says what upstream does, what the integration changes and</span>
+<span class="sd">        which split is scored -- read it before comparing numbers.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">():</span>
+            <span class="n">gf</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">gf</span><span class="o">.</span><span class="n">list_methods</span><span class="p">()</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">method</span><span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Method </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="n">details</span> <span class="o">=</span> <span class="n">found</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="n">readme</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="n">gf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+                                      <span class="sa">f</span><span class="s2">&quot;methods/</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">/README.md&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">readme</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_README_CHARS</span><span class="p">:</span>
+                <span class="n">readme</span> <span class="o">=</span> <span class="n">readme</span><span class="p">[:</span><span class="n">MAX_README_CHARS</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[... README truncated]&quot;</span>
+            <span class="n">details</span><span class="p">[</span><span class="s2">&quot;readme&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">readme</span>
+            <span class="k">return</span> <span class="n">details</span>
+        <span class="k">return</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="n">fetch</span><span class="p">)</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;List datasets&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_datasets</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Every dataset on the share, with its size and file count. Files are</span>
+<span class="sd">        downloaded on the first run that needs them, so a size of 0 is normal.&quot;&quot;&quot;</span>
+        <span class="n">datasets</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">list_datasets</span><span class="p">())</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">),</span> <span class="s2">&quot;datasets&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datasets</span><span class="p">]}</span>
+
+    <span class="c1"># -- experiments ---------------------------------------------------------</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;List experiments&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">list_experiments</span><span class="p">(</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">le</span><span class="o">=</span><span class="n">MAX_LIST</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The most recent experiments, newest first, optionally filtered by</span>
+<span class="sd">        method, dataset or status (building, running, completed, failed,</span>
+<span class="sd">        stopped, unknown).&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">what</span> <span class="ow">in</span> <span class="p">((</span><span class="n">method</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">),</span> <span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;dataset&quot;</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">_name</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">what</span><span class="p">)</span>
+        <span class="n">filtered</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">status</span><span class="p">))</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">():</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">list_experiments</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="n">MAX_LIST</span> <span class="k">if</span> <span class="n">filtered</span> <span class="k">else</span> <span class="n">limit</span><span class="p">)</span>
+            <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">found</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">e</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                    <span class="ow">and</span> <span class="p">(</span><span class="n">dataset</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">e</span><span class="o">.</span><span class="n">dataset</span> <span class="o">==</span> <span class="n">dataset</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+                    <span class="ow">and</span> <span class="p">(</span><span class="n">status</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">e</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">status</span><span class="p">)]</span>
+            <span class="k">return</span> <span class="n">keep</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span>
+        <span class="n">experiments</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="n">fetch</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">experiments</span><span class="p">),</span>
+                <span class="s2">&quot;experiments&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">_experiment_view</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">for_experiment</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+                                <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">experiments</span><span class="p">]}</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Get experiment&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;One experiment&#39;s status, whether it has results and an evaluation,</span>
+<span class="sd">        and any run or evaluation this server started for it (with the error,</span>
+<span class="sd">        if it failed before writing anything to disk).&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">get_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">))</span>
+        <span class="n">jobs</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">for_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">jobs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Experiment </span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_experiment_view</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">jobs</span><span class="p">,</span> <span class="n">experiment</span><span class="p">)</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Run experiment&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                       <span class="n">idempotent</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_experiment</span><span class="p">(</span>
+        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">params</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">build</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Start running `method` on `dataset` and return the experiment name at</span>
+<span class="sd">        once; the run continues in the background. `params` overrides the</span>
+<span class="sd">        method&#39;s parameters (see method_details), e.g. {&quot;EPOCHS&quot;: 5}. `build`</span>
+<span class="sd">        rebuilds the image first, which takes minutes -- needed only after the</span>
+<span class="sd">        method changed. `gpu=False` runs without reserving a GPU. Follow it with</span>
+<span class="sd">        wait_for_experiment.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="s2">&quot;method&quot;</span><span class="p">)</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="s2">&quot;dataset&quot;</span><span class="p">)</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="s2">&quot;tag&quot;</span><span class="p">)</span>
+        <span class="n">cleaned</span> <span class="o">=</span> <span class="n">_clean_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">():</span>
+            <span class="n">gf</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;methods&quot;</span><span class="p">,</span> <span class="n">method</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;datasets&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">gf</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="n">gf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">kind</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">kind</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">gf</span>
+        <span class="n">gf</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
+
+        <span class="n">experiment</span> <span class="o">=</span> <span class="n">GraFlag</span><span class="o">.</span><span class="n">make_experiment_name</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">gf</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+            <span class="n">method</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">build</span><span class="p">,</span> <span class="n">gpu</span><span class="p">,</span> <span class="n">cleaned</span><span class="p">,</span>
+            <span class="n">exp_name</span><span class="o">=</span><span class="n">experiment</span><span class="p">,</span> <span class="n">follow</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;experiment&quot;</span><span class="p">:</span> <span class="n">experiment</span><span class="p">,</span>
+            <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="s2">&quot;started&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;building_image&quot;</span><span class="p">:</span> <span class="n">build</span><span class="p">,</span>
+            <span class="s2">&quot;next&quot;</span><span class="p">:</span> <span class="s2">&quot;wait_for_experiment&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Wait for experiment&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">wait_for_experiment</span><span class="p">(</span>
+        <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">timeout_seconds</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">le</span><span class="o">=</span><span class="n">MAX_WAIT_SECONDS</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">120</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Wait until the experiment -- and any run or evaluation this server</span>
+<span class="sd">        started for it -- has finished, or until `timeout_seconds` pass.</span>
+<span class="sd">        Returns the status either way; `finished` says which. Call it again to</span>
+<span class="sd">        keep waiting.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="n">deadline</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout_seconds</span>
+        <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">get_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">))</span>
+            <span class="n">jobs</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">for_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">)</span>
+            <span class="n">busy</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;running&quot;</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">busy</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">jobs</span><span class="p">:</span>              <span class="c1"># failed before writing anything</span>
+                        <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">_experiment_view</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">jobs</span><span class="p">,</span> <span class="n">experiment</span><span class="p">),</span>
+                                <span class="s2">&quot;finished&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                                <span class="s2">&quot;waited_seconds&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">)}</span>
+                    <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Experiment </span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="n">TERMINAL_STATUSES</span> <span class="ow">or</span> <span class="p">(</span>
+                    <span class="n">info</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;unknown&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">info</span><span class="o">.</span><span class="n">service_name</span>
+                <span class="p">):</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">_experiment_view</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">jobs</span><span class="p">),</span> <span class="s2">&quot;finished&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                            <span class="s2">&quot;waited_seconds&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">)}</span>
+            <span class="n">remaining</span> <span class="o">=</span> <span class="n">deadline</span> <span class="o">-</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">remaining</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span><span class="o">**</span><span class="n">_experiment_view</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">jobs</span><span class="p">,</span> <span class="n">experiment</span><span class="p">),</span> <span class="s2">&quot;finished&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                        <span class="s2">&quot;waited_seconds&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">)}</span>
+            <span class="k">await</span> <span class="n">anyio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">WAIT_POLL_SECONDS</span><span class="p">,</span> <span class="n">remaining</span><span class="p">))</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Experiment logs&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_logs</span><span class="p">(</span>
+        <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">tail</span><span class="p">:</span> <span class="n">Annotated</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">le</span><span class="o">=</span><span class="n">MAX_LOG_LINES</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The last `tail` lines of the experiment&#39;s output: the live service&#39;s</span>
+<span class="sd">        log while it exists, else the saved method_output.txt.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">get_logs</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">tail</span><span class="o">=</span><span class="n">tail</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;experiment&quot;</span><span class="p">:</span> <span class="n">experiment</span><span class="p">,</span>
+                <span class="s2">&quot;lines&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">line</span><span class="p">[:</span><span class="n">MAX_LINE_CHARS</span><span class="p">]</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">]}</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Stop experiment&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                       <span class="n">destructive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">idempotent</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">stop_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Stop a running experiment by removing its Swarm service. Its</span>
+<span class="sd">        directory, and whatever it has written so far, are kept.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">stop</span><span class="p">():</span>
+            <span class="n">gf</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span>
+            <span class="n">gf</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">remove</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">gf</span><span class="o">.</span><span class="n">get_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">)</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_experiment_view</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">for_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">),</span> <span class="n">experiment</span><span class="p">)</span>
+
+    <span class="c1"># -- results -------------------------------------------------------------</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Evaluate experiment&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                       <span class="n">idempotent</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Start computing the experiment&#39;s metrics and plots (AUC-ROC, AUC-PR,</span>
+<span class="sd">        best F1, precision/recall/F1 at k) in a short-lived evaluation service,</span>
+<span class="sd">        and return at once. Follow it with wait_for_experiment, then</span>
+<span class="sd">        get_evaluation.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">():</span>
+            <span class="n">gf</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">gf</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="n">gf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+                                      <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Experiment </span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">gf</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="n">gf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+                                      <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2">/results.json&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> has no results.json to evaluate yet&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">gf</span>
+        <span class="n">gf</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="n">check</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;evaluate&quot;</span><span class="p">,</span>
+                         <span class="k">lambda</span><span class="p">:</span> <span class="n">gf</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">follow</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;experiment&quot;</span><span class="p">:</span> <span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="s2">&quot;evaluating&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;next&quot;</span><span class="p">:</span> <span class="s2">&quot;wait_for_experiment&quot;</span><span class="p">}</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Experiment results&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_results</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;What the run recorded besides its scores: the result type, run time,</span>
+<span class="sd">        peak memory and GPU memory (measured by GraFlag&#39;s monitor), and the</span>
+<span class="sd">        method&#39;s own metadata and summary. The scores themselves are not</span>
+<span class="sd">        returned.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">get_experiment_results</span><span class="p">(</span><span class="n">experiment</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">results</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> has no readable results.json yet&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Evaluation&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_evaluation</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The metrics evaluate_experiment computed, and the names of its plots</span>
+<span class="sd">        (read one with get_plot).&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="n">evaluation</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">get_evaluation_results</span><span class="p">(</span><span class="n">experiment</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">evaluation</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> has not been evaluated; &quot;</span>
+                            <span class="s2">&quot;run evaluate_experiment first&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Evaluation plot&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_plot</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">plot</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Image</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;One of the evaluation&#39;s plots as an image, e.g. `roc_curve`,</span>
+<span class="sd">        `pr_curve`, `score_distribution`, `training_curves` or</span>
+<span class="sd">        `resources_curves` (get_evaluation lists what exists).&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">plot</span><span class="p">,</span> <span class="s2">&quot;plot&quot;</span><span class="p">)</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">plot</span> <span class="k">if</span> <span class="n">plot</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.png&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">plot</span><span class="si">}</span><span class="s2">.png&quot;</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">():</span>
+            <span class="n">gf</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span><span class="n">gf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;experiments&quot;</span><span class="p">,</span>
+                               <span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;eval&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;test -f </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> || exit 3; &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;size=$(wc -c &lt; </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">); &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;[ </span><span class="se">\&quot;</span><span class="s2">$size</span><span class="se">\&quot;</span><span class="s2"> -le </span><span class="si">{</span><span class="n">MAX_PLOT_BYTES</span><span class="si">}</span><span class="s2"> ] || exit 4; &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;base64 &lt; </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> | tr -d &#39;</span><span class="se">\\</span><span class="s2">n&#39;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2"> has no plot </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2"> is larger than </span><span class="si">{</span><span class="n">MAX_PLOT_BYTES</span><span class="si">}</span><span class="s2"> bytes&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ToolError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not read </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">Image</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="n">fetch</span><span class="p">),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;png&quot;</span><span class="p">)</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Verify experiment&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">verify_experiment</span><span class="p">(</span><span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check that the published result is worth believing: scores and</span>
+<span class="sd">        ground truth match in length, both classes are present, the scores</span>
+<span class="sd">        vary, the scored split is declared as the test split, and the AUC the</span>
+<span class="sd">        evaluator computes equals the one the method reported. Run</span>
+<span class="sd">        evaluate_experiment first. `failed` &gt; 0 means the number should not be</span>
+<span class="sd">        used; read every WARN.&quot;&quot;&quot;</span>
+        <span class="n">_name</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="s2">&quot;experiment&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">experiment</span><span class="p">)))</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="c1"># -- housekeeping ----------------------------------------------------------</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Clean up services&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                       <span class="n">destructive</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">idempotent</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">cleanup_services</span><span class="p">(</span><span class="n">dry_run</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove the Swarm services of finished experiments. A service is kept</span>
+<span class="sd">        whenever the run cannot be diagnosed from disk, since its log would be</span>
+<span class="sd">        the only record. `dry_run` reports without removing.&quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">cleanup_services</span><span class="p">(</span><span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;dry_run&quot;</span><span class="p">:</span> <span class="n">dry_run</span><span class="p">,</span> <span class="s2">&quot;services&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">r</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]}</span>
+
+    <span class="nd">@mcp</span><span class="o">.</span><span class="n">tool</span><span class="p">(</span><span class="n">annotations</span><span class="o">=</span><span class="n">_annotations</span><span class="p">(</span><span class="s2">&quot;Storage report&quot;</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">storage_report</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;What `graflag clear` would reclaim: experiments whose method is gone,</span>
+<span class="sd">        datasets only they used, unowned images and registry repositories, and</span>
+<span class="sd">        strays on the share, with sizes. Report only -- nothing is removed;</span>
+<span class="sd">        removing is left to a person, with `graflag clear --apply`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="k">await</span> <span class="n">_blocking</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">state</span><span class="o">.</span><span class="n">gf</span><span class="p">()</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span><span class="n">apply</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">mcp</span></div>
+
+
+
+<span class="c1"># ============================================================================</span>
+<span class="c1"># stdio</span>
+<span class="c1"># ============================================================================</span>
+
+<span class="c1">#: The protocol&#39;s own stdin and stdout, held here for the life of the process.</span>
+<span class="c1">#: The lifespan rebinds sys.stdout to stderr; if nothing else referred to the</span>
+<span class="c1">#: protocol stream, collecting it would close the buffer the SDK&#39;s transport</span>
+<span class="c1">#: writes through, and the first reply would fail with &quot;I/O operation on</span>
+<span class="c1">#: closed file&quot;.</span>
+<span class="n">_PROTOCOL_STREAMS</span> <span class="o">=</span> <span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_claim_stdio</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Give the protocol the only handles on the client&#39;s pipes.</span>
+
+<span class="sd">    Duplicates file descriptors 0 and 1 for the protocol, then points fd 0 at</span>
+<span class="sd">    /dev/null and fd 1 at stderr, so no subprocess, C extension or stray write</span>
+<span class="sd">    can read the client&#39;s requests or write into its replies. ``sys.stdin`` and</span>
+<span class="sd">    ``sys.stdout`` are rebound to the duplicates, which is what the SDK&#39;s stdio</span>
+<span class="sd">    transport wraps when it starts; the server&#39;s lifespan then moves</span>
+<span class="sd">    ``sys.stdout`` to stderr (see :func:`build_server`).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">protocol_in</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">protocol_out</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">dup</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">devnull</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">O_RDONLY</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="n">devnull</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">devnull</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">dup2</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">global</span> <span class="n">_PROTOCOL_STREAMS</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdin</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOWrapper</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BufferedReader</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">FileIO</span><span class="p">(</span><span class="n">protocol_in</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)),</span>
+                                 <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">TextIOWrapper</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BufferedWriter</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">FileIO</span><span class="p">(</span><span class="n">protocol_out</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)),</span>
+                                  <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">write_through</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">_PROTOCOL_STREAMS</span> <span class="o">=</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="serve">
+<a class="viewcode-back" href="../../api/mcp_server.html#graflag.mcp_server.serve">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">serve</span><span class="p">(</span><span class="n">config_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Serve GraFlag&#39;s tools over stdio until the client disconnects.&quot;&quot;&quot;</span>
+    <span class="c1"># The SDK logs every request at INFO; GraFlag&#39;s own messages are the ones</span>
+    <span class="c1"># worth finding in the client&#39;s server log.</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;mcp&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+    <span class="n">_claim_stdio</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">build_server</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">GraFlag</span><span class="p">(</span><span class="n">config_file</span><span class="p">,</span> <span class="n">interactive</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                          <span class="n">guard_stdout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;stdio&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

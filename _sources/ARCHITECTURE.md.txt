@@ -28,7 +28,8 @@ GraFlag is a distributed benchmarking platform that runs Graph Anomaly Detection
 - **Distributed execution** of GAD methods on GPU-equipped worker nodes via Docker Swarm.
 - **Standardized result collection** through the `graflag_runner` library, which wraps method execution with resource monitoring and result serialization.
 - **Automated evaluation** via `graflag_evaluator`, which computes metrics (AUC-ROC, AUC-PR, etc.) and generates plots.
-- **Multiple client interfaces**: a CLI for scripting, a Python API for programmatic use, and a web GUI for interactive management.
+- **Multiple client interfaces**: a CLI for scripting, a Python API for programmatic use, a web GUI for interactive management, and an MCP server through which AI agents manage runs.
+- **Result verification**: `graflag verify` checks that a run's published scores reproduce the AUC the method reported, the last gate of method integration.
 - **NFS-based shared storage** for methods, datasets, experiments, and shared libraries, accessible by all cluster nodes.
 
 ---
@@ -51,13 +52,13 @@ GraFlag is a distributed benchmarking platform that runs Graph Anomaly Detection
                           +-------------------------------------------+
                           |              Client Machine                |
                           |                                            |
-                          |  +--------+  +----------+  +-----------+  |
-                          |  |  CLI   |  |   GUI    |  | Python    |  |
-                          |  | cli.py |  | Flask +  |  | API       |  |
-                          |  |        |  | Vue.js   |  | api.py    |  |
-                          |  +---+----+  +----+-----+  +-----+-----+  |
-                          |      |            |              |         |
-                          |      v            v              v         |
+                          |  +------+ +--------+ +---------+ +-----+  |
+                          |  | CLI  | |  GUI   | | Python  | | MCP |  |
+                          |  |cli.py| |Flask + | | API     | |serv-|  |
+                          |  |      | |Vue.js  | | api.py  | |er   |  |
+                          |  +--+---+ +---+----+ +----+----+ +--+--+  |
+                          |     |         |           |         |     |
+                          |     v         v           v         v     |
                           |  +--------------------------------------+  |
                           |  |          GraFlag Core (core.py)      |  |
                           |  |         returns dataclasses          |  |
@@ -124,11 +125,13 @@ Entry point for all user-facing commands. Uses `argparse` with the following com
 | `logs`       | View experiment logs (supports `--follow`, `--tee`) |
 | `stop`       | Stop a running experiment (optional `--rm`)      |
 | `evaluate`   | Run evaluation on a completed experiment         |
+| `verify`     | Check the published result against the method's own AUC (exit 1 on failure) |
 | `cleanup`    | Remove the Swarm services of finished runs       |
 | `clear`      | Report, or with `--apply` remove, storage nothing owns |
 | `copy`       | Transfer files between local and remote (rsync)  |
 | `sync`       | Sync a method or library directory to remote     |
 | `gui`        | Start the web dashboard                          |
+| `mcp`        | Serve GraFlag to an AI agent over MCP (stdio)    |
 | `devcluster` | Deploy or tear down a local Docker Compose development cluster|
 
 Key flags for `run`:
@@ -176,6 +179,7 @@ Shared dataclass definitions used by core, api, and GUI:
 | `EvaluationResults` | Parsed evaluation.json with metrics and plots    |
 | `ServiceCleanupResult` | What `cleanup_services()` did, per service    |
 | `ClearItem`, `ClearReport` | What `clear()` found, and what it removed |
+| `VerificationReport` | What `verify()` found: one finding per check, and the counts |
 | `RunProgress`       | Progress tracking for experiment execution       |
 
 All dataclasses implement `to_dict()` for JSON serialization.
@@ -212,6 +216,12 @@ All dataclasses implement `to_dict()` for JSON serialization.
 - **`remote_path(*parts)`**: Joins path components and quotes the result for the remote shell.
 
 All SSH commands use `-o StrictHostKeyChecking=no` and authenticate with the configured SSH key.
+Every ssh and rsync the client starts has its stdin closed: ssh forwards what it
+can read from its stdin to the remote command, so an inherited stdin let it
+consume the rest of a shell loop's input -- or, under the MCP server, the
+client's requests. `GraFlag(interactive=False)` adds `BatchMode=yes` and a
+15-second `ConnectTimeout`, so a caller with nobody at a terminal gets an error
+instead of a prompt nobody will answer.
 
 **Command construction contract.** `execute()` passes its argument to `ssh` as a
 single element of an argv list; `subprocess` is called without `shell=True`, so
@@ -276,6 +286,33 @@ real shell.
 - Maintains the same public interface used by the GUI (backward-compatible).
 - All returned dataclasses implement `to_dict()` for JSON serialization.
 
+#### mcp_server.py -- MCP Server
+
+`graflag mcp` serves GraFlag's operations as Model Context Protocol tools over
+stdio (see the MCP page). Like the CLI, it sits directly on `GraFlag` core
+rather than on `api.py`, whose error-swallowing would hide from the agent why a
+call failed. Three rules shape it:
+
+- **stdout is the protocol.** The server gives the protocol private copies of
+  its stdin and stdout and points file descriptors 0 and 1 at `/dev/null` and
+  stderr, so no subprocess or stray `print()` can corrupt a reply or read a
+  request; every core call it makes uses `follow=False`.
+- **Long operations are background jobs.** `run_experiment` and
+  `evaluate_experiment` return at once; `wait_for_experiment` blocks for a
+  bounded time. A job that fails before anything reaches the share is reported
+  from the job itself.
+- **Untrusted input.** Names go through `utils.valid_name()`, the same rule the
+  dashboard applies to HTTP input; nothing that deletes data, sets up the
+  cluster or writes code to it is offered.
+
+#### verify.py -- Result Verification
+
+The checks behind `graflag verify`, `GraFlag.verify()` and the MCP
+`verify_experiment` tool. A probe runs on the manager in one SSH call -- plain
+Python, since the manager has no numpy -- and returns counts, the AUCs the
+method recorded and the evaluator's; `check()` turns that summary into
+findings. The scores never leave the manager.
+
 #### gui/ -- Web Interface (subpackage)
 
 A Flask application with a Vue.js frontend, located in `graflag/graflag/gui/`. Accessible via `graflag gui [--host HOST] [--port PORT] [--debug]`.
@@ -284,7 +321,7 @@ A Flask application with a Vue.js frontend, located in `graflag/graflag/gui/`. A
 - Built on Flask with Flask-SocketIO for real-time updates.
 - Uses `GraFlagAPI` as its data layer.
 - REST endpoints under `/api/` for methods, datasets, experiments, services, run, evaluation, logs, and plot serving.
-- Run, evaluation, stop, and delete operations execute in background threads to avoid blocking HTTP responses.
+- Run, evaluation, stop, and delete operations execute in background threads to avoid blocking HTTP responses. Runs and evaluations wait with `follow=False`, polling status rather than streaming logs into the server's console.
 - Plot images are streamed from the remote via SSH + base64 encoding.
 - Server-side caching for methods and datasets (30-second TTL).
 

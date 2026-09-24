@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CLI Reference &mdash; GraFlag 1.1.0 documentation</title>
+  <title>CLI Reference &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=fc837d61"></script>
+      <script src="_static/documentation_options.js?v=6efca38a"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -56,6 +56,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#logs">logs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stop">stop</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#evaluate">evaluate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#verify">verify</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#list">list</a></li>
 </ul>
 </li>
@@ -71,6 +72,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#gui">gui</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mcp">mcp</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#devcluster">devcluster</a></li>
 </ul>
 </li>
@@ -78,6 +80,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
@@ -100,6 +103,8 @@
 <li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
 </ul>
 
@@ -130,7 +135,8 @@
   <section id="cli-reference">
 <h1>CLI Reference<a class="headerlink" href="#cli-reference" title="Link to this heading"></a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">graflag</span></code> is a thin client: every command acts on the Swarm manager over SSH,
-except <code class="docutils literal notranslate"><span class="pre">devcluster</span></code>, which runs the development cluster on this machine. The
+except <code class="docutils literal notranslate"><span class="pre">devcluster</span></code>, which runs the development cluster on this machine, and
+<code class="docutils literal notranslate"><span class="pre">mcp</span></code>, which serves the other commands to an AI agent. The
 command comes first, then its options:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">COMMAND</span> <span class="p">[</span><span class="n">OPTIONS</span><span class="p">]</span>
 </pre></div>
@@ -231,6 +237,27 @@ from the file; options given on the command line override them</p></li>
 </div>
 <p>The results go to the experiment’s <code class="docutils literal notranslate"><span class="pre">eval/</span></code> directory.</p>
 </section>
+<section id="verify">
+<span id="cli-verify"></span><h3>verify<a class="headerlink" href="#verify" title="Link to this heading"></a></h3>
+<p>Check that a finished, evaluated run published a result worth believing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">verify</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT</span> <span class="p">[</span><span class="o">--</span><span class="n">json</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">completed</span></code> means the method exited 0 and wrote a <code class="docutils literal notranslate"><span class="pre">results.json</span></code> that
+parses; it does not mean the numbers are the method’s. <code class="docutils literal notranslate"><span class="pre">verify</span></code> checks the
+part that does not depend on what the method computes: scores and ground truth
+of the same length, both classes present, scores that vary, the scored split
+declared as the test split, and the AUC <code class="docutils literal notranslate"><span class="pre">evaluate</span></code> computed equal to the one
+the method reported for itself. Each finding is printed as <code class="docutils literal notranslate"><span class="pre">[OK]</span></code>, <code class="docutils literal notranslate"><span class="pre">[WARN]</span></code>
+or <code class="docutils literal notranslate"><span class="pre">[ERROR]</span></code>; the command exits 1 if any check failed. Run <code class="docutils literal notranslate"><span class="pre">evaluate</span></code>
+first – without <code class="docutils literal notranslate"><span class="pre">eval/evaluation.json</span></code> there is nothing to compare against.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--json</span></code> – also print the summary the checks read (counts, AUCs, split;
+never the scores)</p></li>
+</ul>
+<p>This is the last gate of <a class="reference internal" href="AGENT_SKILL.html"><span class="doc">method integration</span></a>. The skill’s
+<code class="docutils literal notranslate"><span class="pre">scripts/verify_run.py</span></code> is the same check under its old name.</p>
+</section>
 <section id="list">
 <h3>list<a class="headerlink" href="#list" title="Link to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="nb">list</span> <span class="n">methods</span>
@@ -323,6 +350,19 @@ library reaches a method only when its image is rebuilt with <code class="docuti
 <li><p><code class="docutils literal notranslate"><span class="pre">--debug</span></code> – Flask debug mode</p></li>
 </ul>
 <p>The dashboard has no authentication. See <a class="reference internal" href="gui.html"><span class="doc">Web Dashboard</span></a>.</p>
+</section>
+<section id="mcp">
+<h3>mcp<a class="headerlink" href="#mcp" title="Link to this heading"></a></h3>
+<p>Serve GraFlag to an AI agent over the Model Context Protocol, on stdio:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">mcp</span> <span class="p">[</span><span class="o">--</span><span class="n">config</span> <span class="n">FILE</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Needs the optional SDK: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">&quot;graflag[mcp]&quot;</span></code> (Python 3.10+). The
+command is meant to be started by an MCP client, not typed; for Claude Code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">claude</span> <span class="n">mcp</span> <span class="n">add</span> <span class="n">graflag</span> <span class="o">--</span> <span class="n">graflag</span> <span class="n">mcp</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="MCP.html"><span class="doc">AI Agents (MCP)</span></a>.</p>
 </section>
 <section id="devcluster">
 <h3>devcluster<a class="headerlink" href="#devcluster" title="Link to this heading"></a></h3>

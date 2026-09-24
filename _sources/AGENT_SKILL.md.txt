@@ -10,7 +10,7 @@ graflag-shared/.claude/skills/method-integration/
 ├── SKILL.md               # the procedure and its four gates
 ├── reference/sdk.md       # the graflag_runner API for integration scripts
 ├── reference/traps.md     # failures that reported success, and their fixes
-└── scripts/verify_run.py  # gate 3: does the published result hold up?
+└── scripts/verify_run.py  # gate 4 under its old name, a shim over graflag verify
 ```
 
 The layout is Claude Code's: a `SKILL.md` whose front matter names the skill and
@@ -40,24 +40,23 @@ same procedure, with complete templates and a worked integration.
 ## The four gates
 
 A method is not reported as integrated until all four pass, in order. Each one
-catches what the one before it cannot.
+catches what the one before it cannot, and each needs the one before it: gate 4
+compares the AUC the method reported with the one gate 3 computed.
 
 | Gate | Command | Catches |
 |---|---|---|
-| 1. Contract | `python3 -m unittest discover -s tests`, in graflag-shared | The `.env` and Dockerfile schema, unpinned clones, `sed -i` on cloned source, `COPY` paths, GPU conventions, provenance |
+| 1. Contract | `python3 -m unittest discover -s tests`, in graflag-shared | The `.env` and Dockerfile schema, unpinned clones, `sed -i` on cloned source, `COPY` paths, GPU conventions, provenance, a README with no `## Verification` section |
 | 2. Build and run | `graflag sync`, then `graflag run -m METHOD -d DATASET --build` | Anything that only exists on the share |
-| 3. Result integrity | `python3 .claude/skills/method-integration/scripts/verify_run.py EXP` | Empty, one-class or constant scores, a length mismatch, published scores that disagree with the AUC the method reported |
-| 4. Evaluation | `graflag evaluate -e EXP` | Metrics and plots |
+| 3. Evaluation | `graflag evaluate -e EXP` | Metrics and plots, from the scores exactly as published |
+| 4. Result integrity | `graflag verify -e EXP` | Empty, one-class or constant scores, a length mismatch, an undeclared or non-test split, published scores that disagree with the AUC the method reported |
 
-Run `graflag evaluate` before `verify_run.py`: gate 3 compares the AUC the
-method reported with the one the evaluator computed.
-
-## verify_run.py
+## graflag verify
 
 `status.json` saying `completed` means the method exited 0 and wrote a
 `results.json` that parses. It does not mean the numbers are the method's, that
 they cover the test split, or that they are the scores whose AUC the method
-printed. The checker tests the generic half of that:
+printed. `graflag verify` (graflag 1.2.0 or later) tests the generic half of
+that:
 
 - the sample is usable: scores and ground truth have the same length, both
   classes are present, and something is left after the evaluator's filtering;
@@ -69,10 +68,30 @@ printed. The checker tests the generic half of that:
 
 It exits 1 when a check fails; warnings do not fail it, and each one should be
 read. It needs no agent: it runs on any finished experiment, reading it on the
-manager through the installed `graflag` client (`--config` selects a
-configuration file). What it cannot check is whether the method's own number is
-right, only that the published scores reproduce it.
-`tests/test_verify_run.py` in graflag-shared covers the checker itself.
+manager in one SSH call, and the scores never leave the manager. What it cannot
+check is whether the method's own number is right, only that the published
+scores reproduce it. The skill's `scripts/verify_run.py EXP` is the same check
+under its old name. graflag's `tests/test_verify.py` covers the checks, and
+graflag-shared's `tests/test_verify_run.py` holds the probe's plain-Python
+counting to the evaluator's.
+
+## Recording the result
+
+The last step of an integration writes the gates down: the method's README gets
+a `## Verification` section with, per dataset, the parameters, gate 2 (status,
+run time, peak memory), gate 3 (`auc_roc`) and gate 4 (failed / warned /
+passed). A method that cannot run on the cluster gets the same section saying
+so, with the traceback and what was tried, and one never run says that too.
+Gate 1 refuses a method with no such section and no row in `VERIFICATION.md`,
+so "integrated" always means something a reader can check.
+
+## Through MCP
+
+With the {doc}`MCP server <MCP>` configured, an agent can run gates 2 to 4 as
+tools: `run_experiment` (with `build: true`) and `wait_for_experiment`,
+`get_logs` while it runs, `evaluate_experiment` and `wait_for_experiment`
+again, then `verify_experiment`. Gate 1 and `graflag sync` stay on the command
+line, because they read the local checkout.
 
 ## The rules it enforces
 

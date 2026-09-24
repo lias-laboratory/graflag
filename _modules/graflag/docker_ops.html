@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.docker_ops &mdash; GraFlag 1.1.0 documentation</title>
+  <title>graflag.docker_ops &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
+      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -44,6 +44,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
@@ -66,6 +67,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
 </ul>
 
@@ -118,7 +121,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">docker.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServiceMode</span><span class="p">,</span> <span class="n">RestartPolicy</span><span class="p">,</span> <span class="n">Resources</span><span class="p">,</span> <span class="n">Mount</span><span class="p">,</span> <span class="n">EndpointSpec</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_method_env</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_path</span><span class="p">,</span> <span class="n">NON_INTERACTIVE_OPTS</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -238,6 +241,10 @@
         <span class="k">pass</span>
 
 
+<span class="c1">#: Swarm task states after which a restart_policy=none task never runs again.</span>
+<span class="n">TERMINAL_TASK_STATES</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;complete&#39;</span><span class="p">,</span> <span class="s1">&#39;failed&#39;</span><span class="p">,</span> <span class="s1">&#39;shutdown&#39;</span><span class="p">,</span> <span class="s1">&#39;rejected&#39;</span><span class="p">,</span> <span class="s1">&#39;orphaned&#39;</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_service_status</span><span class="p">(</span><span class="n">running</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;What a Swarm service is actually doing, from its tasks.</span>
 
@@ -332,6 +339,8 @@
             <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;StrictHostKeyChecking=no&#39;</span><span class="p">,</span>
             <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;ExitOnForwardFailure=yes&#39;</span><span class="p">,</span>
         <span class="p">]</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="s2">&quot;batch_mode&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">NON_INTERACTIVE_OPTS</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
             <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
         <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">)])</span>
@@ -342,9 +351,12 @@
         <span class="c1"># long-lived `ssh -N -L .../docker.sock`, and a SIGKILL-ed graflag</span>
         <span class="c1"># leaves it connected to the manager indefinitely. Nine such orphans</span>
         <span class="c1"># were alive on this workstation, the oldest 22 hours old.</span>
+        <span class="c1"># stdin closed for the reason SSHManager.execute gives: the tunnel</span>
+        <span class="c1"># lives as long as the client, and under the MCP server this</span>
+        <span class="c1"># process&#39;s stdin is the protocol.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
-            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
-            <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">,</span>
+            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
+            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">,</span>
         <span class="p">)</span>
 
         <span class="c1"># Wait for the tunnel to be usable. ssh binds the local port as soon</span>
@@ -1012,42 +1024,56 @@
         <span class="k">return</span> <span class="p">{</span><span class="n">svc</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">svc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">()}</span></div>
 
 
+    <span class="c1"># Every SDK call on the path of a run goes through _with_reconnect. Only</span>
+    <span class="c1"># the service listing did, so a run launched from the dashboard lost the</span>
+    <span class="c1"># tunnel right after its service was created, the background thread died</span>
+    <span class="c1"># on the next call, and the finished service was never removed. A retried</span>
+    <span class="c1"># removal can find the service already gone -- the first attempt went</span>
+    <span class="c1"># through and only its reply was lost -- which each caller below already</span>
+    <span class="c1"># treats as &quot;nothing to remove&quot;.</span>
+
 <div class="viewcode-block" id="DockerManager.stop_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.stop_service">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">stop_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Stop and remove a service.&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
-            <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> stopped and removed&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to stop service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+        <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+                <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> stopped and removed&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to stop service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_remove_service_if_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a service if it exists.&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
-            <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Removed existing service: </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+                <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Removed existing service: </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DockerManager.cleanup_finished_service">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.cleanup_finished_service">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">cleanup_finished_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove a finished service (safe if it doesn&#39;t exist).&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
-            <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Cleaned up finished service: </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to clean up service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+        <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+                <span class="n">service</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Cleaned up finished service: </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">APIError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to clean up service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DockerManager.remove_evaluation_service">
@@ -1182,11 +1208,56 @@
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.service_exists">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">service_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a Docker service exists.&quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span></div>
+        <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.service_task_state">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.service_task_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">service_task_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The newest task&#39;s state (``running``, ``complete``, ...), lower case.</span>
+
+<span class="sd">        None while the service has no task yet. Raises ValueError when the</span>
+<span class="sd">        service does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+            <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">tasks</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">latest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CreatedAt&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="p">(</span><span class="n">latest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DockerManager.wait_for_service">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.wait_for_service">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wait_for_service</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">poll</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">,</span>
+                         <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Wait until the service&#39;s task ends, printing nothing.</span>
+
+<span class="sd">        The quiet counterpart of :meth:`follow_service_logs`, for callers with</span>
+<span class="sd">        nobody reading a terminal: the dashboard, and the MCP server, whose</span>
+<span class="sd">        stdout is its protocol. Returns the terminal task state, or None if</span>
+<span class="sd">        `timeout` seconds passed first.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">deadline</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">service_task_state</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">TERMINAL_TASK_STATES</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">state</span>
+            <span class="k">if</span> <span class="n">deadline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">deadline</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DockerManager.is_service_failed">
@@ -1200,19 +1271,21 @@
 <span class="sd">        failure but is not success either. This is only consulted when</span>
 <span class="sd">        status.json is absent or unreadable -- the runner&#39;s own status wins.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
-            <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">tasks</span><span class="p">:</span>
-                <span class="k">return</span> <span class="kc">False</span>
-            <span class="c1"># Check if every task is in a terminal failure state</span>
-            <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
-                <span class="n">state</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">state</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;failed&#39;</span><span class="p">,</span> <span class="s1">&#39;rejected&#39;</span><span class="p">,</span> <span class="s1">&#39;shutdown&#39;</span><span class="p">,</span> <span class="s1">&#39;orphaned&#39;</span><span class="p">):</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
+                <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">tasks</span><span class="p">:</span>
                     <span class="k">return</span> <span class="kc">False</span>
-            <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">False</span></div>
+                <span class="c1"># Check if every task is in a terminal failure state</span>
+                <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">state</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;failed&#39;</span><span class="p">,</span> <span class="s1">&#39;rejected&#39;</span><span class="p">,</span> <span class="s1">&#39;shutdown&#39;</span><span class="p">,</span> <span class="s1">&#39;orphaned&#39;</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="kc">False</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">NotFound</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span></div>
 
 
     <span class="c1"># ========================================================================</span>
@@ -1344,7 +1417,13 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_service_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service details to JSON after creation.&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">service</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+            <span class="c1"># Fetched and listed as one unit: `service` belongs to the client</span>
+            <span class="c1"># that fetched it, so after a reconnect its tasks() would reuse</span>
+            <span class="c1"># the dead socket.</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+                <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">svc</span><span class="p">,</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+            <span class="n">service</span><span class="p">,</span> <span class="n">tasks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span>
             <span class="n">attrs</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">attrs</span>
 
             <span class="n">details</span> <span class="o">=</span> <span class="p">{</span>
@@ -1356,7 +1435,6 @@
             <span class="p">}</span>
 
             <span class="c1"># Get task info</span>
-            <span class="n">tasks</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">tasks</span><span class="p">:</span>
                 <span class="n">task</span> <span class="o">=</span> <span class="n">tasks</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">details</span><span class="p">[</span><span class="s2">&quot;worker&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>

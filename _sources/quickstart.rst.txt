@@ -165,6 +165,15 @@ precision, recall and F1 at *k*, and the best F1, and writes ``evaluation.json``
 and the plots to the experiment's ``eval/`` directory. :doc:`RESULTS_STANDARD`
 describes what the evaluator expects and which scores it leaves out.
 
+Then check that the number means what it says::
+
+    graflag verify -e exp__bond_dominant__bond_inj_cora__20260923_151827
+
+``verify`` compares what the method reported about itself with what it
+published -- among other checks, that the AUC the evaluator just computed is
+the AUC the method printed -- and exits 1 when a check fails. See
+:ref:`the CLI reference <cli-verify>`.
+
 Custom Metrics
 ~~~~~~~~~~~~~~
 
@@ -235,3 +244,14 @@ Web Dashboard
 
 Then open ``http://localhost:5000``. The dashboard has no authentication: read
 :doc:`gui` before running it anywhere but a trusted network.
+
+From an AI Agent
+----------------
+
+GraFlag also runs as an MCP server, so an agent such as Claude Code can list
+methods and datasets, launch and watch runs, evaluate and verify them::
+
+    pip install "graflag[mcp]"            # Python 3.10+
+    claude mcp add graflag -- graflag mcp
+
+:doc:`MCP` lists the tools and what they deliberately leave out.

@@ -1,0 +1,517 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>graflag.verify &mdash; GraFlag 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GraFlag
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../MCP.html">AI Agents (MCP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mcp_server.html">graflag.mcp_server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GraFlag</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">graflag.verify</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for graflag.verify</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Check that a finished experiment published a result worth believing.</span>
+
+<span class="sd">`status.json` saying `completed` means the process exited 0 and wrote a</span>
+<span class="sd">`results.json` that parses. It does not mean the numbers are the method&#39;s, that</span>
+<span class="sd">they cover the test split, or that the scores are the ones whose AUC the method</span>
+<span class="sd">printed. Every scientific-validity defect recorded in graflag-shared passed</span>
+<span class="sd">`completed`.</span>
+
+<span class="sd">The checks here are the generic half of that -- the part that does not need to</span>
+<span class="sd">know what the method computes:</span>
+
+<span class="sd">  * the sample is usable at all: scores and ground truth the same length, both</span>
+<span class="sd">    classes present, something left after the evaluator&#39;s filtering</span>
+<span class="sd">  * the scores vary (a constant column scores AUC 0.5 and looks like a method)</span>
+<span class="sd">  * what the method says it measured is what it published: every `*auc*` in</span>
+<span class="sd">    `metadata.summary` is compared against `eval/evaluation.json`, and</span>
+<span class="sd">    `scored_samples` against the actual count</span>
+<span class="sd">  * the split is declared, and declared to be the test one</span>
+
+<span class="sd">What it cannot check is whether the method&#39;s own number is right -- only that</span>
+<span class="sd">the published scores reproduce it. A method that measures the wrong thing</span>
+<span class="sd">consistently passes every check below. Read the run&#39;s log as well.</span>
+
+<span class="sd">This is the last of the method-integration skill&#39;s four gates, after</span>
+<span class="sd">`graflag evaluate`. It began as the skill&#39;s `scripts/verify_run.py`, which is</span>
+<span class="sd">now a shim over :func:`main`; `graflag verify -e EXP` and the MCP server&#39;s</span>
+<span class="sd">`verify_experiment` tool reach the same checks through</span>
+<span class="sd">:meth:`graflag.core.GraFlag.verify`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+
+<span class="c1"># Mirrors graflag_evaluator.preprocessing.SENTINELS. The evaluator drops these</span>
+<span class="c1"># before computing anything, so a count taken without dropping them would not</span>
+<span class="c1"># be the count the AUC was computed over.</span>
+<span class="n">SENTINEL_UNKNOWN</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+<span class="n">SENTINEL_INACTIVE</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0</span>
+
+<span class="n">AUC_TOLERANCE</span> <span class="o">=</span> <span class="mf">1e-4</span>  <span class="c1"># evaluation.json rounds to 4 decimals</span>
+
+<span class="n">VALID_RESULT_TYPES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="s2">&quot;EDGE_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="s2">&quot;GRAPH_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TEMPORAL_NODE_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="s2">&quot;TEMPORAL_EDGE_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TEMPORAL_GRAPH_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;NODE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;GRAPH_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="c1"># --- functions shipped to the manager -------------------------------------</span>
+<span class="c1"># These are sent to the manager verbatim by inspect.getsource(), because the</span>
+<span class="c1"># manager has no numpy and cannot import graflag_evaluator.preprocessing. They</span>
+<span class="c1"># are plain Python for that reason, and graflag-shared&#39;s tests/test_verify_run.py</span>
+<span class="c1"># cross-checks them against the real prepare_pairs() to keep the two from</span>
+<span class="c1"># drifting.</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_flatten</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Flatten one level of nesting, as flatten_ragged does for a list of rows.&quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">arr</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">_flatten</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_finite</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> \
+        <span class="ow">and</span> <span class="n">x</span> <span class="o">==</span> <span class="n">x</span> <span class="ow">and</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;-inf&quot;</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_summarise_pairs</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">truth</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Count what the evaluator would have kept, and describe it.&quot;&quot;&quot;</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="n">_flatten</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+    <span class="n">truth</span> <span class="o">=</span> <span class="n">_flatten</span><span class="p">(</span><span class="n">truth</span><span class="p">)</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;n_scores&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">),</span>
+        <span class="s2">&quot;n_truth&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">truth</span><span class="p">),</span>
+        <span class="s2">&quot;kept&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;dropped_unknown&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;dropped_inactive&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;dropped_non_finite&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;n_positive&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;distinct_scores&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">&quot;score_min&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;score_max&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">truth</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">report</span>
+
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">lo</span> <span class="o">=</span> <span class="n">hi</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">truth</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_finite</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;dropped_non_finite&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">SENTINEL_UNKNOWN</span><span class="p">:</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;dropped_unknown&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">SENTINEL_INACTIVE</span><span class="p">:</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;dropped_inactive&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="n">report</span><span class="p">[</span><span class="s2">&quot;kept&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">t</span><span class="p">:</span>
+            <span class="n">report</span><span class="p">[</span><span class="s2">&quot;n_positive&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">seen</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">64</span><span class="p">:</span>        <span class="c1"># enough to tell &quot;constant&quot; from &quot;varies&quot;</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">lo</span> <span class="o">=</span> <span class="n">s</span> <span class="k">if</span> <span class="n">lo</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">s</span> <span class="o">&lt;</span> <span class="n">lo</span> <span class="k">else</span> <span class="n">lo</span>
+        <span class="n">hi</span> <span class="o">=</span> <span class="n">s</span> <span class="k">if</span> <span class="n">hi</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="n">hi</span> <span class="k">else</span> <span class="n">hi</span>
+    <span class="n">report</span><span class="p">[</span><span class="s2">&quot;distinct_scores&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seen</span><span class="p">)</span>
+    <span class="n">report</span><span class="p">[</span><span class="s2">&quot;score_min&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lo</span>
+    <span class="n">report</span><span class="p">[</span><span class="s2">&quot;score_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hi</span>
+    <span class="k">return</span> <span class="n">report</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_collect_aucs</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Every `*auc*` number anywhere in the method&#39;s summary, by path.&quot;&quot;&quot;</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">prefix</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+                <span class="n">found</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_collect_aucs</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">path</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="s2">&quot;auc&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> \
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+                <span class="n">found</span><span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_collect_aucs</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">found</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_probe</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read one experiment on the manager and print a compact JSON summary.&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">json</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_json</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_os</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;exp_dir&quot;</span><span class="p">:</span> <span class="n">exp_dir</span><span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load</span><span class="p">(</span><span class="n">rel</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="n">rel</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">_json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>                       <span class="c1"># noqa: BLE001</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;__unreadable__&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">exc</span><span class="p">)}</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="n">_load</span><span class="p">(</span><span class="s2">&quot;status.json&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">status</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;status_error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">status</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;error&quot;</span><span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="n">_load</span><span class="p">(</span><span class="s2">&quot;results.json&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">results</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;results_present&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">_json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+        <span class="k">return</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;results_present&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="s2">&quot;__unreadable__&quot;</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;results_unreadable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;__unreadable__&quot;</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">_json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+        <span class="k">return</span>
+
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;result_type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result_type&quot;</span><span class="p">)</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;summary&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;method_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;method_name&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;reported_aucs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_collect_aucs</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;scored_split&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;scored_split&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="s2">&quot;declared_samples&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_summarise_pairs</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scores&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[],</span>
+                                <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ground_truth&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]))</span>
+
+    <span class="n">evaluation</span> <span class="o">=</span> <span class="n">_load</span><span class="p">(</span><span class="s2">&quot;eval/evaluation.json&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">evaluation</span> <span class="ow">and</span> <span class="s2">&quot;__unreadable__&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">evaluation</span><span class="p">:</span>
+        <span class="n">metrics</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metrics&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">evaluation</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;eval_metrics&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                               <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))}</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;eval_filtering&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluation</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;filtering&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">_json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_find_key</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">wanted</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;First value stored under `wanted`, at any depth.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">wanted</span> <span class="ow">in</span> <span class="n">node</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">node</span><span class="p">[</span><span class="n">wanted</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">found</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">node</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">found</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">found</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="n">REMOTE_HELPERS</span> <span class="o">=</span> <span class="p">(</span><span class="n">_flatten</span><span class="p">,</span> <span class="n">_is_finite</span><span class="p">,</span> <span class="n">_summarise_pairs</span><span class="p">,</span> <span class="n">_collect_aucs</span><span class="p">,</span>
+                  <span class="n">_find_key</span><span class="p">,</span> <span class="n">_probe</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="remote_script">
+<a class="viewcode-back" href="../../api/verify.html#graflag.verify.remote_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remote_script</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The probe, as a self-contained program to run on the manager.&quot;&quot;&quot;</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsource</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">REMOTE_HELPERS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="s2">&quot;python3 - &lt;&lt;&#39;GRAFLAG_PROBE_EOF&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;SENTINEL_UNKNOWN = </span><span class="si">{</span><span class="n">SENTINEL_UNKNOWN</span><span class="si">!r}</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;SENTINEL_INACTIVE = </span><span class="si">{</span><span class="n">SENTINEL_INACTIVE</span><span class="si">!r}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;_probe(</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">!r}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;GRAFLAG_PROBE_EOF</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># --- the checks ------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="check">
+<a class="viewcode-back" href="../../api/verify.html#graflag.verify.check">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="n">probe</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Turn a probe summary into findings. Pure, so it is testable offline.</span>
+
+<span class="sd">    Returns a list of (level, message); level is &quot;ERROR&quot;, &quot;WARN&quot; or &quot;OK&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">add</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">level</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">level</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>          <span class="c1"># noqa: E731</span>
+
+    <span class="k">if</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;completed&quot;</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;status is </span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">)</span><span class="si">!r}</span><span class="s2">, not &#39;completed&#39;&quot;</span>
+                     <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;: </span><span class="si">{</span><span class="n">probe</span><span class="p">[</span><span class="s1">&#39;status_error&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status_error&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;results_present&quot;</span><span class="p">):</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="s2">&quot;no results.json -- nothing was published&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;results_unreadable&quot;</span><span class="p">):</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;results.json does not parse: </span><span class="si">{</span><span class="n">probe</span><span class="p">[</span><span class="s1">&#39;results_unreadable&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="n">result_type</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result_type&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">result_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_RESULT_TYPES</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;result_type </span><span class="si">{</span><span class="n">result_type</span><span class="si">!r}</span><span class="s2"> is not one of the nine valid types&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;result_type </span><span class="si">{</span><span class="n">result_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">n_scores</span><span class="p">,</span> <span class="n">n_truth</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_scores&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_truth&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_scores</span> <span class="o">!=</span> <span class="n">n_truth</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n_scores</span><span class="si">}</span><span class="s2"> scores against </span><span class="si">{</span><span class="n">n_truth</span><span class="si">}</span><span class="s2"> ground-truth labels -- &quot;</span>
+                     <span class="s2">&quot;they are not the same sample&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">n_scores</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="s2">&quot;no scores were published&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="n">kept</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kept&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">dropped</span> <span class="o">=</span> <span class="n">n_scores</span> <span class="o">-</span> <span class="n">kept</span>
+    <span class="k">if</span> <span class="n">kept</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;the evaluator keeps none of the </span><span class="si">{</span><span class="n">n_scores</span><span class="si">}</span><span class="s2"> scores &quot;</span>
+                     <span class="s2">&quot;(all sentinel or non-finite)&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">dropped</span><span class="p">:</span>
+        <span class="n">level</span> <span class="o">=</span> <span class="s2">&quot;WARN&quot;</span> <span class="k">if</span> <span class="n">kept</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">&gt;=</span> <span class="n">n_scores</span> <span class="k">else</span> <span class="s2">&quot;ERROR&quot;</span>
+        <span class="n">add</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dropped</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">n_scores</span><span class="si">}</span><span class="s2"> scores are dropped before scoring &quot;</span>
+                   <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dropped_unknown&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> unknown, &quot;</span>
+                   <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dropped_inactive&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> inactive, &quot;</span>
+                   <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dropped_non_finite&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2"> non-finite); &quot;</span>
+                   <span class="sa">f</span><span class="s2">&quot;the AUC is over </span><span class="si">{</span><span class="n">kept</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">positives</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_positive&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">positives</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">positives</span> <span class="o">==</span> <span class="n">kept</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ground truth has one class only (</span><span class="si">{</span><span class="n">positives</span><span class="si">}</span><span class="s2"> positive of &quot;</span>
+                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">kept</span><span class="si">}</span><span class="s2">) -- AUC is undefined. Scores must come from the &quot;</span>
+                     <span class="s2">&quot;test split, which is where the anomalies are.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">kept</span><span class="si">}</span><span class="s2"> scored samples, </span><span class="si">{</span><span class="n">positives</span><span class="si">}</span><span class="s2"> positive &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">positives</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">kept</span><span class="si">:</span><span class="s2">.2%</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;distinct_scores&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;every score is the same value (</span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;score_min&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">) -- &quot;</span>
+                     <span class="s2">&quot;the method ranked nothing&quot;</span><span class="p">)</span>
+
+    <span class="n">declared</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;declared_samples&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">declared</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">declared</span> <span class="o">!=</span> <span class="n">n_scores</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;summary declares scored_samples=</span><span class="si">{</span><span class="n">declared</span><span class="si">}</span><span class="s2"> but </span><span class="si">{</span><span class="n">n_scores</span><span class="si">}</span><span class="s2"> &quot;</span>
+                     <span class="s2">&quot;scores were published&quot;</span><span class="p">)</span>
+
+    <span class="n">split</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scored_split&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">split</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;WARN&quot;</span><span class="p">,</span> <span class="s2">&quot;summary does not record scored_split -- record it, so a &quot;</span>
+                    <span class="s2">&quot;reader can tell a test-split AUC from a whole-stream one&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">str</span><span class="p">(</span><span class="n">split</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;test&quot;</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;WARN&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;scored_split is </span><span class="si">{</span><span class="n">split</span><span class="si">!r}</span><span class="s2">, not &#39;test&#39;. Scoring everything &quot;</span>
+                    <span class="s2">&quot;is only sound when the method fitted nothing; if it &quot;</span>
+                    <span class="s2">&quot;trained, this AUC is partly over its own training data. &quot;</span>
+                    <span class="s2">&quot;Either way the README has to say which it is.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;scored_split &#39;test&#39; over </span><span class="si">{</span><span class="n">n_scores</span><span class="si">}</span><span class="s2"> samples&quot;</span><span class="p">)</span>
+
+    <span class="n">reported</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reported_aucs&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;eval_metrics&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">evaluated</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;auc_roc&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">evaluated</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;WARN&quot;</span><span class="p">,</span> <span class="s2">&quot;no eval/evaluation.json -- run `graflag evaluate -e &lt;exp&gt;` &quot;</span>
+                    <span class="s2">&quot;so the published scores can be checked against the &quot;</span>
+                    <span class="s2">&quot;method&#39;s own number&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">reported</span><span class="p">:</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">&quot;WARN&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;evaluator AUC </span><span class="si">{</span><span class="n">evaluated</span><span class="si">}</span><span class="s2">, but the method records no AUC in &quot;</span>
+                    <span class="s2">&quot;metadata.summary, so the two cannot be cross-checked&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">agreeing</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">reported</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">evaluated</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">AUC_TOLERANCE</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">agreeing</span><span class="p">:</span>
+            <span class="n">add</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;evaluator AUC </span><span class="si">{</span><span class="n">evaluated</span><span class="si">}</span><span class="s2"> matches the method&#39;s &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">agreeing</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">listed</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">reported</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+            <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;the evaluator scores </span><span class="si">{</span><span class="n">evaluated</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> and the method &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;reports </span><span class="si">{</span><span class="n">listed</span><span class="si">}</span><span class="s2"> -- the published scores are not the &quot;</span>
+                         <span class="s2">&quot;ones the method measured&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+
+<span class="c1"># --- driver ----------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="probe">
+<a class="viewcode-back" href="../../api/verify.html#graflag.verify.probe">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">probe</span><span class="p">(</span><span class="n">gf</span><span class="p">,</span> <span class="n">experiment</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the probe on the manager through GraFlag&#39;s SSH layer.</span>
+
+<span class="sd">    Returns the probe summary, or raises RuntimeError with what the manager</span>
+<span class="sd">    said when it could not be produced.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">exp_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">gf</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">gf</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">remote_script</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;probe failed on the manager: &quot;</span>
+            <span class="o">+</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()[:</span><span class="mi">400</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../api/verify.html#graflag.verify.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The original command line: ``verify_run.py EXP [--config F] [--json]``.&quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;experiment&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;exp__method__dataset__timestamp&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--config&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;graflag config file (default: the usual resolution)&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--json&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;print the raw probe summary&quot;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraFlag</span><span class="p">,</span> <span class="n">GraFlagError</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="n">GraFlag</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">experiment</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">GraFlagError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">2</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">json</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">report</span><span class="o">.</span><span class="n">probe</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">format_report</span><span class="p">(</span><span class="n">report</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">report</span><span class="o">.</span><span class="n">failed</span> <span class="k">else</span> <span class="mi">0</span></div>
+
+
+
+<div class="viewcode-block" id="format_report">
+<a class="viewcode-back" href="../../api/verify.html#graflag.verify.format_report">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_report</span><span class="p">(</span><span class="n">report</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The report as the lines `graflag verify` prints.&quot;&quot;&quot;</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="n">report</span><span class="o">.</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+    <span class="n">lines</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;level&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">] </span><span class="si">{</span><span class="n">f</span><span class="p">[</span><span class="s1">&#39;message&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">report</span><span class="o">.</span><span class="n">findings</span><span class="p">]</span>
+    <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="n">report</span><span class="o">.</span><span class="n">failed</span><span class="si">}</span><span class="s2"> failed, </span><span class="si">{</span><span class="n">report</span><span class="o">.</span><span class="n">warned</span><span class="si">}</span><span class="s2"> warned, &quot;</span>
+                 <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">report</span><span class="o">.</span><span class="n">passed</span><span class="si">}</span><span class="s2"> passed&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lines</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

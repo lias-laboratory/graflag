@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.core &mdash; GraFlag 1.1.0 documentation</title>
+  <title>graflag.core &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
+      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -44,6 +44,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
@@ -66,6 +67,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
 </ul>
 
@@ -103,6 +106,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">textwrap</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
@@ -115,7 +119,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ClusterInfo</span><span class="p">,</span> <span class="n">MethodInfo</span><span class="p">,</span> <span class="n">DatasetInfo</span><span class="p">,</span> <span class="n">ExperimentInfo</span><span class="p">,</span>
     <span class="n">ExperimentResults</span><span class="p">,</span> <span class="n">EvaluationResults</span><span class="p">,</span> <span class="n">ServiceCleanupResult</span><span class="p">,</span>
-    <span class="n">ClearItem</span><span class="p">,</span> <span class="n">ClearReport</span><span class="p">,</span>
+    <span class="n">ClearItem</span><span class="p">,</span> <span class="n">ClearReport</span><span class="p">,</span> <span class="n">VerificationReport</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -138,7 +142,7 @@
 <span class="sd">    (except follow_logs which streams in real time).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize GraFlag with configuration.</span>
 
 <span class="sd">        `config_file` defaults to None, meaning &quot;resolve normally&quot; (cwd .env</span>
@@ -146,6 +150,10 @@
 <span class="sd">        to the literal &quot;.env&quot;, which config resolution now reads as an</span>
 <span class="sd">        explicit request for that exact file -- so `GraFlag()`, the documented</span>
 <span class="sd">        Python API entry point, failed with &quot;Configuration file not found&quot;.</span>
+
+<span class="sd">        `interactive=False` is for callers with nobody at a terminal, such as</span>
+<span class="sd">        the MCP server: ssh then fails instead of prompting for a password or</span>
+<span class="sd">        passphrase, and gives up on an unreachable manager after 15 seconds.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">GraflagConfig</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
@@ -155,7 +163,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span> <span class="o">=</span> <span class="n">SSHManager</span><span class="p">(</span>
             <span class="n">manager_ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">,</span>
             <span class="n">ssh_port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">,</span>
-            <span class="n">ssh_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_key</span>
+            <span class="n">ssh_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">,</span>
+            <span class="n">batch_mode</span><span class="o">=</span><span class="ow">not</span> <span class="n">interactive</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">docker</span> <span class="o">=</span> <span class="n">DockerManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">hosts_file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span>
 
@@ -250,13 +259,20 @@
         <span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
         <span class="n">build</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">gpu</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">method_params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">keep_service</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">force_rm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">force_rm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">follow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Run experiment.</span>
+
+<span class="sd">        Blocks until the run has ended either way.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            exp_name: Pre-computed experiment name (see</span>
 <span class="sd">                :meth:`make_experiment_name`). Generated when omitted.</span>
+<span class="sd">            follow: Stream the container&#39;s output to stdout while waiting, as</span>
+<span class="sd">                the CLI does. False waits by polling the experiment&#39;s status</span>
+<span class="sd">                instead and prints nothing -- for the dashboard and the MCP</span>
+<span class="sd">                server, where stdout is not a terminal (for the MCP server it</span>
+<span class="sd">                is the protocol).</span>
 <span class="sd">            keep_service: Leave the finished Swarm service in place. Useful</span>
 <span class="sd">                when you want `docker service ps` to inspect the task.</span>
 <span class="sd">            force_rm: With ``build``, remove the build&#39;s intermediate</span>
@@ -319,8 +335,11 @@
         <span class="c1"># Create service</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">create_service</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">gpu</span><span class="p">,</span> <span class="n">method_params</span><span class="p">)</span>
 
-        <span class="c1"># Follow logs (streams to stdout)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">follow</span><span class="p">:</span>
+            <span class="c1"># Stream the logs to stdout until the task ends.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wait_for_experiment</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
 
         <span class="c1"># Remove the finished service. Without this every run leaves one behind</span>
         <span class="c1"># forever, since restart_policy=none services are never reaped.</span>
@@ -354,6 +373,45 @@
             <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">exp_name</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.wait_for_experiment">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.wait_for_experiment">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wait_for_experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">poll</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">5.0</span><span class="p">,</span>
+                            <span class="n">timeout</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Wait until an experiment reaches a terminal status, printing nothing.</span>
+
+<span class="sd">        Polls the same probe `graflag list experiments` uses, so &quot;finished&quot;</span>
+<span class="sd">        means what the listing says it means, including the task that died</span>
+<span class="sd">        before the runner could write status.json. An experiment whose</span>
+<span class="sd">        directory holds no status and whose service is gone (&quot;unknown&quot;) also</span>
+<span class="sd">        ends the wait: nothing is left that could change it.</span>
+
+<span class="sd">        Returns the last ExperimentInfo, or None when the experiment does not</span>
+<span class="sd">        exist. With `timeout`, returns the current state once it has passed,</span>
+<span class="sd">        terminal or not.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">deadline</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout</span>
+        <span class="n">misses</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_experiment_info</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># A failed ssh reads exactly like a missing directory. One</span>
+                <span class="c1"># dropped connection must not end the wait of a run that is</span>
+                <span class="c1"># still going, so only a repeated miss counts as &quot;not there&quot;.</span>
+                <span class="n">misses</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">misses</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">WAIT_MISSES</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">misses</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">TERMINAL_STATUSES</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="n">info</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="s2">&quot;unknown&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">info</span><span class="o">.</span><span class="n">service_name</span>
+            <span class="p">):</span>
+                <span class="k">return</span> <span class="n">info</span>
+            <span class="k">if</span> <span class="n">deadline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">deadline</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">info</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll</span><span class="p">)</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_ensure_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
@@ -447,8 +505,12 @@
 
 <div class="viewcode-block" id="GraFlag.evaluate">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.evaluate">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">follow</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Evaluate an experiment: compute metrics and generate plots.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            follow: Stream the evaluator&#39;s output to stdout, as the CLI does.</span>
+<span class="sd">                False waits for it silently (see :meth:`run`).</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            GraFlagError: If evaluation fails.</span>
@@ -463,7 +525,10 @@
 
         <span class="k">try</span><span class="p">:</span>
             <span class="n">eval_service_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">create_evaluation_service</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
-            <span class="n">final_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">follow</span><span class="p">:</span>
+                <span class="n">final_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">final_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">wait_for_service</span><span class="p">(</span><span class="n">eval_service_name</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">remove_evaluation_service</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Evaluation failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -485,6 +550,42 @@
 
         <span class="n">eval_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">/eval&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Evaluation results saved to: </span><span class="si">{</span><span class="n">eval_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GraFlag.verify">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.verify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">verify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">VerificationReport</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check that a finished experiment published a result worth believing.</span>
+
+<span class="sd">        The last of the four integration gates, after :meth:`evaluate`: it</span>
+<span class="sd">        compares what the method says it measured with what it published.</span>
+<span class="sd">        See :mod:`graflag.verify` for the checks. Reads the experiment in one</span>
+<span class="sd">        remote call and never moves the scores to the client.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            GraFlagError: If the experiment does not exist or cannot be read.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">verify</span> <span class="k">as</span> <span class="n">checks</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span>
+                                    <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Experiment </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">summary</span> <span class="o">=</span> <span class="n">checks</span><span class="o">.</span><span class="n">probe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">RuntimeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot verify </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">findings</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="n">level</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="n">message</span><span class="p">}</span>
+                    <span class="k">for</span> <span class="n">level</span><span class="p">,</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">checks</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">summary</span><span class="p">)]</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">level</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">findings</span> <span class="k">if</span> <span class="n">f</span><span class="p">[</span><span class="s2">&quot;level&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">level</span><span class="p">)</span>  <span class="c1"># noqa: E731</span>
+        <span class="k">return</span> <span class="n">VerificationReport</span><span class="p">(</span>
+            <span class="n">experiment_name</span><span class="o">=</span><span class="n">experiment_name</span><span class="p">,</span>
+            <span class="n">findings</span><span class="o">=</span><span class="n">findings</span><span class="p">,</span>
+            <span class="n">failed</span><span class="o">=</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">),</span>
+            <span class="n">warned</span><span class="o">=</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;WARN&quot;</span><span class="p">),</span>
+            <span class="n">passed</span><span class="o">=</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">),</span>
+            <span class="n">probe</span><span class="o">=</span><span class="n">summary</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
     <span class="c1"># ========================================================================</span>
@@ -932,6 +1033,10 @@
     <span class="c1"># Experiments in these states will never produce more output, so their</span>
     <span class="c1"># Swarm service is only holding task records.</span>
     <span class="n">TERMINAL_STATUSES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;completed&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="s2">&quot;stopped&quot;</span><span class="p">)</span>
+
+    <span class="c1">#: Consecutive failed probes after which wait_for_experiment() concludes</span>
+    <span class="c1">#: that the experiment is gone rather than that ssh blinked.</span>
+    <span class="n">WAIT_MISSES</span> <span class="o">=</span> <span class="mi">3</span>
 
 <div class="viewcode-block" id="GraFlag.cleanup_services">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.cleanup_services">[docs]</a>
@@ -1796,6 +1901,17 @@
             <span class="n">evaluation_path</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">full_exp_path</span><span class="si">}</span><span class="s2">/eval&quot;</span> <span class="k">if</span> <span class="n">has_evaluation</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
             <span class="n">service_name</span><span class="o">=</span><span class="n">exp_name</span> <span class="k">if</span> <span class="n">service_exists</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
+
+<div class="viewcode-block" id="GraFlag.get_experiment">
+<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.get_experiment">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;One experiment&#39;s status, from a single remote probe.</span>
+
+<span class="sd">        None when the experiment does not exist (or the manager could not be</span>
+<span class="sd">        reached -- the probe cannot tell the two apart).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_experiment_info</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_experiment_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">running_services</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ExperimentInfo</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get information for a single experiment.&quot;&quot;&quot;</span>

@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GraFlag Architecture &mdash; GraFlag 1.1.0 documentation</title>
+  <title>GraFlag Architecture &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=fc837d61"></script>
+      <script src="_static/documentation_options.js?v=6efca38a"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
@@ -73,6 +74,8 @@
 <li class="toctree-l4"><a class="reference internal" href="#ssh-py-ssh-operations">ssh.py – SSH Operations</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#docker-ops-py-docker-swarm-operations">docker_ops.py – Docker Swarm Operations</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#api-py-python-api">api.py – Python API</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#mcp-server-py-mcp-server">mcp_server.py – MCP Server</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#verify-py-result-verification">verify.py – Result Verification</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#gui-web-interface-subpackage">gui/ – Web Interface (subpackage)</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#devcluster-development-cluster-subpackage">devcluster/ – Development Cluster (subpackage)</a></li>
 </ul>
@@ -129,6 +132,8 @@
 <li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
 </ul>
 
@@ -185,7 +190,8 @@
 <li><p><strong>Distributed execution</strong> of GAD methods on GPU-equipped worker nodes via Docker Swarm.</p></li>
 <li><p><strong>Standardized result collection</strong> through the <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> library, which wraps method execution with resource monitoring and result serialization.</p></li>
 <li><p><strong>Automated evaluation</strong> via <code class="docutils literal notranslate"><span class="pre">graflag_evaluator</span></code>, which computes metrics (AUC-ROC, AUC-PR, etc.) and generates plots.</p></li>
-<li><p><strong>Multiple client interfaces</strong>: a CLI for scripting, a Python API for programmatic use, and a web GUI for interactive management.</p></li>
+<li><p><strong>Multiple client interfaces</strong>: a CLI for scripting, a Python API for programmatic use, a web GUI for interactive management, and an MCP server through which AI agents manage runs.</p></li>
+<li><p><strong>Result verification</strong>: <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">verify</span></code> checks that a run’s published scores reproduce the AUC the method reported, the last gate of method integration.</p></li>
 <li><p><strong>NFS-based shared storage</strong> for methods, datasets, experiments, and shared libraries, accessible by all cluster nodes.</p></li>
 </ul>
 </section>
@@ -208,13 +214,13 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>                          <span class="o">+-------------------------------------------+</span>
                           <span class="o">|</span>              <span class="n">Client</span> <span class="n">Machine</span>                <span class="o">|</span>
                           <span class="o">|</span>                                            <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">+--------+</span>  <span class="o">+----------+</span>  <span class="o">+-----------+</span>  <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">|</span>  <span class="n">CLI</span>   <span class="o">|</span>  <span class="o">|</span>   <span class="n">GUI</span>    <span class="o">|</span>  <span class="o">|</span> <span class="n">Python</span>    <span class="o">|</span>  <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">|</span> <span class="n">cli</span><span class="o">.</span><span class="n">py</span> <span class="o">|</span>  <span class="o">|</span> <span class="n">Flask</span> <span class="o">+</span>  <span class="o">|</span>  <span class="o">|</span> <span class="n">API</span>       <span class="o">|</span>  <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">|</span>        <span class="o">|</span>  <span class="o">|</span> <span class="n">Vue</span><span class="o">.</span><span class="n">js</span>   <span class="o">|</span>  <span class="o">|</span> <span class="n">api</span><span class="o">.</span><span class="n">py</span>    <span class="o">|</span>  <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">+---+----+</span>  <span class="o">+----+-----+</span>  <span class="o">+-----+-----+</span>  <span class="o">|</span>
-                          <span class="o">|</span>      <span class="o">|</span>            <span class="o">|</span>              <span class="o">|</span>         <span class="o">|</span>
-                          <span class="o">|</span>      <span class="n">v</span>            <span class="n">v</span>              <span class="n">v</span>         <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">+------+</span> <span class="o">+--------+</span> <span class="o">+---------+</span> <span class="o">+-----+</span>  <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">|</span> <span class="n">CLI</span>  <span class="o">|</span> <span class="o">|</span>  <span class="n">GUI</span>   <span class="o">|</span> <span class="o">|</span> <span class="n">Python</span>  <span class="o">|</span> <span class="o">|</span> <span class="n">MCP</span> <span class="o">|</span>  <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">|</span><span class="n">cli</span><span class="o">.</span><span class="n">py</span><span class="o">|</span> <span class="o">|</span><span class="n">Flask</span> <span class="o">+</span> <span class="o">|</span> <span class="o">|</span> <span class="n">API</span>     <span class="o">|</span> <span class="o">|</span><span class="n">serv</span><span class="o">-|</span>  <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">|</span>      <span class="o">|</span> <span class="o">|</span><span class="n">Vue</span><span class="o">.</span><span class="n">js</span>  <span class="o">|</span> <span class="o">|</span> <span class="n">api</span><span class="o">.</span><span class="n">py</span>  <span class="o">|</span> <span class="o">|</span><span class="n">er</span>   <span class="o">|</span>  <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">+--+---+</span> <span class="o">+---+----+</span> <span class="o">+----+----+</span> <span class="o">+--+--+</span>  <span class="o">|</span>
+                          <span class="o">|</span>     <span class="o">|</span>         <span class="o">|</span>           <span class="o">|</span>         <span class="o">|</span>     <span class="o">|</span>
+                          <span class="o">|</span>     <span class="n">v</span>         <span class="n">v</span>           <span class="n">v</span>         <span class="n">v</span>     <span class="o">|</span>
                           <span class="o">|</span>  <span class="o">+--------------------------------------+</span>  <span class="o">|</span>
                           <span class="o">|</span>  <span class="o">|</span>          <span class="n">GraFlag</span> <span class="n">Core</span> <span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">py</span><span class="p">)</span>      <span class="o">|</span>  <span class="o">|</span>
                           <span class="o">|</span>  <span class="o">|</span>         <span class="n">returns</span> <span class="n">dataclasses</span>          <span class="o">|</span>  <span class="o">|</span>
@@ -298,20 +304,26 @@
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate</span></code></p></td>
 <td><p>Run evaluation on a completed experiment</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cleanup</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">verify</span></code></p></td>
+<td><p>Check the published result against the method’s own AUC (exit 1 on failure)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cleanup</span></code></p></td>
 <td><p>Remove the Swarm services of finished runs</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">clear</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">clear</span></code></p></td>
 <td><p>Report, or with <code class="docutils literal notranslate"><span class="pre">--apply</span></code> remove, storage nothing owns</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">copy</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">copy</span></code></p></td>
 <td><p>Transfer files between local and remote (rsync)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sync</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sync</span></code></p></td>
 <td><p>Sync a method or library directory to remote</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gui</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gui</span></code></p></td>
 <td><p>Start the web dashboard</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mcp</span></code></p></td>
+<td><p>Serve GraFlag to an AI agent over MCP (stdio)</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">devcluster</span></code></p></td>
 <td><p>Deploy or tear down a local Docker Compose development cluster</p></td>
@@ -385,7 +397,10 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ClearItem</span></code>, <code class="docutils literal notranslate"><span class="pre">ClearReport</span></code></p></td>
 <td><p>What <code class="docutils literal notranslate"><span class="pre">clear()</span></code> found, and what it removed</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RunProgress</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VerificationReport</span></code></p></td>
+<td><p>What <code class="docutils literal notranslate"><span class="pre">verify()</span></code> found: one finding per check, and the counts</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">RunProgress</span></code></p></td>
 <td><p>Progress tracking for experiment execution</p></td>
 </tr>
 </tbody>
@@ -458,7 +473,13 @@
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">path_exists()</span></code>, <code class="docutils literal notranslate"><span class="pre">read_file()</span></code>, <code class="docutils literal notranslate"><span class="pre">mkdir()</span></code>, <code class="docutils literal notranslate"><span class="pre">list_dir()</span></code></strong>: File system operations on the remote via SSH.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">remote_path(*parts)</span></code></strong>: Joins path components and quotes the result for the remote shell.</p></li>
 </ul>
-<p>All SSH commands use <code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">StrictHostKeyChecking=no</span></code> and authenticate with the configured SSH key.</p>
+<p>All SSH commands use <code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">StrictHostKeyChecking=no</span></code> and authenticate with the configured SSH key.
+Every ssh and rsync the client starts has its stdin closed: ssh forwards what it
+can read from its stdin to the remote command, so an inherited stdin let it
+consume the rest of a shell loop’s input – or, under the MCP server, the
+client’s requests. <code class="docutils literal notranslate"><span class="pre">GraFlag(interactive=False)</span></code> adds <code class="docutils literal notranslate"><span class="pre">BatchMode=yes</span></code> and a
+15-second <code class="docutils literal notranslate"><span class="pre">ConnectTimeout</span></code>, so a caller with nobody at a terminal gets an error
+instead of a prompt nobody will answer.</p>
 <p><strong>Command construction contract.</strong> <code class="docutils literal notranslate"><span class="pre">execute()</span></code> passes its argument to <code class="docutils literal notranslate"><span class="pre">ssh</span></code> as a
 single element of an argv list; <code class="docutils literal notranslate"><span class="pre">subprocess</span></code> is called without <code class="docutils literal notranslate"><span class="pre">shell=True</span></code>, so
 no shell on the client ever sees the command. This is what allows the command to
@@ -528,6 +549,34 @@ real shell.</p>
 <li><p>All returned dataclasses implement <code class="docutils literal notranslate"><span class="pre">to_dict()</span></code> for JSON serialization.</p></li>
 </ul>
 </section>
+<section id="mcp-server-py-mcp-server">
+<h4>mcp_server.py – MCP Server<a class="headerlink" href="#mcp-server-py-mcp-server" title="Link to this heading"></a></h4>
+<p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">mcp</span></code> serves GraFlag’s operations as Model Context Protocol tools over
+stdio (see the MCP page). Like the CLI, it sits directly on <code class="docutils literal notranslate"><span class="pre">GraFlag</span></code> core
+rather than on <code class="docutils literal notranslate"><span class="pre">api.py</span></code>, whose error-swallowing would hide from the agent why a
+call failed. Three rules shape it:</p>
+<ul class="simple">
+<li><p><strong>stdout is the protocol.</strong> The server gives the protocol private copies of
+its stdin and stdout and points file descriptors 0 and 1 at <code class="docutils literal notranslate"><span class="pre">/dev/null</span></code> and
+stderr, so no subprocess or stray <code class="docutils literal notranslate"><span class="pre">print()</span></code> can corrupt a reply or read a
+request; every core call it makes uses <code class="docutils literal notranslate"><span class="pre">follow=False</span></code>.</p></li>
+<li><p><strong>Long operations are background jobs.</strong> <code class="docutils literal notranslate"><span class="pre">run_experiment</span></code> and
+<code class="docutils literal notranslate"><span class="pre">evaluate_experiment</span></code> return at once; <code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code> blocks for a
+bounded time. A job that fails before anything reaches the share is reported
+from the job itself.</p></li>
+<li><p><strong>Untrusted input.</strong> Names go through <code class="docutils literal notranslate"><span class="pre">utils.valid_name()</span></code>, the same rule the
+dashboard applies to HTTP input; nothing that deletes data, sets up the
+cluster or writes code to it is offered.</p></li>
+</ul>
+</section>
+<section id="verify-py-result-verification">
+<h4>verify.py – Result Verification<a class="headerlink" href="#verify-py-result-verification" title="Link to this heading"></a></h4>
+<p>The checks behind <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">verify</span></code>, <code class="docutils literal notranslate"><span class="pre">GraFlag.verify()</span></code> and the MCP
+<code class="docutils literal notranslate"><span class="pre">verify_experiment</span></code> tool. A probe runs on the manager in one SSH call – plain
+Python, since the manager has no numpy – and returns counts, the AUCs the
+method recorded and the evaluator’s; <code class="docutils literal notranslate"><span class="pre">check()</span></code> turns that summary into
+findings. The scores never leave the manager.</p>
+</section>
 <section id="gui-web-interface-subpackage">
 <h4>gui/ – Web Interface (subpackage)<a class="headerlink" href="#gui-web-interface-subpackage" title="Link to this heading"></a></h4>
 <p>A Flask application with a Vue.js frontend, located in <code class="docutils literal notranslate"><span class="pre">graflag/graflag/gui/</span></code>. Accessible via <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">gui</span> <span class="pre">[--host</span> <span class="pre">HOST]</span> <span class="pre">[--port</span> <span class="pre">PORT]</span> <span class="pre">[--debug]</span></code>.</p>
@@ -536,7 +585,7 @@ real shell.</p>
 <li><p>Built on Flask with Flask-SocketIO for real-time updates.</p></li>
 <li><p>Uses <code class="docutils literal notranslate"><span class="pre">GraFlagAPI</span></code> as its data layer.</p></li>
 <li><p>REST endpoints under <code class="docutils literal notranslate"><span class="pre">/api/</span></code> for methods, datasets, experiments, services, run, evaluation, logs, and plot serving.</p></li>
-<li><p>Run, evaluation, stop, and delete operations execute in background threads to avoid blocking HTTP responses.</p></li>
+<li><p>Run, evaluation, stop, and delete operations execute in background threads to avoid blocking HTTP responses. Runs and evaluations wait with <code class="docutils literal notranslate"><span class="pre">follow=False</span></code>, polling status rather than streaming logs into the server’s console.</p></li>
 <li><p>Plot images are streamed from the remote via SSH + base64 encoding.</p></li>
 <li><p>Server-side caching for methods and datasets (30-second TTL).</p></li>
 </ul>

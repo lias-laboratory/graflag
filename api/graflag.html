@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag package &mdash; GraFlag 1.1.0 documentation</title>
+  <title>graflag package &mdash; GraFlag 1.2.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=fc837d61"></script>
+      <script src="../_static/documentation_options.js?v=6efca38a"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -47,6 +47,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../MCP.html">AI Agents (MCP)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
 </ul>
@@ -69,8 +70,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.status"><code class="docutils literal notranslate"><span class="pre">GraFlag.status()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.make_experiment_name"><code class="docutils literal notranslate"><span class="pre">GraFlag.make_experiment_name()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.run"><code class="docutils literal notranslate"><span class="pre">GraFlag.run()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.wait_for_experiment"><code class="docutils literal notranslate"><span class="pre">GraFlag.wait_for_experiment()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.register_metric"><code class="docutils literal notranslate"><span class="pre">GraFlag.register_metric()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.evaluate"><code class="docutils literal notranslate"><span class="pre">GraFlag.evaluate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.verify"><code class="docutils literal notranslate"><span class="pre">GraFlag.verify()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.list_methods"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_methods()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.list_datasets"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_datasets()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.count_experiments"><code class="docutils literal notranslate"><span class="pre">GraFlag.count_experiments()</span></code></a></li>
@@ -81,6 +84,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.show_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.show_logs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.stop"><code class="docutils literal notranslate"><span class="pre">GraFlag.stop()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.TERMINAL_STATUSES"><code class="docutils literal notranslate"><span class="pre">GraFlag.TERMINAL_STATUSES</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.WAIT_MISSES"><code class="docutils literal notranslate"><span class="pre">GraFlag.WAIT_MISSES</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.cleanup_services"><code class="docutils literal notranslate"><span class="pre">GraFlag.cleanup_services()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.OWNED_DIRS"><code class="docutils literal notranslate"><span class="pre">GraFlag.OWNED_DIRS</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.clear"><code class="docutils literal notranslate"><span class="pre">GraFlag.clear()</span></code></a></li>
@@ -89,6 +93,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.copy_files"><code class="docutils literal notranslate"><span class="pre">GraFlag.copy_files()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.mount_nfs"><code class="docutils literal notranslate"><span class="pre">GraFlag.mount_nfs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.sync"><code class="docutils literal notranslate"><span class="pre">GraFlag.sync()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.get_experiment"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_experiment()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.GraFlagError"><code class="docutils literal notranslate"><span class="pre">GraFlagError</span></code></a></li>
@@ -193,6 +198,8 @@
 <li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="verify.html">graflag.verify</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mcp_server.html">graflag.mcp_server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
 </ul>
 
@@ -227,7 +234,7 @@
 across multiple nodes with shared NFS storage.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.GraFlag">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">GraFlag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">GraFlag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Main GraFlag orchestration class.</p>
 <p>All public methods return structured data. No direct printing to stdout
@@ -261,13 +268,19 @@ and timestamp.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.GraFlag.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.run" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">follow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.run" title="Link to this definition"></a></dt>
 <dd><p>Run experiment.</p>
+<p>Blocks until the run has ended either way.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>exp_name</strong> – Pre-computed experiment name (see
 <a class="reference internal" href="#graflag.GraFlag.make_experiment_name" title="graflag.GraFlag.make_experiment_name"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_experiment_name()</span></code></a>). Generated when omitted.</p></li>
+<li><p><strong>follow</strong> – Stream the container’s output to stdout while waiting, as
+the CLI does. False waits by polling the experiment’s status
+instead and prints nothing – for the dashboard and the MCP
+server, where stdout is not a terminal (for the MCP server it
+is the protocol).</p></li>
 <li><p><strong>keep_service</strong> – Leave the finished Swarm service in place. Useful
 when you want <cite>docker service ps</cite> to inspect the task.</p></li>
 <li><p><strong>force_rm</strong> – With <code class="docutils literal notranslate"><span class="pre">build</span></code>, remove the build’s intermediate
@@ -281,6 +294,20 @@ containers even when it fails (<code class="docutils literal notranslate"><span 
 <dd class="field-odd"><p><a class="reference internal" href="#graflag.GraFlagError" title="graflag.GraFlagError"><strong>GraFlagError</strong></a> – If run fails.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.wait_for_experiment">
+<span class="sig-name descname"><span class="pre">wait_for_experiment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">poll</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.wait_for_experiment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.wait_for_experiment" title="Link to this definition"></a></dt>
+<dd><p>Wait until an experiment reaches a terminal status, printing nothing.</p>
+<p>Polls the same probe <cite>graflag list experiments</cite> uses, so “finished”
+means what the listing says it means, including the task that died
+before the runner could write status.json. An experiment whose
+directory holds no status and whose service is gone (“unknown”) also
+ends the wait: nothing is left that could change it.</p>
+<p>Returns the last ExperimentInfo, or None when the experiment does not
+exist. With <cite>timeout</cite>, returns the current state once it has passed,
+terminal or not.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -310,11 +337,30 @@ Otherwise it is saved to the global plugins directory.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.GraFlag.evaluate">
-<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.evaluate" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">follow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.evaluate" title="Link to this definition"></a></dt>
 <dd><p>Evaluate an experiment: compute metrics and generate plots.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>follow</strong> – Stream the evaluator’s output to stdout, as the CLI does.
+False waits for it silently (see <a class="reference internal" href="#graflag.GraFlag.run" title="graflag.GraFlag.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a>).</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#graflag.GraFlagError" title="graflag.GraFlagError"><strong>GraFlagError</strong></a> – If evaluation fails.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.verify">
+<span class="sig-name descname"><span class="pre">verify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.VerificationReport" title="graflag.models.VerificationReport"><span class="pre">VerificationReport</span></a></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.verify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.verify" title="Link to this definition"></a></dt>
+<dd><p>Check that a finished experiment published a result worth believing.</p>
+<p>The last of the four integration gates, after <a class="reference internal" href="#graflag.GraFlag.evaluate" title="graflag.GraFlag.evaluate"><code class="xref py py-meth docutils literal notranslate"><span class="pre">evaluate()</span></code></a>: it
+compares what the method says it measured with what it published.
+See <a class="reference internal" href="verify.html#module-graflag.verify" title="graflag.verify"><code class="xref py py-mod docutils literal notranslate"><span class="pre">graflag.verify</span></code></a> for the checks. Reads the experiment in one
+remote call and never moves the scores to the client.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#graflag.GraFlagError" title="graflag.GraFlagError"><strong>GraFlagError</strong></a> – If evaluation fails.</p>
+<dd class="field-odd"><p><a class="reference internal" href="#graflag.GraFlagError" title="graflag.GraFlagError"><strong>GraFlagError</strong></a> – If the experiment does not exist or cannot be read.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -441,6 +487,13 @@ Falls back to method_output.txt if the service is gone.</p>
 <span class="sig-name descname"><span class="pre">TERMINAL_STATUSES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('completed',</span> <span class="pre">'failed',</span> <span class="pre">'stopped')</span></span><a class="headerlink" href="#graflag.GraFlag.TERMINAL_STATUSES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.GraFlag.WAIT_MISSES">
+<span class="sig-name descname"><span class="pre">WAIT_MISSES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></span><a class="headerlink" href="#graflag.GraFlag.WAIT_MISSES" title="Link to this definition"></a></dt>
+<dd><p>Consecutive failed probes after which wait_for_experiment() concludes
+that the experiment is gone rather than that ssh blinked.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.GraFlag.cleanup_services">
 <span class="sig-name descname"><span class="pre">cleanup_services</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.ServiceCleanupResult" title="graflag.models.ServiceCleanupResult"><span class="pre">ServiceCleanupResult</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.cleanup_services"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.cleanup_services" title="Link to this definition"></a></dt>
@@ -560,6 +613,14 @@ housekeeping and must not fail the caller.</p>
 <dt class="sig sig-object py" id="graflag.GraFlag.sync">
 <span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_lib</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.sync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.sync" title="Link to this definition"></a></dt>
 <dd><p>Sync a local method or library directory to remote shared storage.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.get_experiment">
+<span class="sig-name descname"><span class="pre">get_experiment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.get_experiment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.get_experiment" title="Link to this definition"></a></dt>
+<dd><p>One experiment’s status, from a single remote probe.</p>
+<p>None when the experiment does not exist (or the manager could not be
+reached – the probe cannot tell the two apart).</p>
 </dd></dl>
 
 </dd></dl>

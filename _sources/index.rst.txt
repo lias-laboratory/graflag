@@ -20,6 +20,17 @@ Distributed benchmarking framework for Graph Anomaly Detection.
      </a>
    </div>
 
+GraFlag runs graph anomaly detection (GAD) methods on a Docker Swarm cluster
+and collects their results in one standard form. Each method is a
+containerised image built from a pinned upstream commit, each experiment is a
+one-shot Swarm service that writes its scores to shared NFS storage, and
+``graflag evaluate`` computes the same metrics and plots for every method.
+The distribution ships 33 methods -- 17 PyGOD detectors on one shared image
+and 16 dedicated integrations -- and 43 dataset descriptors whose files are
+downloaded on first use. Everything is driven from the client machine,
+through a CLI, a Python API or a web dashboard, and an agent skill lets AI
+coding agents integrate new methods under the same checks.
+
 .. toctree::
    :maxdepth: 2
    :caption: User Guide
@@ -28,6 +39,22 @@ Distributed benchmarking framework for Graph Anomaly Detection.
    cli
    gui
    devcluster
+   demo
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Integrating Methods
+
+   METHOD_INTEGRATION_GUIDE
+   RESULTS_STANDARD
+   AGENT_METHOD_INTEGRATION
+   AGENT_SKILL
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Internals
+
+   ARCHITECTURE
 
 .. toctree::
    :maxdepth: 2
@@ -40,13 +67,3 @@ Distributed benchmarking framework for Graph Anomaly Detection.
    api/ssh
    api/docker_ops
    api/api_module
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Development
-
-   METHOD_INTEGRATION_GUIDE
-   AGENT_METHOD_INTEGRATION
-   RESULTS_STANDARD
-   ARCHITECTURE
-   demo

@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.ssh &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.ssh &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -48,6 +48,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
@@ -56,6 +68,7 @@
 <li class="toctree-l1"><a class="reference internal" href="models.html">graflag.models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.ssh</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.remote_path"><code class="docutils literal notranslate"><span class="pre">remote_path()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.SSHManager"><code class="docutils literal notranslate"><span class="pre">SSHManager</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.execute"><code class="docutils literal notranslate"><span class="pre">SSHManager.execute()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.path_exists"><code class="docutils literal notranslate"><span class="pre">SSHManager.path_exists()</span></code></a></li>
@@ -69,14 +82,6 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -106,6 +111,19 @@
   <section id="module-graflag.ssh">
 <span id="graflag-ssh"></span><h1>graflag.ssh<a class="headerlink" href="#module-graflag.ssh" title="Link to this heading"></a></h1>
 <p>SSH operations for GraFlag.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.ssh.remote_path">
+<span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">remote_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">parts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/ssh.html#remote_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.remote_path" title="Link to this definition"></a></dt>
+<dd><p>Join path components and quote the result for the remote shell.</p>
+<p>Every remote command is a string interpreted by the manager’s shell, so
+any component that comes from user input (experiment name, method name,
+dataset) must be quoted before interpolation. Use this for paths and
+<code class="xref py py-func docutils literal notranslate"><span class="pre">shlex.quote()</span></code> for bare values.</p>
+<p>Separators are collapsed only at the join boundaries – the content of a
+component is never altered, so a name that happens to contain <code class="docutils literal notranslate"><span class="pre">/</span></code> stays
+intact (and quoted) rather than being silently rewritten.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.ssh.SSHManager">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">SSHManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manager_ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'22'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager" title="Link to this definition"></a></dt>
@@ -115,6 +133,12 @@
 <dt class="sig sig-object py" id="graflag.ssh.SSHManager.execute">
 <span class="sig-name descname"><span class="pre">execute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capture_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CompletedProcess</span></span></span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager.execute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager.execute" title="Link to this definition"></a></dt>
 <dd><p>Execute command on manager via SSH.</p>
+<p>The command is passed to ssh as a single argv element, so no local
+shell ever parses it. This keeps quoting, heredocs and newlines in
+<code class="docutils literal notranslate"><span class="pre">command</span></code> intact – the manager’s shell sees exactly what was built
+here. Callers are still responsible for quoting values they
+interpolate (see <a class="reference internal" href="#graflag.ssh.remote_path" title="graflag.ssh.remote_path"><code class="xref py py-func docutils literal notranslate"><span class="pre">remote_path()</span></code></a>), because the <em>remote</em> shell does
+parse the string.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -150,7 +174,7 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>source_paths</strong> – Source path(s) - can be single string or list</p></li>
 <li><p><strong>dest_path</strong> – Destination path</p></li>
-<li><p><strong>recursive</strong> – Include recursive flag (automatically added for directories)</p></li>
+<li><p><strong>recursive</strong> – Accepted for compatibility; rsync -a always recurses</p></li>
 <li><p><strong>from_remote</strong> – If True, copy from remote to local; if False (default), copy from local to remote</p></li>
 </ul>
 </dd>

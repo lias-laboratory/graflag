@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.docker_ops &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.docker_ops &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -48,6 +48,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
@@ -57,12 +69,25 @@
 <li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.docker_ops</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.BUILD_ARG_KEYS"><code class="docutils literal notranslate"><span class="pre">BUILD_ARG_KEYS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.GRAFLAG_LIBS_CHOICES"><code class="docutils literal notranslate"><span class="pre">GRAFLAG_LIBS_CHOICES</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.IMAGE_NAME"><code class="docutils literal notranslate"><span class="pre">IMAGE_NAME</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.BuildFailed"><code class="docutils literal notranslate"><span class="pre">BuildFailed</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.ImageNames"><code class="docutils literal notranslate"><span class="pre">ImageNames</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ImageNames.local"><code class="docutils literal notranslate"><span class="pre">ImageNames.local</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ImageNames.registry"><code class="docutils literal notranslate"><span class="pre">ImageNames.registry</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ImageNames.owner"><code class="docutils literal notranslate"><span class="pre">ImageNames.owner</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ImageNames.dockerfile"><code class="docutils literal notranslate"><span class="pre">ImageNames.dockerfile</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ImageNames.shared"><code class="docutils literal notranslate"><span class="pre">ImageNames.shared</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.DATA"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.DATA</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.EXP"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.EXP</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.METHOD_NAME"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.METHOD_NAME</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.COMMAND"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.COMMAND</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.MONITOR_INTERVAL"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.MONITOR_INTERVAL</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.GRAFLAG_PARAMS"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.GRAFLAG_PARAMS</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.get_names"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.get_names()</span></code></a></li>
 </ul>
 </li>
@@ -94,14 +119,6 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
-</ul>
 
         </div>
       </div>
@@ -130,6 +147,97 @@
   <section id="module-graflag.docker_ops">
 <span id="graflag-docker-ops"></span><h1>graflag.docker_ops<a class="headerlink" href="#module-graflag.docker_ops" title="Link to this heading"></a></h1>
 <p>Docker operations for GraFlag using Docker SDK.</p>
+<dl class="py data">
+<dt class="sig sig-object py" id="graflag.docker_ops.BUILD_ARG_KEYS">
+<span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">BUILD_ARG_KEYS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('SOURCE_CODE',</span> <span class="pre">'SOURCE_REF')</span></span><a class="headerlink" href="#graflag.docker_ops.BUILD_ARG_KEYS" title="Link to this definition"></a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">.env</span></code> keys forwarded to <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span></code> as <code class="docutils literal notranslate"><span class="pre">--build-arg</span></code>.</p>
+<p>A method declares the value once, in its <code class="docutils literal notranslate"><span class="pre">.env</span></code>, and its Dockerfile reads
+it through an <code class="docutils literal notranslate"><span class="pre">ARG</span></code> of the same name. The alternative – writing the value
+into the Dockerfile – is what let a <code class="docutils literal notranslate"><span class="pre">.env</span></code> advertising one <code class="docutils literal notranslate"><span class="pre">SOURCE_CODE</span></code>
+sit next to an image cloning another, and it is why an upstream commit could
+not be pinned without editing two files in step.</p>
+<p>Only keys named here cross the boundary. A method’s parameters are
+<code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed and belong to the run, not to the build.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="graflag.docker_ops.GRAFLAG_LIBS_CHOICES">
+<span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">GRAFLAG_LIBS_CHOICES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('local',</span> <span class="pre">'pypi')</span></span><a class="headerlink" href="#graflag.docker_ops.GRAFLAG_LIBS_CHOICES" title="Link to this definition"></a></dt>
+<dd><p>Where a method image gets the GraFlag libraries.</p>
+<p>Not a <code class="docutils literal notranslate"><span class="pre">BUILD_ARG_KEYS</span></code> entry, because it is not a property of the method.
+Whether the published wheel is current is a property of the deployment, and
+a method that could answer it differently from its neighbours would be a
+benchmark whose runs are not comparable.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="graflag.docker_ops.IMAGE_NAME">
+<span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">IMAGE_NAME</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">re.compile('^[a-z0-9][a-z0-9._-]*$')</span></span><a class="headerlink" href="#graflag.docker_ops.IMAGE_NAME" title="Link to this definition"></a></dt>
+<dd><p>What a shared <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> may be called.</p>
+<p>The value is both a directory under <code class="docutils literal notranslate"><span class="pre">images/</span></code> and half of an image
+reference, and Docker rejects an uppercase repository name – at push time,
+after the build has already run for minutes.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="graflag.docker_ops.BuildFailed">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">BuildFailed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#BuildFailed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.BuildFailed" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></p>
+<p>A <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span></code> that exited non-zero, with everything it printed.</p>
+<p>The legacy builder prints each step’s output on stdout and leaves stderr
+the deprecation banner and “returned a non-zero code: 128” – which step
+failed, never why. The why was on stdout: for the rare method, git’s
+<code class="docutils literal notranslate"><span class="pre">fatal:</span> <span class="pre">could</span> <span class="pre">not</span> <span class="pre">read</span> <span class="pre">Username</span> <span class="pre">for</span> <span class="pre">'https://github.com'</span></code> from cloning
+a private repository. An error built from stderr alone dropped it, and
+build.log was written only after a successful build, so a failed build
+kept no record of its cause. <code class="docutils literal notranslate"><span class="pre">log</span></code> is what build.log would have held.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.docker_ops.ImageNames">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">ImageNames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">owner</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dockerfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shared</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#ImageNames"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.ImageNames" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NamedTuple</span></code></p>
+<p>Every name one method’s image is known by, resolved together.</p>
+<p>Built and deployed from the same call, so the tag that <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span></code>
+produces and the one Swarm pulls cannot come apart.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ImageNames.local">
+<span class="sig-name descname"><span class="pre">local</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.docker_ops.ImageNames.local" title="Link to this definition"></a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">&lt;owner&gt;:&lt;tag&gt;</span></code> – the local tag on the manager.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ImageNames.registry">
+<span class="sig-name descname"><span class="pre">registry</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.docker_ops.ImageNames.registry" title="Link to this definition"></a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">&lt;manager&gt;:5000/&lt;owner&gt;:&lt;tag&gt;</span></code> – what Swarm pulls.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ImageNames.owner">
+<span class="sig-name descname"><span class="pre">owner</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.docker_ops.ImageNames.owner" title="Link to this definition"></a></dt>
+<dd><p>the method itself, or the shared image
+named by <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code>. Never the same thing as <code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code> at run time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The method that owns the image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ImageNames.dockerfile">
+<span class="sig-name descname"><span class="pre">dockerfile</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.docker_ops.ImageNames.dockerfile" title="Link to this definition"></a></dt>
+<dd><p>Remote path of the Dockerfile that builds it, already quoted.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ImageNames.shared">
+<span class="sig-name descname"><span class="pre">shared</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#graflag.docker_ops.ImageNames.shared" title="Link to this definition"></a></dt>
+<dd><p>True when the image is shared, i.e. <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> was declared.</p>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.docker_ops.</span></span><span class="sig-name descname"><span class="pre">ReservedEnvVars</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#ReservedEnvVars"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars" title="Link to this definition"></a></dt>
@@ -160,6 +268,11 @@
 <span class="sig-name descname"><span class="pre">MONITOR_INTERVAL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'MONITOR_INTERVAL'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.MONITOR_INTERVAL" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.GRAFLAG_PARAMS">
+<span class="sig-name descname"><span class="pre">GRAFLAG_PARAMS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'GRAFLAG_PARAMS'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.GRAFLAG_PARAMS" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.get_names">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#ReservedEnvVars.get_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.get_names" title="Link to this definition"></a></dt>
@@ -182,6 +295,9 @@
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.close">
 <span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.close" title="Link to this definition"></a></dt>
 <dd><p>Close Docker client and SSH tunnel.</p>
+<p>Tolerates a partially-constructed instance: __del__ calls this, and if
+__init__ raised before setting these attributes the resulting
+AttributeError would surface as noise during garbage collection.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -216,12 +332,29 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.build_method_image">
-<span class="sig-name descname"><span class="pre">build_method_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.build_method_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.build_method_image" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">build_method_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.build_method_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.build_method_image" title="Link to this definition"></a></dt>
 <dd><p>Build method Docker image and push to local registry.</p>
 <p>Uses SSH because the build context resides on the remote host.</p>
+<p>Every <code class="docutils literal notranslate"><span class="pre">BUILD_ARG_KEYS</span></code> entry the method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> defines is passed
+through as <code class="docutils literal notranslate"><span class="pre">--build-arg</span></code>, so a Dockerfile can pin its upstream from
+the one place that already names it.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Combined build and push log output.</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method_name</strong> – Method whose <code class="docutils literal notranslate"><span class="pre">methods/&lt;name&gt;/Dockerfile</span></code> to build.</p></li>
+<li><p><strong>tag</strong> – Image tag.</p></li>
+<li><p><strong>method_env</strong> – The method’s parsed <code class="docutils literal notranslate"><span class="pre">.env</span></code>, when the caller already
+has it. Omitted, it is read from the manager – one extra SSH
+round trip, against a build that takes minutes.</p></li>
+<li><p><strong>force_rm</strong> – Pass <code class="docutils literal notranslate"><span class="pre">--force-rm</span></code>, so docker removes the build’s
+intermediate containers even when it fails. Without it a
+failed build keeps its last container, and that container
+holds every layer the build had produced: 12.8 GB on the
+manager after one failed <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code> of the rare method.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Combined build and push log output.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -253,6 +386,10 @@
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.list_services">
 <span class="sig-name descname"><span class="pre">list_services</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.list_services"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.list_services" title="Link to this definition"></a></dt>
 <dd><p>List all Docker services.</p>
+<p>The whole listing is the retry unit, not the first call in it: the
+drop usually lands on one of the per-service <cite>tasks()</cite> calls, and a
+<cite>svc</cite> handed out by the old client keeps pointing at the old client,
+so retrying just that call reuses the socket that already died.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -289,10 +426,21 @@ is unreliable for swarm services.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.follow_service_logs">
-<span class="sig-name descname"><span class="pre">follow_service_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.follow_service_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.follow_service_logs" title="Link to this definition"></a></dt>
-<dd><p>Follow service logs in real-time until task finishes.</p>
+<span class="sig-name descname"><span class="pre">follow_service_logs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_line</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.follow_service_logs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.follow_service_logs" title="Link to this definition"></a></dt>
+<dd><p>Follow service logs in real-time until the task finishes.</p>
 <p>Uses SSH + Docker CLI subprocess because the Docker SDK’s
 follow mode does not stream reliably for swarm services.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>on_line</strong> – Optional callback receiving each streamed log line. When
+given, output is read here and forwarded rather than inherited,
+so callers can capture what the user sees.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The terminal task state (‘complete’, ‘failed’, …), or None if
+the wait ended without observing one.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -304,7 +452,12 @@ follow mode does not stream reliably for swarm services.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.is_service_failed">
 <span class="sig-name descname"><span class="pre">is_service_failed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">service_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.is_service_failed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.is_service_failed" title="Link to this definition"></a></dt>
-<dd><p>Check if a service exists but all its tasks have failed.</p>
+<dd><p>True when the service exists and no task reached a good end state.</p>
+<p>Observed terminal states for a restart_policy=none service are
+<cite>complete</cite> on success and <cite>failed</cite> on error; <cite>shutdown</cite> and <cite>orphaned</cite>
+mean the task was stopped or its node went away, which is not a method
+failure but is not success either. This is only consulted when
+status.json is absent or unreadable – the runner’s own status wins.</p>
 </dd></dl>
 
 <dl class="py method">

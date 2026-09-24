@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.config &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.config &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -55,14 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -95,6 +99,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_env_line</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
@@ -106,6 +112,18 @@
     <span class="s2">&quot;SSH_PORT&quot;</span><span class="p">:</span> <span class="s2">&quot;22&quot;</span><span class="p">,</span>
     <span class="s2">&quot;SHARED_DIR&quot;</span><span class="p">:</span> <span class="s2">&quot;/shared&quot;</span><span class="p">,</span>
     <span class="s2">&quot;NFS_PORT&quot;</span><span class="p">:</span> <span class="s2">&quot;2049&quot;</span><span class="p">,</span>
+    <span class="c1"># Where a method image gets graflag_runner and graflag_bond: &quot;local&quot;</span>
+    <span class="c1"># builds them from SHARED_DIR/libs, &quot;pypi&quot; installs the published wheels.</span>
+    <span class="c1">#</span>
+    <span class="c1"># Local is the default because it is what the rest of the tool already</span>
+    <span class="c1"># implies. `graflag sync --lib` exists to update the libraries on the</span>
+    <span class="c1"># share, and with PyPI wheels baked into every image it changed nothing</span>
+    <span class="c1"># that ran -- the command did its job and the next container still ran the</span>
+    <span class="c1"># published code. The share is already the source of truth for methods and</span>
+    <span class="c1"># datasets; this makes it the source of truth for the libraries too.</span>
+    <span class="c1">#</span>
+    <span class="c1"># Set GRAFLAG_LIBS=pypi to pin images to a release instead.</span>
+    <span class="s2">&quot;GRAFLAG_LIBS&quot;</span><span class="p">:</span> <span class="s2">&quot;local&quot;</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="n">PROMPTS</span> <span class="o">=</span> <span class="p">[</span>
@@ -117,25 +135,60 @@
 <span class="p">]</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_looks_like_graflag_config</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;True if the file defines MANAGER_IP, the one required GraFlag key.</span>
+
+<span class="sd">    A bare `.env` in the working directory is a near-universal convention, so</span>
+<span class="sd">    picking one up purely because it exists meant any unrelated project&#39;s file</span>
+<span class="sd">    became the GraFlag config -- and `graflag setup` then refused to run the</span>
+<span class="sd">    wizard because &quot;the config exists&quot;, leaving no way out but deleting</span>
+<span class="sd">    somebody else&#39;s file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">parsed</span> <span class="o">:=</span> <span class="n">parse_env_line</span><span class="p">(</span><span class="n">line</span><span class="p">))</span> <span class="ow">and</span> <span class="n">parsed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;MANAGER_IP&quot;</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fh</span>
+            <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
 <div class="viewcode-block" id="get_config_path">
 <a class="viewcode-back" href="../../api/config.html#graflag.config.get_config_path">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_config_path</span><span class="p">(</span><span class="n">override</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve config file path. Checks override, then cwd .env, then standard location.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">override</span> <span class="ow">and</span> <span class="n">override</span> <span class="o">!=</span> <span class="s2">&quot;.env&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">override</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve the config file path.</span>
+
+<span class="sd">    Order: explicit override &gt; a GraFlag-looking `.env` in the working</span>
+<span class="sd">    directory &gt; the standard user config location.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">override</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">override</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+
     <span class="n">cwd_env</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.env&quot;</span>
     <span class="k">if</span> <span class="n">cwd_env</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-        <span class="k">return</span> <span class="n">cwd_env</span>
+        <span class="k">if</span> <span class="n">_looks_like_graflag_config</span><span class="p">(</span><span class="n">cwd_env</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">cwd_env</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Ignoring </span><span class="si">{</span><span class="n">cwd_env</span><span class="si">}</span><span class="s2">: no MANAGER_IP, so it is not a GraFlag config&quot;</span>
+        <span class="p">)</span>
     <span class="k">return</span> <span class="n">CONFIG_FILE</span></div>
 
 
 
 <div class="viewcode-block" id="init_config">
 <a class="viewcode-back" href="../../api/config.html#graflag.config.init_config">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">init_config</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interactively create configuration file.&quot;&quot;&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">init_config</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Interactively create configuration file.</span>
+
+<span class="sd">    Writes to `target` when given. Hardcoding CONFIG_FILE meant</span>
+<span class="sd">    `graflag setup --config /etc/graflag/prod.env` ran the whole wizard, wrote</span>
+<span class="sd">    somewhere else, and then failed for the file the user named -- with no way</span>
+<span class="sd">    to break the loop.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span> <span class="k">if</span> <span class="n">target</span> <span class="k">else</span> <span class="n">CONFIG_FILE</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;GraFlag configuration&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config will be saved to: </span><span class="si">{</span><span class="n">CONFIG_FILE</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Config will be saved to: </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="n">values</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">default</span> <span class="ow">in</span> <span class="n">PROMPTS</span><span class="p">:</span>
@@ -150,14 +203,14 @@
                     <span class="k">break</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> is required.&quot;</span><span class="p">)</span>
 
-    <span class="n">CONFIG_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">CONFIG_FILE</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# GraFlag Configuration</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">PROMPTS</span><span class="p">:</span>
             <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">values</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[OK] Configuration saved to </span><span class="si">{</span><span class="n">CONFIG_FILE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">CONFIG_FILE</span></div>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[OK] Configuration saved to </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">target</span></div>
 
 
 
@@ -166,9 +219,13 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">GraflagConfig</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle configuration loading and validation for GraFlag.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;.env&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_file</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize configuration from file.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span> <span class="o">=</span> <span class="n">get_config_path</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">config_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="c1"># Silently falling back surfaced as a misleading</span>
+            <span class="c1"># &quot;Missing required configuration: MANAGER_IP&quot;.</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Configuration file not found: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_config</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate_required_config</span><span class="p">()</span>
 
@@ -181,10 +238,9 @@
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
-                <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">line</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;=&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
-                    <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                    <span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_env_line</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">parsed</span><span class="p">:</span>
+                    <span class="n">config</span><span class="p">[</span><span class="n">parsed</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">parsed</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">config</span>
 
@@ -228,7 +284,11 @@
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">hosts_file</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HOSTS_FILE&quot;</span><span class="p">,</span> <span class="s2">&quot;hosts.yml&quot;</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HOSTS_FILE&quot;</span><span class="p">,</span> <span class="s2">&quot;hosts.yml&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">graflag_libs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;GRAFLAG_LIBS&quot;</span><span class="p">,</span> <span class="s2">&quot;local&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span></div>
 
 </pre></div>
 

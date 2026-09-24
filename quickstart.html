@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Start &mdash; GraFlag 1.0.0 documentation</title>
+  <title>Quick Start &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -45,20 +45,35 @@
               <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#shared-storage-setup">Shared Storage Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#shared-storage">Shared Storage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-an-experiment">Running an Experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#monitoring">Monitoring</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#evaluating-results">Evaluating Results</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#custom-metrics">Custom Metrics</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#cleaning-up">Cleaning Up</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#web-dashboard">Web Dashboard</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -69,14 +84,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -105,9 +112,19 @@
              
   <section id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h1>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>A client machine with Python 3.8 or newer and SSH access, as <code class="docutils literal notranslate"><span class="pre">root</span></code>, to the
+Swarm manager.</p></li>
+<li><p>A cluster: a manager node and GPU worker nodes sharing an NFS export
+(<code class="docutils literal notranslate"><span class="pre">/shared</span></code> by default). Without one, the local <a class="reference internal" href="devcluster.html"><span class="doc">Development Cluster</span></a> provides
+the same setup in Docker containers.</p></li>
+</ul>
+</section>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
-<p>Install from PyPI:</p>
+<p>Install the client from PyPI:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">graflag</span>
 </pre></div>
 </div>
@@ -117,123 +134,221 @@
 <span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
 </pre></div>
 </div>
+<p>Both install the <code class="docutils literal notranslate"><span class="pre">graflag</span></code> command.</p>
 </section>
-<section id="shared-storage-setup">
-<h2>Shared Storage Setup<a class="headerlink" href="#shared-storage-setup" title="Link to this heading"></a></h2>
-<p>GraFlag uses an NFS-mounted shared directory containing methods, datasets, and
-experiment results. The <a class="reference external" href="https://github.com/lias-laboratory/graflag-shared">graflag-shared</a>
-repository provides this structure.</p>
-<p>Clone it on your NFS mount point:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">shared</span>  <span class="c1"># or your NFS mount point</span>
+<section id="shared-storage">
+<h2>Shared Storage<a class="headerlink" href="#shared-storage" title="Link to this heading"></a></h2>
+<p>Everything the cluster runs lives in one NFS-exported directory, laid out by the
+<a class="reference external" href="https://github.com/lias-laboratory/graflag-shared">graflag-shared</a>
+repository. Clone it into the export on the manager:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">shared</span>  <span class="c1"># or your NFS export</span>
 <span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">lias</span><span class="o">-</span><span class="n">laboratory</span><span class="o">/</span><span class="n">graflag</span><span class="o">-</span><span class="n">shared</span><span class="o">.</span><span class="n">git</span> <span class="o">.</span>
-<span class="n">git</span> <span class="n">lfs</span> <span class="n">pull</span>  <span class="c1"># download dataset files</span>
 </pre></div>
 </div>
-<p>The shared directory contains:</p>
+<p>It holds:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">methods/</span></code> – GAD method implementations (Dockerfiles, configs, scripts)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">datasets/</span></code> – Benchmark datasets (tracked via Git LFS)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">experiments/</span></code> – Experiment results (created at runtime)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">libs/</span></code> – Shared Python libraries (graflag_runner, graflag_evaluator, graflag_bond)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">methods/</span></code> – one directory per method: a <code class="docutils literal notranslate"><span class="pre">.env</span></code>, a <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> (or an
+<code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> key naming a shared one) and usually a <code class="docutils literal notranslate"><span class="pre">train_graflag.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">images/</span></code> – Dockerfiles shared by several methods; <code class="docutils literal notranslate"><span class="pre">bond_base</span></code> serves all
+17 PyGOD detectors</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">datasets/</span></code> – one directory per dataset, holding a <code class="docutils literal notranslate"><span class="pre">metadata.json</span></code>
+descriptor</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">libs/</span></code> – the GraFlag libraries: <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code>, installed into every
+method image (with <code class="docutils literal notranslate"><span class="pre">graflag_bond</span></code> for the PyGOD detectors);
+<code class="docutils literal notranslate"><span class="pre">graflag_evaluator</span></code>, which runs in its own image; and <code class="docutils literal notranslate"><span class="pre">graflag_data</span></code>, which
+downloads datasets on the manager</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">experiments/</span></code> – one directory per run, created at run time</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.dockerignore</span></code> – keeps <code class="docutils literal notranslate"><span class="pre">datasets/</span></code> and <code class="docutils literal notranslate"><span class="pre">experiments/</span></code> out of every image
+build. The build context is the whole export, so this file has to stay at its
+root; without it builds still succeed, only several gigabytes larger</p></li>
 </ul>
+<p>Dataset files are not stored in the repository. Each dataset ships only its
+<code class="docutils literal notranslate"><span class="pre">metadata.json</span></code>, which names the original source, and the files are
+downloaded on first use: <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span></code> fetches a missing dataset before it
+deploys. To fetch ahead of time, on the manager:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">./</span><span class="n">libs</span><span class="o">/</span><span class="n">graflag_data</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="nb">list</span>          <span class="c1"># every dataset and whether it is ready</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="n">status</span>        <span class="c1"># only what is missing; exits non-zero if anything is</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="n">fetch</span> <span class="n">uci</span>     <span class="c1"># one dataset; omit the name to fetch them all</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="n">verify</span>        <span class="c1"># re-hash the files against metadata.json</span>
+</pre></div>
+</div>
 </section>
 <section id="configuration">
 <h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
-<p>Run the interactive setup wizard, which prompts for connection details and stores
-them in <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>:</p>
+<p>Run the setup wizard:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">setup</span>
 </pre></div>
 </div>
-<p>The wizard asks for:</p>
-<ul class="simple">
-<li><p><strong>Manager IP</strong> – address of the Swarm manager node</p></li>
-<li><p><strong>SSH port</strong> – SSH port on the manager (default: 22)</p></li>
-<li><p><strong>SSH key</strong> – path to your private key (default: <code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519</span></code>)</p></li>
-<li><p><strong>Shared directory</strong> – NFS-mounted path on the remote (default: <code class="docutils literal notranslate"><span class="pre">/shared</span></code>)</p></li>
-<li><p><strong>Hosts file</strong> – path to <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code> containing worker IPs (default: <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code>)</p></li>
-</ul>
-<p>To reconfigure later:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">setup</span> <span class="o">--</span><span class="n">reconfigure</span>
-</pre></div>
-</div>
-<p>Alternatively, place a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the working directory to override the
-stored configuration.</p>
-<p>For local development without a physical cluster, use the built-in devcluster:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">devcluster</span> <span class="o">--</span><span class="n">hosts</span> <span class="n">hosts</span><span class="o">.</span><span class="n">yml</span>
-<span class="n">graflag</span> <span class="n">setup</span>
-</pre></div>
-</div>
+<p>It asks for the connection details, stores them in
+<code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>, initialises the Swarm on the manager, joins the
+workers listed in <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code> and starts the image registry. The file holds:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 20.0%" />
+<col style="width: 22.0%" />
+<col style="width: 58.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Key</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code></p></td>
+<td><p>(required)</p></td>
+<td><p>Address of the Swarm manager</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SSH_PORT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">22</span></code></p></td>
+<td><p>SSH port on the manager</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SSH_KEY</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519</span></code></p></td>
+<td><p>Private key used to reach the manager</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SHARED_DIR</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/shared</span></code></p></td>
+<td><p>The NFS export, mounted at the same path on every node</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">HOSTS_FILE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code></p></td>
+<td><p>Worker IPs; read by <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">setup</span></code> and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">devcluster</span></code> only</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NFS_PORT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">2049</span></code></p></td>
+<td><p>NFS port used to mount the export</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GRAFLAG_LIBS</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">local</span></code></p></td>
+<td><p>Where method images get <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> and <code class="docutils literal notranslate"><span class="pre">graflag_bond</span></code>:
+<code class="docutils literal notranslate"><span class="pre">local</span></code> installs the copy in <code class="docutils literal notranslate"><span class="pre">SHARED_DIR/libs</span></code>, <code class="docutils literal notranslate"><span class="pre">pypi</span></code> the
+published release</p></td>
+</tr>
+</tbody>
+</table>
+<p>The wizard asks for the first five; set the last two by editing the file.
+<code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">setup</span> <span class="pre">--reconfigure</span></code> runs the wizard again.</p>
+<p>GraFlag takes its configuration from, in order: the file named by <code class="docutils literal notranslate"><span class="pre">--config</span></code>;
+a <code class="docutils literal notranslate"><span class="pre">.env</span></code> in the working directory, but only if it defines <code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code>, so
+an unrelated project’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> is never mistaken for one; and
+<code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>.</p>
 </section>
 <section id="running-an-experiment">
 <h2>Running an Experiment<a class="headerlink" href="#running-an-experiment" title="Link to this heading"></a></h2>
-<p>Build and run a method on a dataset:</p>
+<p>Build a method’s image and run it on a dataset:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">-</span><span class="n">m</span> <span class="n">bond_dominant</span> <span class="o">-</span><span class="n">d</span> <span class="n">bond_inj_cora</span> <span class="o">--</span><span class="n">build</span>
 </pre></div>
 </div>
-<p>With custom parameters:</p>
+<p><code class="docutils literal notranslate"><span class="pre">run</span></code> checks that the method and the dataset exist, fetches the dataset if
+its files are missing, builds and pushes the image (with <code class="docutils literal notranslate"><span class="pre">--build</span></code>), deploys a
+one-shot Swarm service and follows its output until the run ends. Ctrl-C only
+detaches from the output: the run continues, and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">logs</span> <span class="pre">-e</span> <span class="pre">EXP</span> <span class="pre">-f</span></code>
+reattaches. When the run ends, its service is removed, unless <code class="docutils literal notranslate"><span class="pre">--keep-service</span></code>
+is given.</p>
+<p>Without <code class="docutils literal notranslate"><span class="pre">--build</span></code>, the image already in the registry runs, so rebuild after
+editing a method. Parameters are overridden without the underscore their
+<code class="docutils literal notranslate"><span class="pre">.env</span></code> declares them with:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">-</span><span class="n">m</span> <span class="n">taddy</span> <span class="o">-</span><span class="n">d</span> <span class="n">uci</span> <span class="o">--</span><span class="n">params</span> <span class="n">MAX_EPOCH</span><span class="o">=</span><span class="mi">100</span> <span class="n">LEARNING_RATE</span><span class="o">=</span><span class="mf">0.001</span>
 </pre></div>
 </div>
-<p>From a saved config:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">--</span><span class="n">from</span><span class="o">-</span><span class="n">config</span> <span class="o">./</span><span class="n">experiments</span><span class="o">/</span><span class="n">exp__method__dataset__time</span><span class="o">/</span><span class="n">service_config</span><span class="o">.</span><span class="n">json</span>
+<p>Every run saves its configuration in its directory on the cluster, as
+<code class="docutils literal notranslate"><span class="pre">service_config.json</span></code>. To replay a run, copy that file to the client and pass
+it to <code class="docutils literal notranslate"><span class="pre">run</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">copy</span> <span class="o">--</span><span class="n">from</span><span class="o">-</span><span class="n">remote</span> <span class="o">-</span><span class="n">s</span> <span class="n">experiments</span><span class="o">/</span><span class="n">EXP</span><span class="o">/</span><span class="n">service_config</span><span class="o">.</span><span class="n">json</span> <span class="o">--</span><span class="n">dest</span> <span class="o">.</span>
+<span class="n">graflag</span> <span class="n">run</span> <span class="o">--</span><span class="n">from</span><span class="o">-</span><span class="n">config</span> <span class="n">service_config</span><span class="o">.</span><span class="n">json</span>
+</pre></div>
+</div>
+<p>The method, the dataset, the parameters, the image tag and whether the run had
+a GPU all come from the file; options given on the command line override them.</p>
+</section>
+<section id="monitoring">
+<h2>Monitoring<a class="headerlink" href="#monitoring" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">status</span>                  <span class="c1"># nodes, services and the shared directory</span>
+<span class="n">graflag</span> <span class="nb">list</span> <span class="n">experiments</span>        <span class="c1"># every run and its status</span>
+<span class="n">graflag</span> <span class="n">logs</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXP</span> <span class="o">-</span><span class="n">f</span>          <span class="c1"># follow a run&#39;s output</span>
+<span class="n">graflag</span> <span class="n">stop</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXP</span>             <span class="c1"># stop a run; --rm also deletes its directory</span>
 </pre></div>
 </div>
 </section>
 <section id="evaluating-results">
 <h2>Evaluating Results<a class="headerlink" href="#evaluating-results" title="Link to this heading"></a></h2>
-<p>Run evaluation on a completed experiment:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">evaluate</span> <span class="o">-</span><span class="n">e</span> <span class="n">exp__bond_dominant__bond_inj_cora__20260309_120000</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">evaluate</span> <span class="o">-</span><span class="n">e</span> <span class="n">exp__bond_dominant__bond_inj_cora__20260923_151827</span>
 </pre></div>
 </div>
-<p>This computes AUC-ROC, AUC-PR, and generates plots in the experiment’s <code class="docutils literal notranslate"><span class="pre">eval/</span></code> directory.</p>
+<p>This deploys a short-lived evaluator service. It computes AUC-ROC, AUC-PR,
+precision, recall and F1 at <em>k</em>, and the best F1, and writes <code class="docutils literal notranslate"><span class="pre">evaluation.json</span></code>
+and the plots to the experiment’s <code class="docutils literal notranslate"><span class="pre">eval/</span></code> directory. <a class="reference internal" href="RESULTS_STANDARD.html"><span class="doc">Graph Anomaly Detection Result Types</span></a>
+describes what the evaluator expects and which scores it leaves out.</p>
 <section id="custom-metrics">
 <h3>Custom Metrics<a class="headerlink" href="#custom-metrics" title="Link to this heading"></a></h3>
-<p>Register custom metrics via the Python API:</p>
+<p>Register a custom metric from the Python API:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraFlag</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">hits_at_100</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
     <span class="n">top</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="o">-</span><span class="mi">100</span><span class="p">:]</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())}</span>
 
 <span class="n">gf</span> <span class="o">=</span> <span class="n">GraFlag</span><span class="p">()</span>
-<span class="c1"># Save globally (applied to all future evaluations)</span>
+<span class="c1"># Globally: applied to every later evaluation of this result type</span>
 <span class="n">gf</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">)</span>
 
-<span class="c1"># Or scope to a specific experiment</span>
+<span class="c1"># Or for one experiment only</span>
 <span class="n">gf</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">,</span>
-                    <span class="n">experiment</span><span class="o">=</span><span class="s2">&quot;exp__taddy__uci__20260309_120000&quot;</span><span class="p">)</span>
+                   <span class="n">experiment</span><span class="o">=</span><span class="s2">&quot;exp__taddy__uci__20260309_120000&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>This extracts the function source and writes it as a plugin file on the cluster.
-The evaluator loads plugins automatically before computing metrics.</p>
-<p>You can also create plugin files manually. Place a <code class="docutils literal notranslate"><span class="pre">.py</span></code> file in either:</p>
+<p><code class="docutils literal notranslate"><span class="pre">register_metric</span></code> takes the function’s source and writes it as a plugin file
+on the cluster, which the evaluator loads before computing metrics. Plugin files
+can also be written by hand, in either location:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">libs/graflag_evaluator/plugins/</span></code> – global (all evaluations)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">experiments/&lt;exp_name&gt;/custom_metrics/</span></code> – per-experiment</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">libs/graflag_evaluator/plugins/</span></code> – global</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">experiments/&lt;exp_name&gt;/custom_metrics/</span></code> – one experiment</p></li>
 </ul>
-<p>Each plugin file should import <code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> and call <code class="docutils literal notranslate"><span class="pre">register_metric()</span></code>:</p>
+<p>Each plugin registers its function when imported:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># custom_metrics/hits_at_100.py</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">graflag_evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricCalculator</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">hits_at_100</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
     <span class="n">top</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="o">-</span><span class="mi">100</span><span class="p">:]</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;hits@100&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">ground_truth</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())}</span>
 
 <span class="n">MetricCalculator</span><span class="o">.</span><span class="n">register_metric</span><span class="p">(</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">hits_at_100</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
 </section>
+<section id="cleaning-up">
+<h2>Cleaning Up<a class="headerlink" href="#cleaning-up" title="Link to this heading"></a></h2>
+<p>A run removes its own service when it ends, and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">stop</span></code> removes the
+service of the run it stops. <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">cleanup</span></code> removes the ones left behind
+otherwise: by a run you detached from with Ctrl-C, or one started with
+<code class="docutils literal notranslate"><span class="pre">--keep-service</span></code>. It touches finished runs only, and keeps a service whenever
+the run could not be diagnosed without it:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">cleanup</span> <span class="o">--</span><span class="n">dry</span><span class="o">-</span><span class="n">run</span>       <span class="c1"># what would be removed</span>
+<span class="n">graflag</span> <span class="n">cleanup</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">clear</span></code> reclaims storage: experiments whose method no longer exists,
+datasets used only by them, images no method owns, and stray files at the root
+of the share. It only reports unless given <code class="docutils literal notranslate"><span class="pre">--apply</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">clear</span>                   <span class="c1"># report what is reclaimable</span>
+<span class="n">graflag</span> <span class="n">clear</span> <span class="o">--</span><span class="n">apply</span> <span class="o">--</span><span class="n">images</span>  <span class="c1"># remove images and registry repositories only</span>
+<span class="n">graflag</span> <span class="n">clear</span> <span class="o">--</span><span class="n">apply</span> <span class="o">--</span><span class="n">gc</span>      <span class="c1"># also garbage-collect the registry&#39;s blobs</span>
+</pre></div>
+</div>
+<p>Deleting a registry repository frees no disk by itself; <code class="docutils literal notranslate"><span class="pre">--gc</span></code> does, and stops
+the registry while it runs, because collecting blobs from a live registry
+corrupts later pushes.</p>
+</section>
 <section id="web-dashboard">
 <h2>Web Dashboard<a class="headerlink" href="#web-dashboard" title="Link to this heading"></a></h2>
-<p>Start the GUI:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span>
 </pre></div>
 </div>
-<p>Open <code class="docutils literal notranslate"><span class="pre">http://localhost:5000</span></code> in a browser. Use <code class="docutils literal notranslate"><span class="pre">--port</span></code> to change the port:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span> <span class="o">--</span><span class="n">port</span> <span class="mi">8080</span> <span class="o">--</span><span class="n">debug</span>
-</pre></div>
-</div>
+<p>Then open <code class="docutils literal notranslate"><span class="pre">http://localhost:5000</span></code>. The dashboard has no authentication: read
+<a class="reference internal" href="gui.html"><span class="doc">Web Dashboard</span></a> before running it anywhere but a trusted network.</p>
 </section>
 </section>
 

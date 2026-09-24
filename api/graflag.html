@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag package &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag package &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="graflag.core" href="core.html" />
-    <link rel="prev" title="Development Cluster" href="../devcluster.html" /> 
+    <link rel="prev" title="GraFlag Architecture" href="../ARCHITECTURE.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,6 +48,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
@@ -55,17 +67,23 @@
 <li class="toctree-l2"><a class="reference internal" href="#graflag.GraFlag"><code class="docutils literal notranslate"><span class="pre">GraFlag</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.setup"><code class="docutils literal notranslate"><span class="pre">GraFlag.setup()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.status"><code class="docutils literal notranslate"><span class="pre">GraFlag.status()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.make_experiment_name"><code class="docutils literal notranslate"><span class="pre">GraFlag.make_experiment_name()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.run"><code class="docutils literal notranslate"><span class="pre">GraFlag.run()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.register_metric"><code class="docutils literal notranslate"><span class="pre">GraFlag.register_metric()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.evaluate"><code class="docutils literal notranslate"><span class="pre">GraFlag.evaluate()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.list_methods"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_methods()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.list_datasets"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_datasets()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.count_experiments"><code class="docutils literal notranslate"><span class="pre">GraFlag.count_experiments()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.list_experiments"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_experiments()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.list_services"><code class="docutils literal notranslate"><span class="pre">GraFlag.list_services()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.get_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_logs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.follow_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.follow_logs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.show_logs"><code class="docutils literal notranslate"><span class="pre">GraFlag.show_logs()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.stop"><code class="docutils literal notranslate"><span class="pre">GraFlag.stop()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.TERMINAL_STATUSES"><code class="docutils literal notranslate"><span class="pre">GraFlag.TERMINAL_STATUSES</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.cleanup_services"><code class="docutils literal notranslate"><span class="pre">GraFlag.cleanup_services()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.OWNED_DIRS"><code class="docutils literal notranslate"><span class="pre">GraFlag.OWNED_DIRS</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.clear"><code class="docutils literal notranslate"><span class="pre">GraFlag.clear()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.get_experiment_results"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_experiment_results()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.get_evaluation_results"><code class="docutils literal notranslate"><span class="pre">GraFlag.get_evaluation_results()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraFlag.copy_files"><code class="docutils literal notranslate"><span class="pre">GraFlag.copy_files()</span></code></a></li>
@@ -82,6 +100,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraflagConfig.ssh_key"><code class="docutils literal notranslate"><span class="pre">GraflagConfig.ssh_key</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraflagConfig.nfs_port"><code class="docutils literal notranslate"><span class="pre">GraflagConfig.nfs_port</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.GraflagConfig.hosts_file"><code class="docutils literal notranslate"><span class="pre">GraflagConfig.hosts_file</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.GraflagConfig.graflag_libs"><code class="docutils literal notranslate"><span class="pre">GraflagConfig.graflag_libs</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.ClusterInfo"><code class="docutils literal notranslate"><span class="pre">ClusterInfo</span></code></a><ul>
@@ -100,6 +119,8 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.name"><code class="docutils literal notranslate"><span class="pre">MethodInfo.name</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.description"><code class="docutils literal notranslate"><span class="pre">MethodInfo.description</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.source_code"><code class="docutils literal notranslate"><span class="pre">MethodInfo.source_code</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.integration"><code class="docutils literal notranslate"><span class="pre">MethodInfo.integration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.image"><code class="docutils literal notranslate"><span class="pre">MethodInfo.image</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.supported_data"><code class="docutils literal notranslate"><span class="pre">MethodInfo.supported_data</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.parameters"><code class="docutils literal notranslate"><span class="pre">MethodInfo.parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.MethodInfo.has_dockerfile"><code class="docutils literal notranslate"><span class="pre">MethodInfo.has_dockerfile</span></code></a></li>
@@ -158,6 +179,13 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.RunProgress.to_dict"><code class="docutils literal notranslate"><span class="pre">RunProgress.to_dict()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.ServiceCleanupResult"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.ServiceCleanupResult.experiment"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.experiment</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.ServiceCleanupResult.removed"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.removed</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.ServiceCleanupResult.reason"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.reason</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.ServiceCleanupResult.to_dict"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.to_dict()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="core.html">graflag.core</a></li>
@@ -166,14 +194,6 @@
 <li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -207,7 +227,7 @@
 across multiple nodes with shared NFS storage.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.GraFlag">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">GraFlag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.env'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">GraFlag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Main GraFlag orchestration class.</p>
 <p>All public methods return structured data. No direct printing to stdout
@@ -230,15 +250,35 @@ across multiple nodes with shared NFS storage.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.make_experiment_name">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">make_experiment_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.make_experiment_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.make_experiment_name" title="Link to this definition"></a></dt>
+<dd><p>Build the canonical experiment directory name.</p>
+<p>Callers that need the name <em>before</em> the (blocking) run starts – the
+GUI, for instance – must use this and pass the result to <a class="reference internal" href="#graflag.GraFlag.run" title="graflag.GraFlag.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a>,
+otherwise their name and the real directory disagree on both casing
+and timestamp.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="graflag.GraFlag.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.run" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">build</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gpu</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exp_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_service</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.run" title="Link to this definition"></a></dt>
 <dd><p>Run experiment.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Experiment name.</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>exp_name</strong> – Pre-computed experiment name (see
+<a class="reference internal" href="#graflag.GraFlag.make_experiment_name" title="graflag.GraFlag.make_experiment_name"><code class="xref py py-meth docutils literal notranslate"><span class="pre">make_experiment_name()</span></code></a>). Generated when omitted.</p></li>
+<li><p><strong>keep_service</strong> – Leave the finished Swarm service in place. Useful
+when you want <cite>docker service ps</cite> to inspect the task.</p></li>
+<li><p><strong>force_rm</strong> – With <code class="docutils literal notranslate"><span class="pre">build</span></code>, remove the build’s intermediate
+containers even when it fails (<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span> <span class="pre">--force-rm</span></code>).</p></li>
+</ul>
 </dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference internal" href="#graflag.GraFlagError" title="graflag.GraFlagError"><strong>GraFlagError</strong></a> – If run fails.</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Experiment name.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#graflag.GraFlagError" title="graflag.GraFlagError"><strong>GraFlagError</strong></a> – If run fails.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -302,12 +342,45 @@ Otherwise it is saved to the global plugins directory.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="graflag.GraFlag.list_experiments">
-<span class="sig-name descname"><span class="pre">list_experiments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.list_experiments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.list_experiments" title="Link to this definition"></a></dt>
-<dd><p>List recent experiments.</p>
+<dt class="sig sig-object py" id="graflag.GraFlag.count_experiments">
+<span class="sig-name descname"><span class="pre">count_experiments</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.count_experiments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.count_experiments" title="Link to this definition"></a></dt>
+<dd><p>How many experiment directories exist on the share.</p>
+<p><cite>list_experiments</cite> takes a limit and gives no indication when it
+truncates, so a dashboard showing 50 of 78 looked complete. This is
+the cheap other half: one <cite>ls | wc -l</cite>, no per-experiment probing, so
+it can be called alongside the list without doubling its cost.</p>
+<p>Prefers the total captured by the most recent <cite>list_experiments</cite>,
+which gets it from the same remote call it already makes. Asking
+separately doubled the cold cost of the GUI’s most-polled endpoint
+(measured: 437ms -&gt; 1.06s) for a single integer.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>List of ExperimentInfo (most recent first).</p>
+<dd class="field-odd"><p>The directory count, or 0 when the experiments root is absent.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.list_experiments">
+<span class="sig-name descname"><span class="pre">list_experiments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.ExperimentInfo" title="graflag.models.ExperimentInfo"><span class="pre">ExperimentInfo</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.list_experiments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.list_experiments" title="Link to this definition"></a></dt>
+<dd><p>List recent experiments.</p>
+<p>Probes every experiment in a single remote command. The previous
+implementation issued one SSH connection per experiment directory –
+and there is no ControlMaster, so each was a fresh TCP and auth
+handshake. With 50 experiments that was 52 connections, repeated every
+two seconds by the GUI’s background updater. <cite>limit</cite> was also applied
+only after probing everything.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>limit</strong> – how many to return.</p></li>
+<li><p><strong>offset</strong> – how many of the newest to skip. Paging was done in the
+browser over whatever the API had already capped, so the last
+page was the end of the cap rather than the end of the data.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of ExperimentInfo (most recent first).</p>
 </dd>
 </dl>
 </dd></dl>
@@ -363,6 +436,102 @@ Falls back to method_output.txt if the service is gone.</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.GraFlag.TERMINAL_STATUSES">
+<span class="sig-name descname"><span class="pre">TERMINAL_STATUSES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('completed',</span> <span class="pre">'failed',</span> <span class="pre">'stopped')</span></span><a class="headerlink" href="#graflag.GraFlag.TERMINAL_STATUSES" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.cleanup_services">
+<span class="sig-name descname"><span class="pre">cleanup_services</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="models.html#graflag.models.ServiceCleanupResult" title="graflag.models.ServiceCleanupResult"><span class="pre">ServiceCleanupResult</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.cleanup_services"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.cleanup_services" title="Link to this definition"></a></dt>
+<dd><p>Remove Swarm services for experiments that have finished.</p>
+<p>Swarm services are created with <code class="docutils literal notranslate"><span class="pre">restart_policy=none</span></code> and were never
+removed, so every run left one behind forever. They are what
+<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">service</span> <span class="pre">ls</span></code> and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">list</span> <span class="pre">services</span></code> show, and they hold
+task records on the manager indefinitely.</p>
+<p>Two safety rules, because removing a service is not reversible:</p>
+<ol class="arabic simple">
+<li><p>Only terminal experiments are touched. Anything still running or
+building keeps its service.</p></li>
+<li><p>The service is kept unless the run’s output is already on disk.
+<code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">logs</span></code> falls back to <code class="docutils literal notranslate"><span class="pre">method_output.txt</span></code> once the
+service is gone, but a run that died before the runner wrote that
+file has its Docker logs as the only diagnostic – removing the
+service would destroy the evidence for the failure you most need to
+read.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>experiment</strong> – Limit to one experiment. Default: sweep all.</p></li>
+<li><p><strong>dry_run</strong> – Report what would be removed without removing it.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One ServiceCleanupResult per candidate considered.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.GraFlag.OWNED_DIRS">
+<span class="sig-name descname"><span class="pre">OWNED_DIRS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('datasets',</span> <span class="pre">'experiments',</span> <span class="pre">'images',</span> <span class="pre">'libs',</span> <span class="pre">'methods')</span></span><a class="headerlink" href="#graflag.GraFlag.OWNED_DIRS" title="Link to this definition"></a></dt>
+<dd><p>The five directories GraFlag owns at the root of the share. They are
+named here as well as in the survey so that a widened rule in one place
+cannot reach them: the survey decides what is <em>collected</em>, this decides
+what may be <em>deleted</em>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.GraFlag.clear">
+<span class="sig-name descname"><span class="pre">clear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">apply</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">share</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">images</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collect</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ClearReport" title="graflag.models.ClearReport"><span class="pre">ClearReport</span></a></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.clear"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.clear" title="Link to this definition"></a></dt>
+<dd><p>Remove what is on the cluster but no longer belongs to anything.</p>
+<p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">cleanup</span></code> sweeps finished <em>services</em>; this sweeps the
+storage they leave behind. An item is removed only on evidence that
+nothing owns it any more, never because its name looks disposable:</p>
+<ul class="simple">
+<li><p>an <strong>experiment</strong> whose <code class="docutils literal notranslate"><span class="pre">methods/&lt;name&gt;</span></code> directory is gone. The
+method was deleted or renamed, so the run can no longer be
+reproduced or even read against its definition.</p></li>
+<li><p>a <strong>dataset</strong> referenced only by such experiments. A dataset no
+experiment has used yet is kept – it is there to be run, and “used
+by nothing” is its normal state before the first run.</p></li>
+<li><p>an <strong>image</strong>, local or in the registry, whose owner is not a method.
+The owner is <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> from the method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> when it declares
+one, so the seventeen <code class="docutils literal notranslate"><span class="pre">bond_*</span></code> methods keep <code class="docutils literal notranslate"><span class="pre">bond_base</span></code> alive
+between them.</p></li>
+<li><p>a <strong>stray</strong> at the root of the share: anything beside the five
+directories GraFlag owns.</p></li>
+</ul>
+<p>Nothing is removed unless <code class="docutils literal notranslate"><span class="pre">apply</span></code> is true. The dry run reports the
+same rows with <code class="docutils literal notranslate"><span class="pre">removed</span></code> false, so the two are diffable.</p>
+<p><code class="docutils literal notranslate"><span class="pre">collect</span></code> additionally garbage-collects the registry’s blobs, which
+is what actually reclaims the disk – deleting a repository removes
+its manifests and leaves every layer behind. It is a separate flag
+because it cannot be done safely while the registry is serving:
+garbage collection deletes blobs the running registry still answers
+<code class="docutils literal notranslate"><span class="pre">HEAD</span></code> for from its cache, so the next <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">push</span></code> reports
+“Layer already exists”, uploads nothing, and produces an image the
+manager can run and a worker cannot pull. This scales the service to
+zero first and back up afterwards, in a <code class="docutils literal notranslate"><span class="pre">finally</span></code>, so an error
+during collection cannot leave the cluster without a registry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>apply</strong> – Remove. Default is to report only.</p></li>
+<li><p><strong>share</strong> – Consider experiments, datasets and strays.</p></li>
+<li><p><strong>images</strong> – Consider local images and registry repositories.</p></li>
+<li><p><strong>collect</strong> – Garbage-collect registry blobs (implies <code class="docutils literal notranslate"><span class="pre">images</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A ClearReport. Failures to remove an individual item are
+collected in <code class="docutils literal notranslate"><span class="pre">errors</span></code> rather than raised – clearing is
+housekeeping and must not fail the caller.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.GraFlag.get_experiment_results">
 <span class="sig-name descname"><span class="pre">get_experiment_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="models.html#graflag.models.ExperimentResults" title="graflag.models.ExperimentResults"><span class="pre">ExperimentResults</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/core.html#GraFlag.get_experiment_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraFlag.get_experiment_results" title="Link to this definition"></a></dt>
@@ -404,7 +573,7 @@ Falls back to method_output.txt if the service is gone.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.GraflagConfig">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">GraflagConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.env'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/config.html#GraflagConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraflagConfig" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">GraflagConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/config.html#GraflagConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.GraflagConfig" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Handle configuration loading and validation for GraFlag.</p>
 <dl class="py method">
@@ -441,6 +610,11 @@ Falls back to method_output.txt if the service is gone.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="graflag.GraflagConfig.hosts_file">
 <span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">hosts_file</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#graflag.GraflagConfig.hosts_file" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="graflag.GraflagConfig.graflag_libs">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">graflag_libs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.GraflagConfig.graflag_libs" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -499,7 +673,7 @@ Falls back to method_output.txt if the service is gone.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.MethodInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">MethodInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supported_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_dockerfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#MethodInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.MethodInfo" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">MethodInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supported_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_dockerfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#MethodInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.MethodInfo" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Method metadata.</p>
 <dl class="py attribute">
@@ -516,6 +690,23 @@ Falls back to method_output.txt if the service is gone.</p>
 <dt class="sig sig-object py" id="graflag.MethodInfo.source_code">
 <span class="sig-name descname"><span class="pre">source_code</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#graflag.MethodInfo.source_code" title="Link to this definition"></a></dt>
 <dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.MethodInfo.integration">
+<span class="sig-name descname"><span class="pre">integration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#graflag.MethodInfo.integration" title="Link to this definition"></a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">upstream</span></code> (the image runs the authors’ implementation) or
+<code class="docutils literal notranslate"><span class="pre">reimplementation</span></code> (this repository’s code, written from the paper).
+Empty for a method whose <code class="docutils literal notranslate"><span class="pre">.env</span></code> predates the key – rendered as
+“unstated”, which is what it is, rather than assumed to be either.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.MethodInfo.image">
+<span class="sig-name descname"><span class="pre">image</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#graflag.MethodInfo.image" title="Link to this definition"></a></dt>
+<dd><p>The shared image this method builds from, from <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> in its
+<code class="docutils literal notranslate"><span class="pre">.env</span></code>. Empty when the method builds its own – which is the common
+case; the seventeen <code class="docutils literal notranslate"><span class="pre">bond_*</span></code> methods share <code class="docutils literal notranslate"><span class="pre">bond_base</span></code>.</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="graflag.MethodInfo.supported_data">
@@ -759,13 +950,40 @@ Falls back to method_output.txt if the service is gone.</p>
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.ServiceCleanupResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.</span></span><span class="sig-name descname"><span class="pre">ServiceCleanupResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">removed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#ServiceCleanupResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ServiceCleanupResult" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Outcome of considering one finished service for removal.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.ServiceCleanupResult.experiment">
+<span class="sig-name descname"><span class="pre">experiment</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.ServiceCleanupResult.experiment" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.ServiceCleanupResult.removed">
+<span class="sig-name descname"><span class="pre">removed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#graflag.ServiceCleanupResult.removed" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.ServiceCleanupResult.reason">
+<span class="sig-name descname"><span class="pre">reason</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.ServiceCleanupResult.reason" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.ServiceCleanupResult.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/graflag/models.html#ServiceCleanupResult.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ServiceCleanupResult.to_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </section>
 
 
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="../devcluster.html" class="btn btn-neutral float-left" title="Development Cluster" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../ARCHITECTURE.html" class="btn btn-neutral float-left" title="GraFlag Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="core.html" class="btn btn-neutral float-right" title="graflag.core" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

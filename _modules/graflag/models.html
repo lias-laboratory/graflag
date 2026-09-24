@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.models &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.models &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -55,14 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -126,6 +130,15 @@
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">source_code</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1">#: ``upstream`` (the image runs the authors&#39; implementation) or</span>
+    <span class="c1">#: ``reimplementation`` (this repository&#39;s code, written from the paper).</span>
+    <span class="c1">#: Empty for a method whose ``.env`` predates the key -- rendered as</span>
+    <span class="c1">#: &quot;unstated&quot;, which is what it is, rather than assumed to be either.</span>
+    <span class="n">integration</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1">#: The shared image this method builds from, from ``IMAGE=`` in its</span>
+    <span class="c1">#: ``.env``. Empty when the method builds its own -- which is the common</span>
+    <span class="c1">#: case; the seventeen ``bond_*`` methods share ``bond_base``.</span>
+    <span class="n">image</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">supported_data</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">parameters</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
     <span class="n">has_dockerfile</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
@@ -216,6 +229,80 @@
 
 <div class="viewcode-block" id="EvaluationResults.to_dict">
 <a class="viewcode-back" href="../../api/models.html#graflag.EvaluationResults.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ServiceCleanupResult">
+<a class="viewcode-back" href="../../api/models.html#graflag.ServiceCleanupResult">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ServiceCleanupResult</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Outcome of considering one finished service for removal.&quot;&quot;&quot;</span>
+    <span class="n">experiment</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">removed</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span>
+
+<div class="viewcode-block" id="ServiceCleanupResult.to_dict">
+<a class="viewcode-back" href="../../api/models.html#graflag.ServiceCleanupResult.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ClearItem">
+<a class="viewcode-back" href="../../api/models.html#graflag.ClearItem">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ClearItem</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;One thing `graflag clear` considered removing, and why.</span>
+
+<span class="sd">    Every candidate is reported whether or not it was removed, so a dry run</span>
+<span class="sd">    and an applied run print the same rows -- the difference is `removed`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#: experiment | dataset | image | registry | stray</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: The evidence for the verdict, in the words the report prints.</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: Bytes on disk, 0 when not measured (registry repos before a GC).</span>
+    <span class="n">size_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">removed</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="ClearItem.to_dict">
+<a class="viewcode-back" href="../../api/models.html#graflag.ClearItem.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ClearReport">
+<a class="viewcode-back" href="../../api/models.html#graflag.ClearReport">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ClearReport</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What `graflag clear` found, and what it did about it.&quot;&quot;&quot;</span>
+    <span class="c1">#: False for a dry run -- nothing was removed.</span>
+    <span class="n">applied</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">items</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ClearItem</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="c1">#: Bytes actually reclaimed. 0 on a dry run; on an applied run this is</span>
+    <span class="c1">#: the sum over removed items, which for the registry counts only what a</span>
+    <span class="c1">#: garbage collection actually freed, not the manifests deleted before it.</span>
+    <span class="n">freed_bytes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1">#: Non-fatal problems. Clearing is housekeeping: a failure to remove one</span>
+    <span class="c1">#: item must not abort the sweep or fail the caller.</span>
+    <span class="n">errors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="c1">#: True when registry blobs were collected, which needs the registry</span>
+    <span class="c1">#: stopped -- see `core.clear`.</span>
+    <span class="n">registry_collected</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">removed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ClearItem</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">removed</span><span class="p">]</span>
+
+<div class="viewcode-block" id="ClearReport.to_dict">
+<a class="viewcode-back" href="../../api/models.html#graflag.ClearReport.to_dict">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 </div>

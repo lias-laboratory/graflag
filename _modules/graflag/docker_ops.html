@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.docker_ops &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.docker_ops &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -55,14 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -94,21 +98,101 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">docker</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">docker.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServiceMode</span><span class="p">,</span> <span class="n">RestartPolicy</span><span class="p">,</span> <span class="n">Resources</span><span class="p">,</span> <span class="n">Mount</span><span class="p">,</span> <span class="n">EndpointSpec</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_method_env</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_path</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="c1">#: ``.env`` keys forwarded to ``docker build`` as ``--build-arg``.</span>
+<span class="c1">#:</span>
+<span class="c1">#: A method declares the value once, in its ``.env``, and its Dockerfile reads</span>
+<span class="c1">#: it through an ``ARG`` of the same name. The alternative -- writing the value</span>
+<span class="c1">#: into the Dockerfile -- is what let a ``.env`` advertising one ``SOURCE_CODE``</span>
+<span class="c1">#: sit next to an image cloning another, and it is why an upstream commit could</span>
+<span class="c1">#: not be pinned without editing two files in step.</span>
+<span class="c1">#:</span>
+<span class="c1">#: Only keys named here cross the boundary. A method&#39;s parameters are</span>
+<span class="c1">#: ``_``-prefixed and belong to the run, not to the build.</span>
+<span class="n">BUILD_ARG_KEYS</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;SOURCE_CODE&quot;</span><span class="p">,</span> <span class="s2">&quot;SOURCE_REF&quot;</span><span class="p">)</span>
+
+<span class="c1">#: Where a method image gets the GraFlag libraries.</span>
+<span class="c1">#:</span>
+<span class="c1">#: Not a ``BUILD_ARG_KEYS`` entry, because it is not a property of the method.</span>
+<span class="c1">#: Whether the published wheel is current is a property of the deployment, and</span>
+<span class="c1">#: a method that could answer it differently from its neighbours would be a</span>
+<span class="c1">#: benchmark whose runs are not comparable.</span>
+<span class="n">GRAFLAG_LIBS_CHOICES</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;local&quot;</span><span class="p">,</span> <span class="s2">&quot;pypi&quot;</span><span class="p">)</span>
+
+<span class="c1">#: What a shared ``IMAGE=`` may be called.</span>
+<span class="c1">#:</span>
+<span class="c1">#: The value is both a directory under ``images/`` and half of an image</span>
+<span class="c1">#: reference, and Docker rejects an uppercase repository name -- at push time,</span>
+<span class="c1">#: after the build has already run for minutes.</span>
+<span class="n">IMAGE_NAME</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[a-z0-9][a-z0-9._-]*$&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="BuildFailed">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.BuildFailed">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BuildFailed</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A ``docker build`` that exited non-zero, with everything it printed.</span>
+
+<span class="sd">    The legacy builder prints each step&#39;s output on stdout and leaves stderr</span>
+<span class="sd">    the deprecation banner and &quot;returned a non-zero code: 128&quot; -- which step</span>
+<span class="sd">    failed, never why. The why was on stdout: for the rare method, git&#39;s</span>
+<span class="sd">    ``fatal: could not read Username for &#39;https://github.com&#39;`` from cloning</span>
+<span class="sd">    a private repository. An error built from stderr alone dropped it, and</span>
+<span class="sd">    build.log was written only after a successful build, so a failed build</span>
+<span class="sd">    kept no record of its cause. ``log`` is what build.log would have held.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">log</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">log</span></div>
+
+
+
+<div class="viewcode-block" id="ImageNames">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ImageNames">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ImageNames</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Every name one method&#39;s image is known by, resolved together.</span>
+
+<span class="sd">    Built and deployed from the same call, so the tag that ``docker build``</span>
+<span class="sd">    produces and the one Swarm pulls cannot come apart.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1">#: ``&lt;owner&gt;:&lt;tag&gt;`` -- the local tag on the manager.</span>
+    <span class="n">local</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: ``&lt;manager&gt;:5000/&lt;owner&gt;:&lt;tag&gt;`` -- what Swarm pulls.</span>
+    <span class="n">registry</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: The method that owns the image: the method itself, or the shared image</span>
+    <span class="c1">#: named by ``IMAGE=``. Never the same thing as ``METHOD_NAME`` at run time.</span>
+    <span class="n">owner</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: Remote path of the Dockerfile that builds it, already quoted.</span>
+    <span class="n">dockerfile</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: True when the image is shared, i.e. ``IMAGE=`` was declared.</span>
+    <span class="n">shared</span><span class="p">:</span> <span class="nb">bool</span></div>
+
+
 
 
 <div class="viewcode-block" id="ReservedEnvVars">
@@ -120,6 +204,7 @@
     <span class="n">METHOD_NAME</span> <span class="o">=</span> <span class="s1">&#39;METHOD_NAME&#39;</span>
     <span class="n">COMMAND</span> <span class="o">=</span> <span class="s1">&#39;COMMAND&#39;</span>
     <span class="n">MONITOR_INTERVAL</span> <span class="o">=</span> <span class="s1">&#39;MONITOR_INTERVAL&#39;</span>
+    <span class="n">GRAFLAG_PARAMS</span> <span class="o">=</span> <span class="s1">&#39;GRAFLAG_PARAMS&#39;</span>
 
 <div class="viewcode-block" id="ReservedEnvVars.get_names">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.get_names">[docs]</a>
@@ -128,6 +213,54 @@
         <span class="k">return</span> <span class="p">{</span><span class="n">var</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">cls</span><span class="p">}</span></div>
 </div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_die_with_parent</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;preexec_fn that makes a child die when its parent does.</span>
+
+<span class="sd">    The log follower is an `ssh ... docker service logs -f` subprocess. Ctrl-C</span>
+<span class="sd">    is handled -- KeyboardInterrupt terminates it -- but SIGKILL cannot be</span>
+<span class="sd">    caught, so a `timeout`-killed or `kill -9`-ed graflag leaves the ssh</span>
+<span class="sd">    running forever, following a service that is later removed. Measured on</span>
+<span class="sd">    this workstation: 162 such orphans, the oldest 22 hours old, all following</span>
+<span class="sd">    services that no longer existed.</span>
+
+<span class="sd">    PR_SET_PDEATHSIG asks the kernel to signal this process when its parent</span>
+<span class="sd">    dies, which covers the case a Python handler cannot. Linux-only and</span>
+<span class="sd">    best-effort: anywhere else, or if ctypes cannot reach prctl, the child</span>
+<span class="sd">    behaves exactly as before.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">ctypes</span>
+        <span class="n">PR_SET_PDEATHSIG</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">ctypes</span><span class="o">.</span><span class="n">CDLL</span><span class="p">(</span><span class="s2">&quot;libc.so.6&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">prctl</span><span class="p">(</span><span class="n">PR_SET_PDEATHSIG</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_service_status</span><span class="p">(</span><span class="n">running</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">tasks</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;What a Swarm service is actually doing, from its tasks.</span>
+
+<span class="sd">    Every experiment service is one replica with `restart_policy=none`, so</span>
+<span class="sd">    &quot;no task is running&quot; is the normal end state, not a symptom. Reporting</span>
+<span class="sd">    it as &#39;pending&#39; made a finished run indistinguishable from one that had</span>
+<span class="sd">    never been scheduled.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">running</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;running&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">tasks</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;pending&#39;</span>
+    <span class="c1"># Newest task first: a service that was updated has older ones behind it.</span>
+    <span class="n">latest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CreatedAt&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="p">(</span><span class="n">latest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;complete&#39;</span><span class="p">:</span> <span class="s1">&#39;completed&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;failed&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;rejected&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;orphaned&#39;</span><span class="p">:</span> <span class="s1">&#39;failed&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;shutdown&#39;</span><span class="p">:</span> <span class="s1">&#39;stopped&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;remove&#39;</span><span class="p">:</span> <span class="s1">&#39;stopped&#39;</span><span class="p">,</span>
+    <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="s1">&#39;pending&#39;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="DockerManager">
@@ -142,16 +275,49 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># The GUI shares one DockerManager across socketio (async_mode</span>
+        <span class="c1"># &#39;threading&#39;), Flask request threads, the background updater and the</span>
+        <span class="c1"># threads spawned for run/evaluate/stop/delete. Without this, two</span>
+        <span class="c1"># threads could both observe _client is None and both enter _connect(),</span>
+        <span class="c1"># whose first act is close() -- tearing down the tunnel the other had</span>
+        <span class="c1"># just built. Reentrant because _connect() calls close().</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">RLock</span><span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Lazy-initialize Docker client via SSH tunnel.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_with_reconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">call</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run a Docker SDK call, rebuilding the tunnel once if it has died.</span>
+
+<span class="sd">        `client` above rebuilds only when the ssh process itself has exited.</span>
+<span class="sd">        This cluster drops the far end of a live tunnel about once a minute</span>
+<span class="sd">        (&quot;Connection aborted / RemoteDisconnected&quot;), and that leaves the</span>
+<span class="sd">        process running and the pooled socket dead -- so the property hands</span>
+<span class="sd">        back a client whose next call raises. Swallowed upstream, that became</span>
+<span class="sd">        an empty service list, which is indistinguishable from a cluster with</span>
+<span class="sd">        nothing running: the dashboard&#39;s Services panel emptied itself at</span>
+<span class="sd">        random and filled back in two seconds later.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">call</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">ConnectionError</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;[WARN] Docker tunnel dropped; reconnecting&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">call</span><span class="p">()</span>          <span class="c1"># `client` rebuilds on the way through</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Establish SSH tunnel and create Docker client.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Establish SSH tunnel and create Docker client.</span>
+
+<span class="sd">        Callers hold self._lock.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
         <span class="c1"># Find free local port</span>
@@ -172,59 +338,107 @@
         <span class="n">ssh_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Starting SSH tunnel on port </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># Guarded for the same reason as the log follower: the tunnel is a</span>
+        <span class="c1"># long-lived `ssh -N -L .../docker.sock`, and a SIGKILL-ed graflag</span>
+        <span class="c1"># leaves it connected to the manager indefinitely. Nine such orphans</span>
+        <span class="c1"># were alive on this workstation, the oldest 22 hours old.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
-            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span>
+            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+            <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="c1"># Wait for tunnel to be ready</span>
+        <span class="c1"># Wait for the tunnel to be usable. ssh binds the local port as soon</span>
+        <span class="c1"># as it starts, so a successful TCP connect only proves ssh is</span>
+        <span class="c1"># listening -- not that the forward reaches the manager&#39;s Docker</span>
+        <span class="c1"># socket. Ping the Docker API instead, otherwise the first real call</span>
+        <span class="c1"># fails with an opaque connection error further down the stack.</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">last_error</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">):</span>
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">stderr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SSH tunnel failed: </span><span class="si">{</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="k">with</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span> <span class="k">as</span> <span class="n">s</span><span class="p">:</span>
-                    <span class="n">s</span><span class="o">.</span><span class="n">settimeout</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-                    <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="p">))</span>
+                <span class="n">client</span> <span class="o">=</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">(</span>
+                    <span class="n">base_url</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;tcp://localhost:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">client</span><span class="o">.</span><span class="n">ping</span><span class="p">()</span>
                 <span class="k">break</span>
-            <span class="k">except</span> <span class="p">(</span><span class="ne">ConnectionRefusedError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">):</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">last_error</span> <span class="o">=</span> <span class="n">exc</span>
+                <span class="k">if</span> <span class="n">client</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                        <span class="k">pass</span>
+                    <span class="n">client</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="k">continue</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;SSH tunnel failed to become ready&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;SSH tunnel to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2"> came up but the Docker &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;API did not respond: </span><span class="si">{</span><span class="n">last_error</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">docker</span><span class="o">.</span><span class="n">DockerClient</span><span class="p">(</span>
-            <span class="n">base_url</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;tcp://localhost:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-            <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">client</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Docker client connected via SSH tunnel&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DockerManager.close">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.close">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close Docker client and SSH tunnel.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Close Docker client and SSH tunnel.</span>
+
+<span class="sd">        Tolerates a partially-constructed instance: __del__ calls this, and if</span>
+<span class="sd">        __init__ raised before setting these attributes the resulting</span>
+<span class="sd">        AttributeError would surface as noise during garbage collection.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lock</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_lock&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">lock</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_close_locked</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">lock</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_close_locked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_client&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="k">pass</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_tunnel_proc&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="kc">None</span></div>
-
+            <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_hosts</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load hosts configuration from YAML file.&quot;&quot;&quot;</span>
-        <span class="n">hosts_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load hosts configuration from YAML file.</span>
+
+<span class="sd">        Expands `~`: HOSTS_FILE is a path a human types into config.env, so it</span>
+<span class="sd">        routinely starts with `~`. Path() does not expand that, so the file was</span>
+<span class="sd">        reported missing, this returned {}, and setup_workers() logged &quot;No</span>
+<span class="sd">        workers defined in hosts.yml&quot; for a file that plainly defined four --</span>
+<span class="sd">        leaving a single-node swarm that `graflag setup` called a success.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+
+        <span class="n">hosts_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">hosts_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="c1"># Say which path was tried; &quot;no workers&quot; gave no clue that the</span>
+            <span class="c1"># file had not been read at all.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] hosts file not found: </span><span class="si">{</span><span class="n">hosts_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">{}</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">hosts_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
@@ -268,7 +482,10 @@
         <span class="n">workers</span> <span class="o">=</span> <span class="n">hosts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;workers&quot;</span><span class="p">,</span> <span class="p">[])</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">workers</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No workers defined in hosts.yml&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;[WARN] No workers defined in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts_file</span><span class="si">}</span><span class="s2">; &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the swarm will have the manager only&quot;</span>
+            <span class="p">)</span>
             <span class="k">return</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[SETUP] Setting up </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span><span class="si">}</span><span class="s2"> worker nodes...&quot;</span><span class="p">)</span>
@@ -349,44 +566,206 @@
     <span class="c1"># Image Build (SSH — build context is on remote host)</span>
     <span class="c1"># ========================================================================</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_graflag_libs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate GRAFLAG_LIBS before it reaches a three-minute build.</span>
+
+<span class="sd">        The Dockerfiles refuse an unknown value too -- a `case` with an</span>
+<span class="sd">        explicit error arm, not an `if` whose else branch quietly means PyPI.</span>
+<span class="sd">        Catching it here means the message names the config key rather than</span>
+<span class="sd">        arriving as a shell exit status from inside a build layer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;graflag_libs&quot;</span><span class="p">,</span> <span class="s2">&quot;local&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">GRAFLAG_LIBS_CHOICES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;GRAFLAG_LIBS=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> is not one of &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">GRAFLAG_LIBS_CHOICES</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_image_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
+                     <span class="n">method_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImageNames</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve every name a method&#39;s image is known by, in one place.</span>
+
+<span class="sd">        The image name used to be built from an f-string in</span>
+<span class="sd">        ``build_method_image`` and again from an identical one in</span>
+<span class="sd">        ``create_service``. Identical is the problem: the two are written</span>
+<span class="sd">        apart, and a method that builds one image and runs another fails at</span>
+<span class="sd">        deploy time with an image-not-found from the registry, long after the</span>
+<span class="sd">        build said ``[OK]``. Resolving here means the two cannot disagree --</span>
+<span class="sd">        which is what makes a shared ``IMAGE=`` safe to introduce at all.</span>
+
+<span class="sd">        A method builds its own image unless its ``.env`` declares ``IMAGE=``,</span>
+<span class="sd">        in which case it shares one: seventeen ``bond_*`` methods have</span>
+<span class="sd">        byte-identical Dockerfiles, and building seventeen copies of the same</span>
+<span class="sd">        ~9 GB image is why building the whole tree did not fit on the cluster.</span>
+<span class="sd">        They stay distinct at run time -- ``_build_service_env`` sets</span>
+<span class="sd">        ``METHOD_NAME`` per service and ``graflag_bond.train`` selects the</span>
+<span class="sd">        PyGOD detector from it -- so nothing about what runs changes.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            method_name: The method being built or deployed.</span>
+<span class="sd">            tag: Image tag.</span>
+<span class="sd">            method_env: The method&#39;s parsed ``.env``, when the caller has it.</span>
+<span class="sd">                Omitted, it is read from the manager. Callers that already</span>
+<span class="sd">                hold it pass it, following the same &quot;one SSH call, not one per</span>
+<span class="sd">                item&quot; rule as ``list_experiments()``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            An :class:`ImageNames`, including the Dockerfile to build it from.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: ``IMAGE=`` is not a usable Docker repository name.</span>
+<span class="sd">                Deliberately not a silent fall back to the method&#39;s own image:</span>
+<span class="sd">                that would build one image, deploy another, and report</span>
+<span class="sd">                success -- the fail-open shape this resolver exists to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">method_name</span> <span class="o">=</span> <span class="n">method_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">method_env</span> <span class="k">if</span> <span class="n">method_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">load_method_env</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+
+        <span class="n">shared</span> <span class="o">=</span> <span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;IMAGE&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">shared</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">IMAGE_NAME</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">shared</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">: IMAGE=</span><span class="si">{</span><span class="n">shared</span><span class="si">!r}</span><span class="s2"> is not a usable Docker &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;repository name (expected </span><span class="si">{</span><span class="n">IMAGE_NAME</span><span class="o">.</span><span class="n">pattern</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+        <span class="n">owner</span> <span class="o">=</span> <span class="n">shared</span> <span class="ow">or</span> <span class="n">method_name</span>
+        <span class="n">dockerfile</span> <span class="o">=</span> <span class="p">(</span><span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;images&quot;</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span>
+                                  <span class="s2">&quot;Dockerfile&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">shared</span> <span class="k">else</span>
+                      <span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;methods&quot;</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span>
+                                  <span class="s2">&quot;Dockerfile&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">ImageNames</span><span class="p">(</span>
+            <span class="n">local</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">owner</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">registry</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/</span><span class="si">{</span><span class="n">owner</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">owner</span><span class="o">=</span><span class="n">owner</span><span class="p">,</span>
+            <span class="n">dockerfile</span><span class="o">=</span><span class="n">dockerfile</span><span class="p">,</span>
+            <span class="n">shared</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">shared</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_context_is_filtered</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Whether the build context root carries a .dockerignore.</span>
+
+<span class="sd">        One extra SSH round trip against a build that takes minutes -- the</span>
+<span class="sd">        same trade `build_method_image` already makes for `method_env`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shared</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;test -f </span><span class="si">{</span><span class="n">shared</span><span class="si">}</span><span class="s2">/.dockerignore&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span>
+
 <div class="viewcode-block" id="DockerManager.build_method_image">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_method_image">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">build_method_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_method_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
+                           <span class="n">method_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">force_rm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build method Docker image and push to local registry.</span>
 
 <span class="sd">        Uses SSH because the build context resides on the remote host.</span>
+
+<span class="sd">        Every ``BUILD_ARG_KEYS`` entry the method&#39;s ``.env`` defines is passed</span>
+<span class="sd">        through as ``--build-arg``, so a Dockerfile can pin its upstream from</span>
+<span class="sd">        the one place that already names it.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            method_name: Method whose ``methods/&lt;name&gt;/Dockerfile`` to build.</span>
+<span class="sd">            tag: Image tag.</span>
+<span class="sd">            method_env: The method&#39;s parsed ``.env``, when the caller already</span>
+<span class="sd">                has it. Omitted, it is read from the manager -- one extra SSH</span>
+<span class="sd">                round trip, against a build that takes minutes.</span>
+<span class="sd">            force_rm: Pass ``--force-rm``, so docker removes the build&#39;s</span>
+<span class="sd">                intermediate containers even when it fails. Without it a</span>
+<span class="sd">                failed build keeps its last container, and that container</span>
+<span class="sd">                holds every layer the build had produced: 12.8 GB on the</span>
+<span class="sd">                manager after one failed ``git clone`` of the rare method.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Combined build and push log output.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">method_name</span> <span class="o">=</span> <span class="n">method_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[BUILD] Building image </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
 
-        <span class="n">local_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="n">method_env</span> <span class="k">if</span> <span class="n">method_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">load_method_env</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_names</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">method_env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span>
+        <span class="n">local_image</span><span class="p">,</span> <span class="n">registry_image</span> <span class="o">=</span> <span class="n">names</span><span class="o">.</span><span class="n">local</span><span class="p">,</span> <span class="n">names</span><span class="o">.</span><span class="n">registry</span>
 
-        <span class="n">build_log</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">names</span><span class="o">.</span><span class="n">shared</span><span class="p">:</span>
+            <span class="c1"># Worth saying out loud: the tag being built is not the method&#39;s</span>
+            <span class="c1"># name, and `--build` on three methods that share an image</span>
+            <span class="c1"># rebuilds it three times. The layer cache makes that near-free</span>
+            <span class="c1"># and --build is explicit intent, so it is not deduplicated -- but</span>
+            <span class="c1"># it should not look like a mistake in the log either.</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Rebuilding shared image </span><span class="si">{</span><span class="n">names</span><span class="o">.</span><span class="n">owner</span><span class="si">}</span><span class="s2"> &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;(used by </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[BUILD] Building image </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+        <span class="c1"># Quoted as one word: docker takes `--build-arg KEY=VALUE`, and the</span>
+        <span class="c1"># remote shell must not split a value containing spaces or `#`.</span>
+        <span class="n">build_args</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;--build-arg </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">=</span><span class="si">{</span><span class="n">env</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">BUILD_ARG_KEYS</span> <span class="k">if</span> <span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+
+        <span class="n">libs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graflag_libs</span><span class="p">()</span>
+        <span class="n">build_args</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;--build-arg GRAFLAG_LIBS=</span><span class="si">{</span><span class="n">libs</span><span class="si">}</span><span class="s2"> &quot;</span>
+
+        <span class="c1"># Both of these also go into build.log, not only to the operator&#39;s</span>
+        <span class="c1"># terminal. `docker build` never echoes a --build-arg value, so a log</span>
+        <span class="c1"># holding only its output records `checkout --detach ${SOURCE_REF}`</span>
+        <span class="c1"># with the variable unexpanded -- the experiment would name no commit</span>
+        <span class="c1"># anywhere on disk once the CLI output scrolled away. The same applies</span>
+        <span class="c1"># to which graflag_runner went into the image: the RUN step prints</span>
+        <span class="c1"># both branches of its `case`, so the log alone does not say which one</span>
+        <span class="c1"># ran.</span>
+        <span class="n">provenance</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;SOURCE_REF&quot;</span><span class="p">):</span>
+            <span class="n">provenance</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Upstream pinned at </span><span class="si">{</span><span class="n">env</span><span class="p">[</span><span class="s1">&#39;SOURCE_REF&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">provenance</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;[INFO] GraFlag libraries from &quot;</span> <span class="o">+</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/libs&quot;</span> <span class="k">if</span> <span class="n">libs</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span>
+            <span class="k">else</span> <span class="s2">&quot;PyPI&quot;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">provenance</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="n">build_log</span> <span class="o">=</span> <span class="p">[</span><span class="o">*</span><span class="n">provenance</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">]</span>
+
+        <span class="c1"># The build context is the whole share, so the `.dockerignore` at its</span>
+        <span class="c1"># root is the only thing keeping `datasets/` and `experiments/` out of</span>
+        <span class="c1"># the tarball docker streams before the first instruction runs. And</span>
+        <span class="c1"># nothing puts it there: `sync` copies a method directory, `sync --lib`</span>
+        <span class="c1"># copies a library, and neither touches the root -- so a share</span>
+        <span class="c1"># populated by either has the file in git and not on the cluster.</span>
+        <span class="c1">#</span>
+        <span class="c1"># The build then succeeds anyway, which is the whole problem. Docker</span>
+        <span class="c1"># prints the context size and moves on; on this cluster it read</span>
+        <span class="c1"># &quot;Sending build context to Docker daemon 3.651GB&quot; for a build that</span>
+        <span class="c1"># needs 674 KB, on every method, for as long as the file was missing.</span>
+        <span class="c1"># Say so where it will be read, and put it in build.log too.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context_is_filtered</span><span class="p">():</span>
+            <span class="n">note</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;[WARN] No .dockerignore at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the build context includes datasets/ and experiments/. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Copy it with `graflag copy -s ./.dockerignore --dest .` from &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the graflag-shared checkout.&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">note</span><span class="p">)</span>
+            <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">note</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1"># Build image</span>
+        <span class="n">force</span> <span class="o">=</span> <span class="s2">&quot;--force-rm &quot;</span> <span class="k">if</span> <span class="n">force_rm</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
         <span class="n">build_cmd</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;docker build --network=host &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;-f </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/methods/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">/Dockerfile &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;-t </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> -t </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;docker build --network=host </span><span class="si">{</span><span class="n">force</span><span class="si">}{</span><span class="n">build_args</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-f </span><span class="si">{</span><span class="n">names</span><span class="o">.</span><span class="n">dockerfile</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-t </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">local_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> -t </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">)</span><span class="si">}</span><span class="s2">/&quot;</span>
         <span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">build_cmd</span><span class="p">)</span>
-        <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;=== BUILD: </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;=== BUILD: </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
             <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build image </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">BuildFailed</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build image </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                              <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">))</span>
 
         <span class="c1"># Push to registry</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Pushing </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> to local registry...&quot;</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== PUSH: </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
@@ -397,9 +776,31 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Image pushed to local registry&quot;</span><span class="p">)</span>
 
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Image </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2"> built successfully&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Image </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> built successfully&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">)</span></div>
 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_evaluator_source_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Short content hash of the evaluator sources on the manager.</span>
+
+<span class="sd">        Used as the image tag so a source change produces a new tag and</span>
+<span class="sd">        therefore a real rebuild, while an unchanged tree still hits the cache.</span>
+<span class="sd">        Falls back to &quot;latest&quot; if the hash cannot be computed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lib_dir</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;libs&quot;</span><span class="p">,</span> <span class="s2">&quot;graflag_evaluator&quot;</span>
+        <span class="p">)</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;find </span><span class="si">{</span><span class="n">lib_dir</span><span class="si">}</span><span class="s2"> -type f -name &#39;*.py&#39; -o -type f -name &#39;Dockerfile&#39; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-o -type f -name &#39;requirements.txt&#39; 2&gt;/dev/null &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;| sort | xargs cat 2&gt;/dev/null | sha256sum | cut -c1-12&quot;</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+        <span class="n">digest</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">digest</span><span class="p">)</span> <span class="o">==</span> <span class="mi">12</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">digest</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;[WARN] Could not hash evaluator sources; using &#39;latest&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;latest&quot;</span>
 
 <div class="viewcode-block" id="DockerManager.build_evaluator_image">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_evaluator_image">[docs]</a>
@@ -411,28 +812,37 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[BUILD] Building graflag-evaluator image...&quot;</span><span class="p">)</span>
 
-        <span class="n">local_image</span> <span class="o">=</span> <span class="s2">&quot;graflag-evaluator:latest&quot;</span>
-        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/graflag-evaluator:latest&quot;</span>
+        <span class="c1"># Tag by a hash of the evaluator source. The cache check below asks</span>
+        <span class="c1"># whether *this* content has been built, not merely whether some image</span>
+        <span class="c1"># called :latest exists -- which is why edits to graflag_evaluator</span>
+        <span class="c1"># never reached the cluster.</span>
+        <span class="n">tag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_evaluator_source_tag</span><span class="p">()</span>
+        <span class="n">local_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;graflag-evaluator:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/graflag-evaluator:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
 
-        <span class="c1"># Check if image exists in registry</span>
-        <span class="n">check_cmd</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;docker manifest inspect </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> &gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo &#39;exists&#39;&quot;</span>
+        <span class="c1"># Check if this exact content was already built</span>
+        <span class="n">check_cmd</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;docker manifest inspect </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;&gt; /dev/null 2&gt;&amp;1 &amp;&amp; echo &#39;exists&#39;&quot;</span>
+        <span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">check_cmd</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;exists&quot;</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Evaluator image already exists in registry&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Evaluator image </span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2"> already in registry&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">registry_image</span>
 
         <span class="c1"># Build</span>
         <span class="n">build_cmd</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;cd </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/libs/graflag_evaluator &amp;&amp; &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;docker build --network=host -t </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> -t </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2"> .&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;cd </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;libs&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;graflag_evaluator&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> &amp;&amp; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;docker build --network=host -t </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">local_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;-t </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> .&quot;</span>
         <span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">build_cmd</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build evaluator image: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1"># Push</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to push evaluator to registry: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -452,14 +862,22 @@
                        <span class="n">method_params</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create Docker service for experiment.&quot;&quot;&quot;</span>
         <span class="n">method_params</span> <span class="o">=</span> <span class="n">method_params</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="n">registry_image</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000/</span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="c1"># Read once, used twice: the image name depends on `IMAGE=` and the</span>
+        <span class="c1"># service environment on the rest of the same file. Fetching it here</span>
+        <span class="c1"># keeps this to one remote read per service rather than two.</span>
+        <span class="n">method_env</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+        <span class="n">registry_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_names</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">method_env</span><span class="o">=</span><span class="n">method_env</span><span class="p">)</span><span class="o">.</span><span class="n">registry</span>
 
         <span class="c1"># Save service config</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_save_service_config</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">gpu_required</span><span class="p">,</span>
-                                  <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">)</span>
+                                  <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">,</span>
+                                  <span class="n">method_env</span><span class="o">=</span><span class="n">method_env</span><span class="p">)</span>
 
         <span class="c1"># Build environment variables</span>
-        <span class="n">env_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_service_env</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">)</span>
+        <span class="n">env_vars</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_service_env</span><span class="p">(</span>
+            <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">,</span>
+            <span class="n">gpu_required</span><span class="o">=</span><span class="n">gpu_required</span><span class="p">,</span> <span class="n">method_env</span><span class="o">=</span><span class="n">method_env</span><span class="p">,</span>
+        <span class="p">)</span>
 
         <span class="c1"># Mount shared directory</span>
         <span class="n">shared_mount</span> <span class="o">=</span> <span class="n">Mount</span><span class="p">(</span>
@@ -475,7 +893,11 @@
                 <span class="n">generic_resources</span><span class="o">=</span><span class="p">[{</span>
                     <span class="s1">&#39;DiscreteResourceSpec&#39;</span><span class="p">:</span> <span class="p">{</span>
                         <span class="s1">&#39;Kind&#39;</span><span class="p">:</span> <span class="s1">&#39;NVIDIA-GPU&#39;</span><span class="p">,</span>
-                        <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="mi">0</span>
+                        <span class="c1"># Must be &gt;= 1. A value of 0 reserves nothing and adds no</span>
+                        <span class="c1"># placement constraint, so a &quot;GPU-enabled&quot; service could be</span>
+                        <span class="c1"># scheduled onto a CPU-only node and several jobs could land</span>
+                        <span class="c1"># on one GPU.</span>
+                        <span class="s1">&#39;Value&#39;</span><span class="p">:</span> <span class="mi">1</span>
                     <span class="p">}</span>
                 <span class="p">}]</span>
             <span class="p">)</span>
@@ -535,7 +957,17 @@
 <div class="viewcode-block" id="DockerManager.list_services">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.list_services">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_services</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all Docker services.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List all Docker services.</span>
+
+<span class="sd">        The whole listing is the retry unit, not the first call in it: the</span>
+<span class="sd">        drop usually lands on one of the per-service `tasks()` calls, and a</span>
+<span class="sd">        `svc` handed out by the old client keeps pointing at the old client,</span>
+<span class="sd">        so retrying just that call reuses the socket that already died.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_list_services_once</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_list_services_once</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">]:</span>
         <span class="n">services</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">svc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">list</span><span class="p">():</span>
             <span class="n">attrs</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">attrs</span>
@@ -553,19 +985,25 @@
             <span class="k">if</span> <span class="s1">&#39;@sha256:&#39;</span> <span class="ow">in</span> <span class="n">image</span><span class="p">:</span>
                 <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
-            <span class="c1"># Running task count</span>
-            <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;desired-state&#39;</span><span class="p">:</span> <span class="s1">&#39;running&#39;</span><span class="p">})</span>
-            <span class="n">running</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tasks</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">)</span>
+            <span class="c1"># Every task, not just the ones Swarm still wants running. The</span>
+            <span class="c1"># filter used to be `desired-state: running`, which excludes a</span>
+            <span class="c1"># task that has finished -- so a one-shot experiment service that</span>
+            <span class="c1"># ran to completion reported zero running tasks and fell through</span>
+            <span class="c1"># to &#39;pending&#39;. A finished run therefore sat in the dashboard&#39;s</span>
+            <span class="c1"># &quot;Running Services&quot; panel labelled as about to start, for as</span>
+            <span class="c1"># long as it took `cleanup` to sweep it.</span>
+            <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+            <span class="n">running</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tasks</span>
+                          <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;running&#39;</span><span class="p">)</span>
 
             <span class="n">services</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
                 <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Name&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
                 <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
                 <span class="s1">&#39;image&#39;</span><span class="p">:</span> <span class="n">image</span><span class="p">,</span>
                 <span class="s1">&#39;replicas&#39;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">running</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">desired</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">desired</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="n">desired</span><span class="p">,</span>
-                <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="s1">&#39;running&#39;</span> <span class="k">if</span> <span class="n">running</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s1">&#39;pending&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;status&#39;</span><span class="p">:</span> <span class="n">_service_status</span><span class="p">(</span><span class="n">running</span><span class="p">,</span> <span class="n">tasks</span><span class="p">),</span>
             <span class="p">})</span>
-        <span class="k">return</span> <span class="n">services</span></div>
-
+        <span class="k">return</span> <span class="n">services</span>
 
 <div class="viewcode-block" id="DockerManager.get_service_names">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.get_service_names">[docs]</a>
@@ -633,7 +1071,7 @@
             <span class="k">return</span> <span class="p">[]</span>
 
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;docker service logs --tail </span><span class="si">{</span><span class="n">tail</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s2"> 2&gt;&amp;1&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;docker service logs --tail </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span><span class="si">}</span><span class="s2"> 2&gt;&amp;1&quot;</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
             <span class="k">return</span> <span class="p">[</span><span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
@@ -642,11 +1080,20 @@
 
 <div class="viewcode-block" id="DockerManager.follow_service_logs">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.follow_service_logs">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">follow_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Follow service logs in real-time until task finishes.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">follow_service_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">on_line</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Follow service logs in real-time until the task finishes.</span>
 
 <span class="sd">        Uses SSH + Docker CLI subprocess because the Docker SDK&#39;s</span>
 <span class="sd">        follow mode does not stream reliably for swarm services.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            on_line: Optional callback receiving each streamed log line. When</span>
+<span class="sd">                given, output is read here and forwarded rather than inherited,</span>
+<span class="sd">                so callers can capture what the user sees.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The terminal task state (&#39;complete&#39;, &#39;failed&#39;, ...), or None if</span>
+<span class="sd">            the wait ended without observing one.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">_time</span>
 
@@ -662,11 +1109,43 @@
         <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
             <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">),</span>
             <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;StrictHostKeyChecking=no&#39;</span><span class="p">,</span>
+            <span class="c1"># -tt forces a TTY, which is what makes the *remote* command die</span>
+            <span class="c1"># with the connection. Without it sshd sends no SIGHUP, so killing</span>
+            <span class="c1"># the local ssh client leaves `docker service logs -f` running on</span>
+            <span class="c1"># the manager forever: 158 of them were alive there, the oldest 22</span>
+            <span class="c1"># hours old, every one following a service that no longer existed.</span>
+            <span class="c1"># _die_with_parent only ever covered the local half of that.</span>
+            <span class="c1">#</span>
+            <span class="c1"># The cost is CRLF on the stream, stripped in _pump below.</span>
+            <span class="s1">&#39;-tt&#39;</span><span class="p">,</span>
             <span class="sa">f</span><span class="s1">&#39;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s1">&#39;docker service logs -f </span><span class="si">{</span><span class="n">service_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s1">&#39;docker service logs -f </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
         <span class="p">])</span>
 
-        <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">ssh_args</span><span class="p">)</span>
+        <span class="c1"># When the caller wants the stream captured, read it here and forward</span>
+        <span class="c1"># it. Previously this inherited stdout, so --tee wrote a file holding</span>
+        <span class="c1"># only the build log -- or an empty one when --build was not used.</span>
+        <span class="k">if</span> <span class="n">on_line</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">ssh_args</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">)</span>
+            <span class="n">reader</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+                <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
+                <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">,</span> <span class="n">bufsize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">_pump</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="p">:</span>
+                    <span class="c1"># -tt gives the remote command a TTY, so lines arrive</span>
+                    <span class="c1"># CRLF-terminated. Left alone, every captured log line in</span>
+                    <span class="c1"># method_output.txt would carry a trailing \r.</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\r</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">on_line</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">))</span>
+
+            <span class="n">reader</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">_pump</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">reader</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
         <span class="k">try</span><span class="p">:</span>
             <span class="c1"># Poll task state until it finishes</span>
@@ -684,11 +1163,15 @@
                         <span class="n">_time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># Let final logs flush</span>
                         <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
                         <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-                        <span class="k">return</span>
+                        <span class="c1"># Returned so callers can tell a clean finish from a</span>
+                        <span class="c1"># crash; this used to return None either way, which is</span>
+                        <span class="c1"># why `graflag evaluate` reported success regardless.</span>
+                        <span class="k">return</span> <span class="n">state</span>
         <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
             <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
             <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[INFO] Log following interrupted&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="n">proc</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
             <span class="n">proc</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
@@ -709,7 +1192,14 @@
 <div class="viewcode-block" id="DockerManager.is_service_failed">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.is_service_failed">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">is_service_failed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">service_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if a service exists but all its tasks have failed.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;True when the service exists and no task reached a good end state.</span>
+
+<span class="sd">        Observed terminal states for a restart_policy=none service are</span>
+<span class="sd">        `complete` on success and `failed` on error; `shutdown` and `orphaned`</span>
+<span class="sd">        mean the task was stopped or its node went away, which is not a method</span>
+<span class="sd">        failure but is not success either. This is only consulted when</span>
+<span class="sd">        status.json is absent or unreadable -- the runner&#39;s own status wins.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span>
             <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
@@ -747,9 +1237,21 @@
     <span class="c1"># Internal</span>
     <span class="c1"># ========================================================================</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_build_service_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build environment variable list for service.&quot;&quot;&quot;</span>
-        <span class="n">method_env</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_service_env</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_params</span><span class="p">,</span>
+                           <span class="n">gpu_required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                           <span class="n">method_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build environment variable list for service.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            gpu_required: False when the service is scheduled without a GPU.</span>
+<span class="sd">                Used to switch the method&#39;s own `_GPU` index to the CPU</span>
+<span class="sd">                sentinel, since the two were otherwise independent.</span>
+<span class="sd">            method_env: The method&#39;s parsed `.env`, when the caller has it.</span>
+<span class="sd">                Omitted, it is read from the manager.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">method_env</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">method_env</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
 
         <span class="c1"># Build env dict (method .env values as base)</span>
         <span class="n">env_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">method_env</span><span class="p">)</span>
@@ -766,17 +1268,57 @@
                 <span class="n">env_dict</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;   Setting parameter: _</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
+        <span class="c1"># --no-gpu only removes the Swarm resource reservation; the method&#39;s</span>
+        <span class="c1"># own `_GPU` index comes from its .env, so a service scheduled without</span>
+        <span class="c1"># a GPU could still be told to use cuda:0.</span>
+        <span class="c1">#</span>
+        <span class="c1"># `-1 means CPU` is PyGOD&#39;s documented contract, which GraFlag adopted</span>
+        <span class="c1"># for every method: graflag_runner.method.device() implements it, and</span>
+        <span class="c1"># methods that build their own device string guard on `&gt;= 0` first.</span>
+        <span class="c1"># test_methods.py::GpuConvention checks that on the whole tree, which</span>
+        <span class="c1"># is what lets this apply to all 27 rather than to the 17 bond methods</span>
+        <span class="c1"># it was first limited to. An explicit --params GPU=... always wins.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">gpu_required</span>
+                <span class="ow">and</span> <span class="s2">&quot;_GPU&quot;</span> <span class="ow">in</span> <span class="n">env_dict</span> <span class="ow">and</span> <span class="s2">&quot;GPU&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">method_params</span>
+                <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">env_dict</span><span class="p">[</span><span class="s2">&quot;_GPU&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">&quot;-1&quot;</span><span class="p">):</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;   Setting parameter: _GPU=-1 (running without a GPU)&quot;</span><span class="p">)</span>
+            <span class="n">env_dict</span><span class="p">[</span><span class="s2">&quot;_GPU&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-1&quot;</span>
+
+        <span class="c1"># Say which `_FOO` variables are parameters. The method side cannot</span>
+        <span class="c1"># work that out from the environment alone -- a shell exports `_`,</span>
+        <span class="c1"># zsh exports `_P9K_TTY`, conda exports `_CE_CONDA` -- so without</span>
+        <span class="c1"># this, anything running outside a container reads those as method</span>
+        <span class="c1"># parameters and records them in results.json. graflag_runner reads</span>
+        <span class="c1"># it in method.injected_params() and falls back to a full scan when</span>
+        <span class="c1"># it is absent, so older images are unaffected.</span>
+        <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;GRAFLAG_PARAMS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="nb">sorted</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">env_dict</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)))</span>
+
         <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">env_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_service_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span>
-                             <span class="n">gpu_required</span><span class="p">,</span> <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service configuration to JSON.&quot;&quot;&quot;</span>
-        <span class="n">env_contents</span> <span class="o">=</span> <span class="n">load_method_env</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
+                             <span class="n">gpu_required</span><span class="p">,</span> <span class="n">method_params</span><span class="p">,</span> <span class="n">registry_image</span><span class="p">,</span>
+                             <span class="n">method_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service configuration to JSON.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            method_env: The method&#39;s parsed `.env`, when the caller has it.</span>
+<span class="sd">                Omitted, it is read from the manager. A copy is taken either</span>
+<span class="sd">                way: the recorded config layers the user&#39;s params over the</span>
+<span class="sd">                defaults, and the caller&#39;s dict is the same one the service</span>
+<span class="sd">                environment is built from.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">env_contents</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">method_env</span><span class="p">)</span> <span class="k">if</span> <span class="n">method_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">load_method_env</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">method_name</span><span class="p">)</span>
 
         <span class="n">reserved</span> <span class="o">=</span> <span class="n">ReservedEnvVars</span><span class="o">.</span><span class="n">get_names</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">method_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">reserved</span><span class="p">:</span>
-                <span class="n">env_contents</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="c1"># Same &quot;_&quot; prefix the service actually runs with. Recording the</span>
+                <span class="c1"># bare key left the method default in place under &quot;_KEY&quot;, and</span>
+                <span class="c1"># `run --from-config` (which only reads &quot;_&quot;-prefixed keys) then</span>
+                <span class="c1"># silently replayed the default instead of the user&#39;s value.</span>
+                <span class="n">env_contents</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
         <span class="n">service_config</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;experiment_name&quot;</span><span class="p">:</span> <span class="n">exp_name</span><span class="p">,</span>
@@ -792,7 +1334,9 @@
             <span class="s2">&quot;env_contents&quot;</span><span class="p">:</span> <span class="n">env_contents</span><span class="p">,</span>
         <span class="p">}</span>
 
-        <span class="n">config_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/service_config.json&quot;</span>
+        <span class="n">config_file</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;experiments&quot;</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="s2">&quot;service_config.json&quot;</span>
+        <span class="p">)</span>
         <span class="n">config_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">service_config</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">config_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved service configuration to </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -822,7 +1366,9 @@
                     <span class="s2">&quot;desired_state&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DesiredState&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
                 <span class="p">}</span>
 
-            <span class="n">details_file</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/service_details.json&quot;</span>
+            <span class="n">details_file</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;experiments&quot;</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="s2">&quot;service_details.json&quot;</span>
+            <span class="p">)</span>
             <span class="n">details_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">details_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">details_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved service details to </span><span class="si">{</span><span class="n">details_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>

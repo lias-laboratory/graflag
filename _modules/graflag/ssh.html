@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.ssh &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.ssh &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -45,6 +45,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -55,14 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -92,6 +96,7 @@
   <h1>Source code for graflag.ssh</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;SSH operations for GraFlag.&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span>
@@ -100,60 +105,110 @@
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
 
+<div class="viewcode-block" id="remote_path">
+<a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.remote_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remote_path</span><span class="p">(</span><span class="o">*</span><span class="n">parts</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Join path components and quote the result for the remote shell.</span>
+
+<span class="sd">    Every remote command is a string interpreted by the manager&#39;s shell, so</span>
+<span class="sd">    any component that comes from user input (experiment name, method name,</span>
+<span class="sd">    dataset) must be quoted before interpolation. Use this for paths and</span>
+<span class="sd">    :func:`shlex.quote` for bare values.</span>
+
+<span class="sd">    Separators are collapsed only at the join boundaries -- the content of a</span>
+<span class="sd">    component is never altered, so a name that happens to contain ``/`` stays</span>
+<span class="sd">    intact (and quoted) rather than being silently rewritten.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cleaned</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">last</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parts</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">last</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">p</span><span class="p">:</span>
+            <span class="n">cleaned</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cleaned</span><span class="p">))</span></div>
+
+
+
 <div class="viewcode-block" id="SSHManager">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">SSHManager</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle SSH operations to remote manager.&quot;&quot;&quot;</span>
-    
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager_ip</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ssh_port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;22&quot;</span><span class="p">,</span> <span class="n">ssh_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize SSH manager.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span> <span class="o">=</span> <span class="n">manager_ip</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span> <span class="o">=</span> <span class="n">ssh_port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span> <span class="o">=</span> <span class="n">ssh_key</span>
-    
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_ssh_args</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build the ssh argv prefix shared by execute() and log following.&quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ssh&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
+            <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-i&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+            <span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">),</span>
+            <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="p">])</span>
+        <span class="k">return</span> <span class="n">args</span>
+
 <div class="viewcode-block" id="SSHManager.execute">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager.execute">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">capture_output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CompletedProcess</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute command on manager via SSH.&quot;&quot;&quot;</span>
-        <span class="n">ssh_cmd</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;ssh -i </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="si">}</span><span class="s2"> -p </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="si">}</span><span class="s2"> -o StrictHostKeyChecking=no root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing SSH command: </span><span class="si">{</span><span class="n">ssh_cmd</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute command on manager via SSH.</span>
+
+<span class="sd">        The command is passed to ssh as a single argv element, so no local</span>
+<span class="sd">        shell ever parses it. This keeps quoting, heredocs and newlines in</span>
+<span class="sd">        ``command`` intact -- the manager&#39;s shell sees exactly what was built</span>
+<span class="sd">        here. Callers are still responsible for quoting values they</span>
+<span class="sd">        interpolate (see :func:`remote_path`), because the *remote* shell does</span>
+<span class="sd">        parse the string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ssh_args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ssh_args</span><span class="p">()</span> <span class="o">+</span> <span class="p">[</span><span class="n">command</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing SSH command: </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-            <span class="n">ssh_cmd</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="n">capture_output</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">ssh_args</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="n">capture_output</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span>
         <span class="p">)</span></div>
 
-    
+
 <div class="viewcode-block" id="SSHManager.path_exists">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager.path_exists">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">path_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if path exists on remote manager.&quot;&quot;&quot;</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;test -e </span><span class="si">{</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;test -e </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span></div>
 
-    
+
 <div class="viewcode-block" id="SSHManager.read_file">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager.read_file">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">read_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Read file content from remote manager.&quot;&quot;&quot;</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat </span><span class="si">{</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span>
         <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
 
-    
+
 <div class="viewcode-block" id="SSHManager.mkdir">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager.mkdir">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create directory on remote manager.&quot;&quot;&quot;</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span></div>
 
-    
+
 <div class="viewcode-block" id="SSHManager.list_dir">
 <a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager.list_dir">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">list_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;List directory contents on remote manager.&quot;&quot;&quot;</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ls -1 </span><span class="si">{</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null || true&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;ls -1 </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null || true&quot;</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
             <span class="k">return</span> <span class="p">[</span>
                 <span class="n">item</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
@@ -172,7 +227,7 @@
 <span class="sd">        Args:</span>
 <span class="sd">            source_paths: Source path(s) - can be single string or list</span>
 <span class="sd">            dest_path: Destination path</span>
-<span class="sd">            recursive: Include recursive flag (automatically added for directories)</span>
+<span class="sd">            recursive: Accepted for compatibility; rsync -a always recurses</span>
 <span class="sd">            from_remote: If True, copy from remote to local; if False (default), copy from local to remote</span>
 <span class="sd">        </span>
 <span class="sd">        Returns:</span>
@@ -202,11 +257,16 @@
         
         <span class="c1"># Ensure remote destination directory exists</span>
         <span class="n">parent_dir</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">remote_dest</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">parent_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Copying </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">local_paths</span><span class="p">)</span><span class="si">}</span><span class="s2"> item(s) to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
-        <span class="c1"># Build rsync command - more robust than scp</span>
+        <span class="c1"># Build rsync command - more robust than scp.</span>
+        <span class="c1"># -a implies -r, so recursion is always on and the `recursive`</span>
+        <span class="c1"># argument has no effect. Left that way deliberately: rsync without</span>
+        <span class="c1"># -r skips directories *silently* and still exits 0, so honouring the</span>
+        <span class="c1"># flag would turn a harmless no-op into a copy that quietly does</span>
+        <span class="c1"># nothing. The CLI help documents recursion as automatic instead.</span>
         <span class="n">rsync_parts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;rsync&quot;</span><span class="p">,</span> <span class="s2">&quot;-avz&quot;</span><span class="p">,</span> <span class="s2">&quot;--progress&quot;</span><span class="p">,</span> <span class="s2">&quot;--force&quot;</span><span class="p">]</span>
         
         <span class="c1"># SSH options</span>
@@ -221,9 +281,15 @@
         
         <span class="n">rsync_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ssh </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ssh_opts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
         
-        <span class="c1"># Add all source paths</span>
-        <span class="k">for</span> <span class="n">local_path_obj</span> <span class="ow">in</span> <span class="n">local_path_objs</span><span class="p">:</span>
-            <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">local_path_obj</span><span class="p">))</span>
+        <span class="c1"># Add all source paths. rsync&#39;s trailing slash is load-bearing:</span>
+        <span class="c1"># &quot;src/&quot; copies the *contents* of src into dest, &quot;src&quot; copies src</span>
+        <span class="c1"># itself as a child of dest. Path() normalises that slash away, so</span>
+        <span class="c1"># sync()&#39;s f&quot;{local_dir}/&quot; silently became a copy into</span>
+        <span class="c1"># methods/&lt;name&gt;/&lt;name&gt;/ -- a directory nothing reads -- and still</span>
+        <span class="c1"># reported [OK]. Validate through Path, transmit the caller&#39;s spelling.</span>
+        <span class="k">for</span> <span class="n">original</span><span class="p">,</span> <span class="n">local_path_obj</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">local_paths</span><span class="p">,</span> <span class="n">local_path_objs</span><span class="p">):</span>
+            <span class="n">trailing</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">original</span><span class="p">)</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;/.&quot;</span><span class="p">))</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">local_path_obj</span><span class="p">)</span> <span class="o">+</span> <span class="n">trailing</span><span class="p">)</span>
         
         <span class="c1"># Add destination</span>
         <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>

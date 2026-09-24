@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Dashboard &mdash; GraFlag 1.0.0 documentation</title>
+  <title>Web Dashboard &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -53,6 +53,18 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -63,14 +75,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -106,6 +110,20 @@
 </pre></div>
 </div>
 <p>Default: <code class="docutils literal notranslate"><span class="pre">http://0.0.0.0:5000</span></code></p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code class="docutils literal notranslate"><span class="pre">0.0.0.0</span></code> binds every interface, so the dashboard is reachable from any
+host that can route to the machine. The dashboard has <strong>no authentication</strong>,
+and every action it exposes – running experiments, deleting experiment
+directories, reading files – is carried out on the swarm manager as
+<code class="docutils literal notranslate"><span class="pre">root</span></code>. Run it on a trusted network, or bind it explicitly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span> <span class="o">--</span><span class="n">host</span> <span class="mf">127.0.0.1</span>
+</pre></div>
+</div>
+<p>Experiment, method and dataset names arriving over HTTP are validated
+against <code class="docutils literal notranslate"><span class="pre">^[A-Za-z0-9._-]{1,200}$</span></code> before they reach any remote command,
+but that guard is not a substitute for network isolation.</p>
+</div>
 </section>
 <section id="features">
 <h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
@@ -113,8 +131,17 @@
 <li><p><strong>Cluster status</strong> – connection and Swarm health in the navbar</p></li>
 <li><p><strong>Methods and datasets</strong> – browse available resources with pagination</p></li>
 <li><p><strong>Run experiments</strong> – select method, dataset, parameters, and deploy</p></li>
-<li><p><strong>Real-time logs</strong> – live log streaming via WebSocket</p></li>
-<li><p><strong>Evaluation viewer</strong> – metrics display and plot gallery with lightbox</p></li>
+<li><p><strong>Live updates</strong> – the experiment and service lists are pushed over a
+WebSocket (<code class="docutils literal notranslate"><span class="pre">update</span></code> events) as the background poller notices changes</p></li>
+<li><p><strong>Logs</strong> – fetched over HTTP from <code class="docutils literal notranslate"><span class="pre">/api/experiments/&lt;name&gt;/logs?tail=200</span></code>:
+every two seconds while the output keeps changing, backing off to thirty
+seconds when it goes quiet, and not at all once the run has finished. They
+are polled, not streamed, and only the last 200 lines are shown (the last
+1000 in the Run form’s live view); use <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">logs</span> <span class="pre">-e</span> <span class="pre">EXP</span> <span class="pre">-f</span></code> for a true
+stream</p></li>
+<li><p><strong>Evaluation viewer</strong> – the scalar metrics (counts as integers, with the
+number of samples the evaluator excluded when there are any) and every plot
+in a grid, each opening full size in a lightbox</p></li>
 <li><p><strong>Notifications</strong> – browser notifications for experiment status changes</p></li>
 <li><p><strong>Dark/light theme</strong></p></li>
 </ul>
@@ -154,26 +181,38 @@
 <td><p>Evaluation metrics</p></td>
 </tr>
 <tr class="row-even"><td><p>GET</p></td>
-<td><p>/api/experiments/&lt;name&gt;/logs</p></td>
-<td><p>Experiment logs</p></td>
+<td><p>/api/experiments/&lt;name&gt;</p></td>
+<td><p>Experiment details</p></td>
 </tr>
 <tr class="row-odd"><td><p>GET</p></td>
+<td><p>/api/experiments/&lt;name&gt;/logs</p></td>
+<td><p>Experiment logs (last <code class="docutils literal notranslate"><span class="pre">tail</span></code> lines, default 100)</p></td>
+</tr>
+<tr class="row-even"><td><p>GET</p></td>
+<td><p>/api/experiments/&lt;name&gt;/plot/&lt;plot_name&gt;</p></td>
+<td><p>Evaluation plot image</p></td>
+</tr>
+<tr class="row-odd"><td><p>GET</p></td>
+<td><p>/api/methods/&lt;method_name&gt;</p></td>
+<td><p>Method details</p></td>
+</tr>
+<tr class="row-even"><td><p>GET</p></td>
 <td><p>/api/services</p></td>
 <td><p>Running services</p></td>
 </tr>
-<tr class="row-even"><td><p>POST</p></td>
+<tr class="row-odd"><td><p>POST</p></td>
 <td><p>/api/run</p></td>
 <td><p>Run experiment</p></td>
 </tr>
-<tr class="row-odd"><td><p>POST</p></td>
+<tr class="row-even"><td><p>POST</p></td>
 <td><p>/api/experiments/&lt;name&gt;/evaluate</p></td>
 <td><p>Evaluate experiment</p></td>
 </tr>
-<tr class="row-even"><td><p>POST</p></td>
+<tr class="row-odd"><td><p>POST</p></td>
 <td><p>/api/experiments/&lt;name&gt;/stop</p></td>
 <td><p>Stop experiment</p></td>
 </tr>
-<tr class="row-odd"><td><p>POST</p></td>
+<tr class="row-even"><td><p>POST</p></td>
 <td><p>/api/experiments/&lt;name&gt;/delete</p></td>
 <td><p>Delete experiment</p></td>
 </tr>

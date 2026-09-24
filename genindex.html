@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; GraFlag 1.0.0 documentation</title>
+  <title>Index &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -45,6 +45,18 @@
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -55,14 +67,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -92,7 +96,8 @@
 <h1 id="index">Index</h1>
 
 <div class="genindex-jumpbox">
- <a href="#B"><strong>B</strong></a>
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
@@ -100,9 +105,11 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
@@ -110,14 +117,26 @@
  | <a href="#W"><strong>W</strong></a>
  
 </div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/models.html#graflag.models.ClearReport.applied">applied (graflag.models.ClearReport attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.BUILD_ARG_KEYS">BUILD_ARG_KEYS (in module graflag.docker_ops)</a>
+</li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.build_evaluator_image">build_evaluator_image() (graflag.docker_ops.DockerManager method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.build_method_image">build_method_image() (graflag.docker_ops.DockerManager method)</a>
+</li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.BuildFailed">BuildFailed</a>
 </li>
   </ul></td>
 </tr></table>
@@ -127,18 +146,38 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.cleanup_finished_service">cleanup_finished_service() (graflag.docker_ops.DockerManager method)</a>
 </li>
+      <li><a href="api/api_module.html#graflag.api.GraFlagAPI.cleanup_services">cleanup_services() (graflag.api.GraFlagAPI method)</a>
+
+      <ul>
+        <li><a href="api/core.html#graflag.core.GraFlag.cleanup_services">(graflag.core.GraFlag method)</a>
+</li>
+        <li><a href="api/graflag.html#graflag.GraFlag.cleanup_services">(graflag.GraFlag method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/api_module.html#graflag.api.GraFlagAPI.clear">clear() (graflag.api.GraFlagAPI method)</a>
+
+      <ul>
+        <li><a href="api/core.html#graflag.core.GraFlag.clear">(graflag.core.GraFlag method)</a>
+</li>
+        <li><a href="api/graflag.html#graflag.GraFlag.clear">(graflag.GraFlag method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/models.html#graflag.models.ClearItem">ClearItem (class in graflag.models)</a>
+</li>
+      <li><a href="api/models.html#graflag.models.ClearReport">ClearReport (class in graflag.models)</a>
+</li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.client">client (graflag.docker_ops.DockerManager property)</a>
 </li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.close">close() (graflag.docker_ops.DockerManager method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.ClusterInfo">ClusterInfo (class in graflag)</a>
 
       <ul>
         <li><a href="api/models.html#graflag.models.ClusterInfo">(class in graflag.models)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.COMMAND">COMMAND (graflag.docker_ops.ReservedEnvVars attribute)</a>
 </li>
       <li><a href="api/core.html#graflag.core.GraFlag.copy_files">copy_files() (graflag.core.GraFlag method)</a>
@@ -147,6 +186,14 @@
         <li><a href="api/graflag.html#graflag.GraFlag.copy_files">(graflag.GraFlag method)</a>
 </li>
         <li><a href="api/ssh.html#graflag.ssh.SSHManager.copy_files">(graflag.ssh.SSHManager method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/api_module.html#graflag.api.GraFlagAPI.count_experiments">count_experiments() (graflag.api.GraFlagAPI method)</a>
+
+      <ul>
+        <li><a href="api/core.html#graflag.core.GraFlag.count_experiments">(graflag.core.GraFlag method)</a>
+</li>
+        <li><a href="api/graflag.html#graflag.GraFlag.count_experiments">(graflag.GraFlag method)</a>
 </li>
       </ul></li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.create_evaluation_service">create_evaluation_service() (graflag.docker_ops.DockerManager method)</a>
@@ -187,6 +234,8 @@
         <li><a href="api/models.html#graflag.models.MethodInfo.description">(graflag.models.MethodInfo attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ImageNames.dockerfile">dockerfile (graflag.docker_ops.ImageNames attribute)</a>
+</li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager">DockerManager (class in graflag.docker_ops)</a>
 </li>
       <li><a href="api/api_module.html#graflag.api.GraFlagAPI.download_directory">download_directory() (graflag.api.GraFlagAPI method)</a>
@@ -205,6 +254,8 @@
         <li><a href="api/models.html#graflag.models.ClusterInfo.error">(graflag.models.ClusterInfo attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/models.html#graflag.models.ClearReport.errors">errors (graflag.models.ClearReport attribute)</a>
+</li>
       <li><a href="api/core.html#graflag.core.GraFlag.evaluate">evaluate() (graflag.core.GraFlag method)</a>
 
       <ul>
@@ -231,16 +282,22 @@
       </ul></li>
       <li><a href="api/ssh.html#graflag.ssh.SSHManager.execute">execute() (graflag.ssh.SSHManager method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.ExperimentResults.execution_time_ms">execution_time_ms (graflag.ExperimentResults attribute)</a>
 
       <ul>
         <li><a href="api/models.html#graflag.models.ExperimentResults.execution_time_ms">(graflag.models.ExperimentResults attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.EXP">EXP (graflag.docker_ops.ReservedEnvVars attribute)</a>
 </li>
+      <li><a href="api/models.html#graflag.models.ServiceCleanupResult.experiment">experiment (graflag.models.ServiceCleanupResult attribute)</a>
+
+      <ul>
+        <li><a href="api/graflag.html#graflag.ServiceCleanupResult.experiment">(graflag.ServiceCleanupResult attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api/graflag.html#graflag.EvaluationResults.experiment_name">experiment_name (graflag.EvaluationResults attribute)</a>
 
       <ul>
@@ -279,15 +336,17 @@
         <li><a href="api/models.html#graflag.models.DatasetInfo.file_count">(graflag.models.DatasetInfo attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/core.html#graflag.core.GraFlag.follow_logs">follow_logs() (graflag.core.GraFlag method)</a>
 
       <ul>
         <li><a href="api/graflag.html#graflag.GraFlag.follow_logs">(graflag.GraFlag method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.follow_service_logs">follow_service_logs() (graflag.docker_ops.DockerManager method)</a>
+</li>
+      <li><a href="api/models.html#graflag.models.ClearReport.freed_bytes">freed_bytes (graflag.models.ClearReport attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -343,8 +402,6 @@
 </li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.get_service_names">get_service_names() (graflag.docker_ops.DockerManager method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.get_swarm_token">get_swarm_token() (graflag.docker_ops.DockerManager method)</a>
 </li>
       <li>
@@ -354,6 +411,8 @@
         <li><a href="api/graflag.html#module-graflag">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.GraFlag">GraFlag (class in graflag)</a>
 
       <ul>
@@ -402,6 +461,16 @@
         <li><a href="api/ssh.html#module-graflag.ssh">module</a>
 </li>
       </ul></li>
+      <li><a href="api/config.html#graflag.config.GraflagConfig.graflag_libs">graflag_libs (graflag.config.GraflagConfig property)</a>
+
+      <ul>
+        <li><a href="api/graflag.html#graflag.GraflagConfig.graflag_libs">(graflag.GraflagConfig property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.GRAFLAG_LIBS_CHOICES">GRAFLAG_LIBS_CHOICES (in module graflag.docker_ops)</a>
+</li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.GRAFLAG_PARAMS">GRAFLAG_PARAMS (graflag.docker_ops.ReservedEnvVars attribute)</a>
+</li>
       <li><a href="api/api_module.html#graflag.api.GraFlagAPI">GraFlagAPI (class in graflag.api)</a>
 </li>
       <li><a href="api/graflag.html#graflag.GraflagConfig">GraflagConfig (class in graflag)</a>
@@ -456,17 +525,43 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/graflag.html#graflag.MethodInfo.image">image (graflag.MethodInfo attribute)</a>
+
+      <ul>
+        <li><a href="api/models.html#graflag.models.MethodInfo.image">(graflag.models.MethodInfo attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.IMAGE_NAME">IMAGE_NAME (in module graflag.docker_ops)</a>
+</li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ImageNames">ImageNames (class in graflag.docker_ops)</a>
+</li>
       <li><a href="api/config.html#graflag.config.init_config">init_config() (in module graflag.config)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/graflag.html#graflag.MethodInfo.integration">integration (graflag.MethodInfo attribute)</a>
+
+      <ul>
+        <li><a href="api/models.html#graflag.models.MethodInfo.integration">(graflag.models.MethodInfo attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api/graflag.html#graflag.ClusterInfo.is_connected">is_connected (graflag.ClusterInfo attribute)</a>
 
       <ul>
         <li><a href="api/models.html#graflag.models.ClusterInfo.is_connected">(graflag.models.ClusterInfo attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.is_service_failed">is_service_failed() (graflag.docker_ops.DockerManager method)</a>
+</li>
+      <li><a href="api/models.html#graflag.models.ClearReport.items">items (graflag.models.ClearReport attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/models.html#graflag.models.ClearItem.kind">kind (graflag.models.ClearItem attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -512,6 +607,8 @@
         <li><a href="api/graflag.html#graflag.GraFlag.list_services">(graflag.GraFlag method)</a>
 </li>
       </ul></li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ImageNames.local">local (graflag.docker_ops.ImageNames attribute)</a>
+</li>
       <li><a href="api/models.html#graflag.models.RunProgress.log_lines">log_lines (graflag.models.RunProgress attribute)</a>
 
       <ul>
@@ -524,6 +621,12 @@
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/core.html#graflag.core.GraFlag.make_experiment_name">make_experiment_name() (graflag.core.GraFlag static method)</a>
+
+      <ul>
+        <li><a href="api/graflag.html#graflag.GraFlag.make_experiment_name">(graflag.GraFlag static method)</a>
+</li>
+      </ul></li>
       <li><a href="api/graflag.html#graflag.ClusterInfo.manager_ip">manager_ip (graflag.ClusterInfo attribute)</a>
 
       <ul>
@@ -560,14 +663,14 @@
         <li><a href="api/models.html#graflag.models.ExperimentResults.method_name">(graflag.models.ExperimentResults attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.MethodInfo">MethodInfo (class in graflag)</a>
 
       <ul>
         <li><a href="api/models.html#graflag.models.MethodInfo">(class in graflag.models)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.EvaluationResults.metrics">metrics (graflag.EvaluationResults attribute)</a>
 
       <ul>
@@ -616,6 +719,8 @@
 </li>
         <li><a href="api/graflag.html#graflag.MethodInfo.name">(graflag.MethodInfo attribute)</a>
 </li>
+        <li><a href="api/models.html#graflag.models.ClearItem.name">(graflag.models.ClearItem attribute)</a>
+</li>
         <li><a href="api/models.html#graflag.models.DatasetInfo.name">(graflag.models.DatasetInfo attribute)</a>
 </li>
         <li><a href="api/models.html#graflag.models.ExperimentInfo.name">(graflag.models.ExperimentInfo attribute)</a>
@@ -631,6 +736,22 @@
         <li><a href="api/graflag.html#graflag.GraflagConfig.nfs_port">(graflag.GraflagConfig property)</a>
 </li>
       </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/core.html#graflag.core.GraFlag.OWNED_DIRS">OWNED_DIRS (graflag.core.GraFlag attribute)</a>
+
+      <ul>
+        <li><a href="api/graflag.html#graflag.GraFlag.OWNED_DIRS">(graflag.GraFlag attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ImageNames.owner">owner (graflag.docker_ops.ImageNames attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -679,12 +800,26 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/ssh.html#graflag.ssh.SSHManager.read_file">read_file() (graflag.ssh.SSHManager method)</a>
 </li>
+      <li><a href="api/models.html#graflag.models.ClearItem.reason">reason (graflag.models.ClearItem attribute)</a>
+
+      <ul>
+        <li><a href="api/models.html#graflag.models.ServiceCleanupResult.reason">(graflag.models.ServiceCleanupResult attribute)</a>
+</li>
+        <li><a href="api/graflag.html#graflag.ServiceCleanupResult.reason">(graflag.ServiceCleanupResult attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api/core.html#graflag.core.GraFlag.register_metric">register_metric() (graflag.core.GraFlag method)</a>
 
       <ul>
         <li><a href="api/graflag.html#graflag.GraFlag.register_metric">(graflag.GraFlag method)</a>
 </li>
       </ul></li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ImageNames.registry">registry (graflag.docker_ops.ImageNames attribute)</a>
+</li>
+      <li><a href="api/models.html#graflag.models.ClearReport.registry_collected">registry_collected (graflag.models.ClearReport attribute)</a>
+</li>
+      <li><a href="api/ssh.html#graflag.ssh.remote_path">remote_path() (in module graflag.ssh)</a>
+</li>
       <li><a href="api/config.html#graflag.config.GraflagConfig.remote_shared_dir">remote_shared_dir (graflag.config.GraflagConfig property)</a>
 
       <ul>
@@ -693,6 +828,18 @@
       </ul></li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.remove_evaluation_service">remove_evaluation_service() (graflag.docker_ops.DockerManager method)</a>
 </li>
+      <li><a href="api/models.html#graflag.models.ClearItem.removed">removed (graflag.models.ClearItem attribute)</a>
+
+      <ul>
+        <li><a href="api/models.html#graflag.models.ClearReport.removed">(graflag.models.ClearReport property)</a>
+</li>
+        <li><a href="api/models.html#graflag.models.ServiceCleanupResult.removed">(graflag.models.ServiceCleanupResult attribute)</a>
+</li>
+        <li><a href="api/graflag.html#graflag.ServiceCleanupResult.removed">(graflag.ServiceCleanupResult attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/docker_ops.html#graflag.docker_ops.ReservedEnvVars">ReservedEnvVars (class in graflag.docker_ops)</a>
 </li>
       <li><a href="api/graflag.html#graflag.ExperimentResults.result_type">result_type (graflag.ExperimentResults attribute)</a>
@@ -701,8 +848,6 @@
         <li><a href="api/models.html#graflag.models.ExperimentResults.result_type">(graflag.models.ExperimentResults attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.ExperimentInfo.results_path">results_path (graflag.ExperimentInfo attribute)</a>
 
       <ul>
@@ -743,6 +888,12 @@
         <li><a href="api/models.html#graflag.models.ExperimentInfo.service_name">(graflag.models.ExperimentInfo attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/graflag.html#graflag.ServiceCleanupResult">ServiceCleanupResult (class in graflag)</a>
+
+      <ul>
+        <li><a href="api/models.html#graflag.models.ServiceCleanupResult">(class in graflag.models)</a>
+</li>
+      </ul></li>
       <li><a href="api/graflag.html#graflag.ClusterInfo.services">services (graflag.ClusterInfo attribute)</a>
 
       <ul>
@@ -763,6 +914,8 @@
 </li>
       <li><a href="api/docker_ops.html#graflag.docker_ops.DockerManager.setup_workers">setup_workers() (graflag.docker_ops.DockerManager method)</a>
 </li>
+      <li><a href="api/docker_ops.html#graflag.docker_ops.ImageNames.shared">shared (graflag.docker_ops.ImageNames attribute)</a>
+</li>
       <li><a href="api/graflag.html#graflag.ClusterInfo.shared_contents">shared_contents (graflag.ClusterInfo attribute)</a>
 
       <ul>
@@ -781,20 +934,22 @@
         <li><a href="api/graflag.html#graflag.GraFlag.show_logs">(graflag.GraFlag method)</a>
 </li>
       </ul></li>
+      <li><a href="api/models.html#graflag.models.ClearItem.size_bytes">size_bytes (graflag.models.ClearItem attribute)</a>
+</li>
       <li><a href="api/graflag.html#graflag.DatasetInfo.size_mb">size_mb (graflag.DatasetInfo attribute)</a>
 
       <ul>
         <li><a href="api/models.html#graflag.models.DatasetInfo.size_mb">(graflag.models.DatasetInfo attribute)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/graflag.html#graflag.MethodInfo.source_code">source_code (graflag.MethodInfo attribute)</a>
 
       <ul>
         <li><a href="api/models.html#graflag.models.MethodInfo.source_code">(graflag.models.MethodInfo attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/config.html#graflag.config.GraflagConfig.ssh_key">ssh_key (graflag.config.GraflagConfig property)</a>
 
       <ul>
@@ -859,6 +1014,12 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/core.html#graflag.core.GraFlag.TERMINAL_STATUSES">TERMINAL_STATUSES (graflag.core.GraFlag attribute)</a>
+
+      <ul>
+        <li><a href="api/graflag.html#graflag.GraFlag.TERMINAL_STATUSES">(graflag.GraFlag attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api/graflag.html#graflag.ExperimentInfo.timestamp">timestamp (graflag.ExperimentInfo attribute)</a>
 
       <ul>
@@ -878,6 +1039,10 @@
 </li>
         <li><a href="api/graflag.html#graflag.MethodInfo.to_dict">(graflag.MethodInfo method)</a>
 </li>
+        <li><a href="api/models.html#graflag.models.ClearItem.to_dict">(graflag.models.ClearItem method)</a>
+</li>
+        <li><a href="api/models.html#graflag.models.ClearReport.to_dict">(graflag.models.ClearReport method)</a>
+</li>
         <li><a href="api/models.html#graflag.models.ClusterInfo.to_dict">(graflag.models.ClusterInfo method)</a>
 </li>
         <li><a href="api/models.html#graflag.models.DatasetInfo.to_dict">(graflag.models.DatasetInfo method)</a>
@@ -892,7 +1057,11 @@
 </li>
         <li><a href="api/models.html#graflag.models.RunProgress.to_dict">(graflag.models.RunProgress method)</a>
 </li>
+        <li><a href="api/models.html#graflag.models.ServiceCleanupResult.to_dict">(graflag.models.ServiceCleanupResult method)</a>
+</li>
         <li><a href="api/graflag.html#graflag.RunProgress.to_dict">(graflag.RunProgress method)</a>
+</li>
+        <li><a href="api/graflag.html#graflag.ServiceCleanupResult.to_dict">(graflag.ServiceCleanupResult method)</a>
 </li>
       </ul></li>
   </ul></td>

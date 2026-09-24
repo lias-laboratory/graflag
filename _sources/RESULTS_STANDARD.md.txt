@@ -128,7 +128,7 @@ This document defines the standardized result types used in GraFlag for graph an
     [0, 0, 0, 0],
     [0, 1, 0, 0]
   ],
-  "iterations": [1, 2, 3],
+  "timestamps": [0, 1, 2],
   "graph_ids": [478, 338, 337, 318]
 }
 ```
@@ -267,18 +267,18 @@ writer.add_metadata(
     dataset="cora"
 )
 
-# Add resource metrics (optional, also set automatically by graflag_runner)
-writer.add_resource_metrics(
-    exec_time_ms=12345.67,
-    peak_memory_mb=512.3,
-    peak_gpu_mb=2048.0      # optional
-)
-
-# Finalize (writes results.json to EXP directory)
+# Finalize: writes results.json to the EXP directory, atomically
 writer.finalize()
 ```
 
-The `results.json` file is saved to the experiment directory (`EXP` environment variable) and is used by `graflag evaluate` to compute metrics (AUC-ROC, AUC-PR) and generate plots.
+`graflag evaluate` reads `results.json` from the experiment directory (the
+`EXP` environment variable) to compute the metrics and plots.
+
+A method does not record its own execution time or memory. `graflag_runner`
+measures `exec_time_ms`, `peak_memory_mb` and `peak_gpu_mb` over the whole
+process tree and merges them into `metadata` after the method exits. Values a
+method passes to `writer.add_resource_metrics()` are kept beside them as
+`method_reported_<key>`, but the reported numbers are the runner's.
 
 ### Required Fields
 
@@ -286,7 +286,7 @@ The `results.json` file is saved to the experiment directory (`EXP` environment 
 |-------|-------------|
 | `result_type` | One of the valid result types listed above |
 | `scores` | Anomaly scores (list or nested list) |
-| `ground_truth` | Binary labels matching scores shape (0=normal, 1=anomaly) |
+| `ground_truth` | Binary labels matching scores shape (0=normal, 1=anomaly); both classes must be present |
 
 ### Optional Fields
 
@@ -298,9 +298,40 @@ The `results.json` file is saved to the experiment directory (`EXP` environment 
 | `edges` | Edge pairs as `[[src, dst], ...]` |
 | `graph_ids` | Graph identifiers |
 
+## How the Evaluator Reads Results
+
+`graflag evaluate` flattens `scores` and `ground_truth` into one pair of arrays
+whatever the result type (a ragged 2D array, with snapshots of different sizes,
+is flattened row by row). Before computing anything it leaves out:
+
+- scores equal to `-1` (unknown) or `-2` (inactive);
+- scores that are not finite (NaN or infinite).
+
+How many samples were left out, and for which reason, is reported under
+`metrics.filtering` in `evaluation.json`; the dashboard shows the total. Metrics
+and plots are computed from the same filtered pairs, so the AUC in a plot legend
+is the one in `evaluation.json`.
+
+| Metric | Definition |
+|--------|------------|
+| `auc_roc` | Area under the ROC curve |
+| `auc_pr` | Average precision (`sklearn.metrics.average_precision_score`), not the trapezoidal area under the PR curve, which overstates it at low base rates |
+| `precision_at_k`, `recall_at_k`, `f1_at_k` | At `k` = the number of positives, so precision and recall at `k` are equal by construction. Scores tied across the cut-off count at their positive rate (the expectation under random tie-breaking); `k` is reported alongside |
+| `best_f1`, `best_f1_threshold` | The best F1 over all thresholds, and the threshold that reaches it |
+| `num_samples`, `num_anomalies`, `anomaly_ratio` | Counted after filtering |
+
+The ranking metrics need both classes. A ground truth with no anomalies -- a
+training split, typically -- leaves them empty with a warning rather than
+failing, which is why a method must publish the scores of its **test** split.
+
+`python3 -m graflag_evaluator.compare_metrics <exp_dir>` recomputes an existing
+experiment's metrics with the implementation before these rules and prints what
+moves.
+
 ## Custom Metrics
 
-The evaluator computes built-in metrics (AUC-ROC, AUC-PR, Precision@K, Recall@K, F1@K, Best F1) for all result types. You can extend this with custom metrics via plugins.
+The built-in metrics above are computed for every result type. Plugins add
+more.
 
 ### Plugin Files
 
@@ -317,12 +348,25 @@ from graflag_evaluator import MetricCalculator
 
 def hits_at_100(scores, ground_truth, **kw):
     top = scores.argsort()[-100:]
-    return {"hits@100": ground_truth[top].mean()}
+    return {"hits@100": float(ground_truth[top].mean())}
 
 MetricCalculator.register_metric("EDGE_STREAM_ANOMALY_SCORES", hits_at_100)
 ```
 
-The function must accept `(scores, ground_truth, **kwargs)` and return a `Dict[str, float]`.
+The function returns a `Dict[str, float]`. It receives `scores` and
+`ground_truth` as NumPy arrays holding what `results.json` holds -- nested for
+the temporal types, with any `-1`/`-2` sentinels still in -- plus keyword
+arguments it may ignore. To measure on the same samples as the built-in metrics,
+filter them the same way:
+
+```python
+from graflag_evaluator.preprocessing import prepare_pairs
+
+def hits_at_100(scores, ground_truth, **kw):
+    scores, ground_truth, _ = prepare_pairs(scores, ground_truth)
+    top = scores.argsort()[-100:]
+    return {"hits@100": float(ground_truth[top].mean())}
+```
 
 ### Python API
 
@@ -333,7 +377,7 @@ from graflag import GraFlag
 
 def hits_at_100(scores, ground_truth, **kw):
     top = scores.argsort()[-100:]
-    return {"hits@100": ground_truth[top].mean()}
+    return {"hits@100": float(ground_truth[top].mean())}
 
 gf = GraFlag()
 gf.register_metric("EDGE_STREAM_ANOMALY_SCORES", hits_at_100)

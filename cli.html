@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CLI Reference &mdash; GraFlag 1.0.0 documentation</title>
+  <title>CLI Reference &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -46,24 +46,51 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">CLI Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cluster">Cluster</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#setup">setup</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#run">run</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#list">list</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#status">status</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#experiments">Experiments</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#run">run</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#logs">logs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stop">stop</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#evaluate">evaluate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#list">list</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#housekeeping">Housekeeping</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cleanup">cleanup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#clear">clear</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#files">Files</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#copy">copy</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#sync">sync</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#gui">gui</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#devcluster">devcluster</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag-data">graflag-data</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -74,14 +101,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -110,39 +129,110 @@
              
   <section id="cli-reference">
 <h1>CLI Reference<a class="headerlink" href="#cli-reference" title="Link to this heading"></a></h1>
-<p>The <code class="docutils literal notranslate"><span class="pre">graflag</span></code> command provides the primary interface for managing benchmarks.</p>
-<section id="commands">
-<h2>Commands<a class="headerlink" href="#commands" title="Link to this heading"></a></h2>
-<section id="setup">
-<h3>setup<a class="headerlink" href="#setup" title="Link to this heading"></a></h3>
-<p>Initialize Docker Swarm and verify cluster connectivity:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">setup</span>
+<p><code class="docutils literal notranslate"><span class="pre">graflag</span></code> is a thin client: every command acts on the Swarm manager over SSH,
+except <code class="docutils literal notranslate"><span class="pre">devcluster</span></code>, which runs the development cluster on this machine. The
+command comes first, then its options:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">COMMAND</span> <span class="p">[</span><span class="n">OPTIONS</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>On first run, prompts for manager IP, SSH credentials, shared directory,
-and the path to <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code> (which defines worker node IPs).
-Configuration is stored in <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>.</p>
+<p>Two options apply to every command:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-c,</span> <span class="pre">--config</span> <span class="pre">FILE</span></code> – use this configuration file (see <a class="reference internal" href="quickstart.html"><span class="doc">Quick Start</span></a>
+for the default order)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-v,</span> <span class="pre">--verbose</span></code> – debug logging, and a traceback on unexpected errors</p></li>
+</ul>
+<section id="cluster">
+<h2>Cluster<a class="headerlink" href="#cluster" title="Link to this heading"></a></h2>
+<section id="setup">
+<h3>setup<a class="headerlink" href="#setup" title="Link to this heading"></a></h3>
+<p>Configure the client and prepare the cluster:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">setup</span> <span class="p">[</span><span class="o">--</span><span class="n">reconfigure</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The first run asks for the connection details and stores them in
+<code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>. Every run then initialises the Swarm on the
+manager, joins the workers listed in <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code>, starts the image registry,
+and prints the resulting status.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--reconfigure</span></code> – ask for the connection details again</p></li>
+</ul>
 </section>
+<section id="status">
+<h3>status<a class="headerlink" href="#status" title="Link to this heading"></a></h3>
+<p>Show the nodes, the running services and the contents of the shared
+directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">status</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="experiments">
+<h2>Experiments<a class="headerlink" href="#experiments" title="Link to this heading"></a></h2>
 <section id="run">
 <h3>run<a class="headerlink" href="#run" title="Link to this heading"></a></h3>
-<p>Run an experiment:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">-</span><span class="n">m</span> <span class="n">METHOD</span> <span class="o">-</span><span class="n">d</span> <span class="n">DATASET</span> <span class="p">[</span><span class="o">--</span><span class="n">build</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">gpu</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">params</span> <span class="n">KEY</span><span class="o">=</span><span class="n">VALUE</span> <span class="o">...</span><span class="p">]</span>
+<p>Run a method on a dataset:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">run</span> <span class="o">-</span><span class="n">m</span> <span class="n">METHOD</span> <span class="o">-</span><span class="n">d</span> <span class="n">DATASET</span> <span class="p">[</span><span class="o">--</span><span class="n">build</span> <span class="p">[</span><span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">rm</span><span class="p">]]</span> <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">gpu</span><span class="p">]</span>
+            <span class="p">[</span><span class="o">--</span><span class="n">params</span> <span class="n">KEY</span><span class="o">=</span><span class="n">VALUE</span> <span class="o">...</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tag</span> <span class="n">TAG</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">keep</span><span class="o">-</span><span class="n">service</span><span class="p">]</span>
 <span class="n">graflag</span> <span class="n">run</span> <span class="o">--</span><span class="n">from</span><span class="o">-</span><span class="n">config</span> <span class="n">service_config</span><span class="o">.</span><span class="n">json</span> <span class="p">[</span><span class="o">--</span><span class="n">params</span> <span class="n">KEY</span><span class="o">=</span><span class="n">VALUE</span> <span class="o">...</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Options:</p>
+<p><code class="docutils literal notranslate"><span class="pre">run</span></code> is blocking: after deploying the service it follows the method’s output
+until the run ends. Ctrl-C detaches and leaves the run going.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">-m,</span> <span class="pre">--method</span></code> – Method name</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">-d,</span> <span class="pre">--dataset</span></code> – Dataset name</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">-b,</span> <span class="pre">--build</span></code> – Build Docker image before running</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code> – Disable GPU support</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">-p,</span> <span class="pre">--params</span></code> – Override parameters as KEY=VALUE pairs</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--from-config</span></code> – Load configuration from a saved service_config.json</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-m,</span> <span class="pre">--method</span></code> – method name</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-d,</span> <span class="pre">--dataset</span></code> – dataset name</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-b,</span> <span class="pre">--build</span></code> – build the image and push it to the registry first.
+Without it, the image already in the registry runs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--force-rm</span></code> – with <code class="docutils literal notranslate"><span class="pre">--build</span></code>, remove the build’s intermediate containers
+even if the build fails. Without it a failed build leaves its last container,
+and every layer under it, on the manager</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code> – schedule without reserving a GPU; a method that declares
+<code class="docutils literal notranslate"><span class="pre">_GPU</span></code> gets <code class="docutils literal notranslate"><span class="pre">-1</span></code>, which means CPU</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-p,</span> <span class="pre">--params</span> <span class="pre">KEY=VALUE</span> <span class="pre">...</span></code> – override parameters, named without the
+leading underscore their <code class="docutils literal notranslate"><span class="pre">.env</span></code> uses</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-t,</span> <span class="pre">--tag</span></code> – image tag (default: <code class="docutils literal notranslate"><span class="pre">latest</span></code>, or the recorded one with
+<code class="docutils literal notranslate"><span class="pre">--from-config</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--keep-service</span></code> – leave the finished Swarm service in place, for
+<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">service</span> <span class="pre">ps</span></code>; by default it is removed when the run ends</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--from-config</span> <span class="pre">FILE</span></code> – replay a run from its <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code>, copied
+from the experiment’s directory with <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">copy</span> <span class="pre">--from-remote</span></code>. The
+method, the dataset, the parameters, the image tag and the GPU choice come
+from the file; options given on the command line override them</p></li>
 </ul>
+</section>
+<section id="logs">
+<h3>logs<a class="headerlink" href="#logs" title="Link to this heading"></a></h3>
+<p>Show a run’s output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">logs</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT</span> <span class="p">[</span><span class="o">-</span><span class="n">f</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tee</span> <span class="n">FILE</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-f,</span> <span class="pre">--follow</span></code> – stream until the run ends</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--tee</span> <span class="pre">FILE</span></code> – also write the output to a file</p></li>
+</ul>
+<p>Once the service is gone, the output comes from the experiment’s
+<code class="docutils literal notranslate"><span class="pre">method_output.txt</span></code>.</p>
+</section>
+<section id="stop">
+<h3>stop<a class="headerlink" href="#stop" title="Link to this heading"></a></h3>
+<p>Stop a running experiment and remove its service:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">stop</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT</span> <span class="p">[</span><span class="o">--</span><span class="n">rm</span><span class="p">]</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--rm</span></code> – also delete the experiment directory</p></li>
+</ul>
+</section>
+<section id="evaluate">
+<h3>evaluate<a class="headerlink" href="#evaluate" title="Link to this heading"></a></h3>
+<p>Compute metrics and plots for a finished run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">evaluate</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT</span>
+</pre></div>
+</div>
+<p>The results go to the experiment’s <code class="docutils literal notranslate"><span class="pre">eval/</span></code> directory.</p>
 </section>
 <section id="list">
 <h3>list<a class="headerlink" href="#list" title="Link to this heading"></a></h3>
-<p>List available resources:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="nb">list</span> <span class="n">methods</span>
 <span class="n">graflag</span> <span class="nb">list</span> <span class="n">datasets</span>
 <span class="n">graflag</span> <span class="nb">list</span> <span class="n">experiments</span>
@@ -150,85 +240,119 @@ Configuration is stored in <code class="docutils literal notranslate"><span clas
 </pre></div>
 </div>
 </section>
-<section id="status">
-<h3>status<a class="headerlink" href="#status" title="Link to this heading"></a></h3>
-<p>Show cluster status and running services:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">status</span>
-</pre></div>
-</div>
 </section>
-<section id="logs">
-<h3>logs<a class="headerlink" href="#logs" title="Link to this heading"></a></h3>
-<p>View experiment logs:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">logs</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT_NAME</span> <span class="p">[</span><span class="o">-</span><span class="n">f</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">tee</span> <span class="n">FILE</span><span class="p">]</span>
+<section id="housekeeping">
+<h2>Housekeeping<a class="headerlink" href="#housekeeping" title="Link to this heading"></a></h2>
+<section id="cleanup">
+<h3>cleanup<a class="headerlink" href="#cleanup" title="Link to this heading"></a></h3>
+<p>Remove the Swarm services of finished runs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">cleanup</span> <span class="p">[</span><span class="o">--</span><span class="n">dry</span><span class="o">-</span><span class="n">run</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Options:</p>
+<p>Only finished runs are touched, and a service is kept when the run could not be
+diagnosed without it (no <code class="docutils literal notranslate"><span class="pre">method_output.txt</span></code>, and no error recorded in
+<code class="docutils literal notranslate"><span class="pre">status.json</span></code>).</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">-f,</span> <span class="pre">--follow</span></code> – Stream logs in real-time</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--tee</span></code> – Save logs to file while displaying</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> – report what would be removed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-e</span></code> – only this experiment</p></li>
 </ul>
 </section>
-<section id="stop">
-<h3>stop<a class="headerlink" href="#stop" title="Link to this heading"></a></h3>
-<p>Stop a running experiment:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">stop</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT_NAME</span> <span class="p">[</span><span class="o">--</span><span class="n">rm</span><span class="p">]</span>
+<section id="clear">
+<h3>clear<a class="headerlink" href="#clear" title="Link to this heading"></a></h3>
+<p>Reclaim storage that nothing owns any more: experiments whose method is gone,
+datasets used only by those experiments, images and registry repositories no
+method owns, and stray files at the root of the share:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">clear</span> <span class="p">[</span><span class="o">--</span><span class="n">apply</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">share</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">images</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">gc</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Options:</p>
+<p>Without <code class="docutils literal notranslate"><span class="pre">--apply</span></code> it only reports; the report and the applied run list the
+same items.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--rm</span></code> – Also delete the experiment directory</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--apply</span></code> – remove what is reported</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--share</span></code> – limit the sweep to the shared directory</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--images</span></code> – limit the sweep to images and registry repositories. Neither
+flag, or both, sweeps everything</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--gc</span></code> – with <code class="docutils literal notranslate"><span class="pre">--apply</span></code>, also garbage-collect the registry’s blobs.
+Deleting a repository alone frees no disk. The registry is stopped for the
+duration, because collecting from a live registry makes later pushes skip
+layers that no longer exist</p></li>
 </ul>
 </section>
-<section id="evaluate">
-<h3>evaluate<a class="headerlink" href="#evaluate" title="Link to this heading"></a></h3>
-<p>Run evaluation on a completed experiment:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">evaluate</span> <span class="o">-</span><span class="n">e</span> <span class="n">EXPERIMENT_NAME</span>
-</pre></div>
-</div>
 </section>
+<section id="files">
+<h2>Files<a class="headerlink" href="#files" title="Link to this heading"></a></h2>
 <section id="copy">
 <h3>copy<a class="headerlink" href="#copy" title="Link to this heading"></a></h3>
-<p>Copy files between local and remote:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">copy</span> <span class="o">-</span><span class="n">s</span> <span class="n">SOURCE</span> <span class="o">-</span><span class="n">d</span> <span class="n">DEST</span> <span class="p">[</span><span class="o">-</span><span class="n">r</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">from</span><span class="o">-</span><span class="n">remote</span><span class="p">]</span>
+<p>Copy files between the client and the shared directory (rsync over SSH):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">copy</span> <span class="o">-</span><span class="n">s</span> <span class="n">SOURCE</span> <span class="p">[</span><span class="n">SOURCE</span> <span class="o">...</span><span class="p">]</span> <span class="o">--</span><span class="n">dest</span> <span class="n">DEST</span> <span class="p">[</span><span class="o">--</span><span class="n">from</span><span class="o">-</span><span class="n">remote</span><span class="p">]</span>
 </pre></div>
 </div>
+<p>rsync semantics apply: <code class="docutils literal notranslate"><span class="pre">dir</span></code> copies the directory itself into <code class="docutils literal notranslate"><span class="pre">DEST</span></code>,
+<code class="docutils literal notranslate"><span class="pre">dir/</span></code> copies its contents. Remote paths are relative to the shared
+directory. <code class="docutils literal notranslate"><span class="pre">--dest</span></code> has no short form, since <code class="docutils literal notranslate"><span class="pre">-d</span></code> is <code class="docutils literal notranslate"><span class="pre">--dataset</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--from-remote</span></code> – copy from the cluster to the client</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-r</span></code> – accepted for compatibility; directories are always copied
+recursively</p></li>
+</ul>
 </section>
 <section id="sync">
 <h3>sync<a class="headerlink" href="#sync" title="Link to this heading"></a></h3>
-<p>Sync a method or library to remote shared storage:</p>
+<p>Copy a method or a library directory to the shared directory:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">sync</span> <span class="p">[</span><span class="o">--</span><span class="n">path</span> <span class="n">DIR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">lib</span><span class="p">]</span>
 </pre></div>
 </div>
+<p>A method directory (the working directory by default) goes to
+<code class="docutils literal notranslate"><span class="pre">methods/&lt;METHOD_NAME&gt;</span></code>, as named in its <code class="docutils literal notranslate"><span class="pre">.env</span></code>; with <code class="docutils literal notranslate"><span class="pre">--lib</span></code> the
+directory goes to <code class="docutils literal notranslate"><span class="pre">libs/&lt;name&gt;</span></code>. <code class="docutils literal notranslate"><span class="pre">sync</span></code> adds and overwrites but never
+deletes: remove a file on the share by hand when you remove it locally. A synced
+library reaches a method only when its image is rebuilt with <code class="docutils literal notranslate"><span class="pre">--build</span></code>.</p>
 </section>
+</section>
+<section id="interfaces">
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Link to this heading"></a></h2>
 <section id="gui">
 <h3>gui<a class="headerlink" href="#gui" title="Link to this heading"></a></h3>
 <p>Start the web dashboard:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span> <span class="p">[</span><span class="o">--</span><span class="n">host</span> <span class="n">HOST</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">port</span> <span class="n">PORT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">debug</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">config</span> <span class="n">FILE</span><span class="p">]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">gui</span> <span class="p">[</span><span class="o">--</span><span class="n">host</span> <span class="n">HOST</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">port</span> <span class="n">PORT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">debug</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>Options:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--host</span></code> – Host to bind to (default: 0.0.0.0)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--port</span></code> – Port to bind to (default: 5000)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--debug</span></code> – Enable Flask debug mode</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--config</span></code> – Path to config file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--host</span></code> – address to bind (default: <code class="docutils literal notranslate"><span class="pre">0.0.0.0</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--port</span></code> – port (default: <code class="docutils literal notranslate"><span class="pre">5000</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--debug</span></code> – Flask debug mode</p></li>
 </ul>
-<p>See <a class="reference internal" href="gui.html"><span class="doc">Web Dashboard</span></a> for details.</p>
+<p>The dashboard has no authentication. See <a class="reference internal" href="gui.html"><span class="doc">Web Dashboard</span></a>.</p>
 </section>
 <section id="devcluster">
 <h3>devcluster<a class="headerlink" href="#devcluster" title="Link to this heading"></a></h3>
-<p>Deploy a local development cluster using Docker Compose:</p>
+<p>Deploy or remove the local development cluster:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">devcluster</span> <span class="o">--</span><span class="n">hosts</span> <span class="n">hosts</span><span class="o">.</span><span class="n">yml</span> <span class="p">[</span><span class="o">--</span><span class="n">pubkey</span> <span class="o">~/.</span><span class="n">ssh</span><span class="o">/</span><span class="n">id_ed25519</span><span class="o">.</span><span class="n">pub</span><span class="p">]</span>
+<span class="n">graflag</span> <span class="n">devcluster</span> <span class="o">--</span><span class="n">down</span>
 </pre></div>
 </div>
-<p>Options:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--hosts</span></code> – Path to hosts.yml configuration file (required)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--pubkey</span></code> – Path to SSH public key (default: <code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519.pub</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--hosts</span></code> – the <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code> describing the cluster (required to deploy)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--pubkey</span></code> – public key the nodes will trust (default:
+<code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519.pub</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--down</span></code> – stop and remove the cluster and its volumes</p></li>
 </ul>
-<p>See <a class="reference internal" href="devcluster.html"><span class="doc">Development Cluster</span></a> for details.</p>
+<p>See <a class="reference internal" href="devcluster.html"><span class="doc">Development Cluster</span></a>.</p>
 </section>
+</section>
+<section id="graflag-data">
+<h2>graflag-data<a class="headerlink" href="#graflag-data" title="Link to this heading"></a></h2>
+<p>A separate command, installed with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">./libs/graflag_data</span></code> on the
+machine that holds the shared directory. It downloads dataset files from their
+original sources:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="nb">list</span>              <span class="c1"># every dataset and whether it is ready</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="n">status</span>            <span class="c1"># what is missing; exits non-zero if anything is</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="n">fetch</span> <span class="p">[</span><span class="n">DATASET</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">force</span><span class="p">]</span>
+<span class="n">graflag</span><span class="o">-</span><span class="n">data</span> <span class="n">verify</span>            <span class="c1"># re-hash files against metadata.json</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span></code> fetches its own dataset, so this is only needed to fetch ahead
+of time.</p>
 </section>
 </section>
 

@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.models &mdash; GraFlag 1.0.0 documentation</title>
+  <title>graflag.models &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../_static/documentation_options.js?v=fc837d61"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -48,6 +48,18 @@
 <li class="toctree-l1"><a class="reference internal" href="../cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul class="current">
@@ -70,6 +82,8 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.name"><code class="docutils literal notranslate"><span class="pre">MethodInfo.name</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.description"><code class="docutils literal notranslate"><span class="pre">MethodInfo.description</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.source_code"><code class="docutils literal notranslate"><span class="pre">MethodInfo.source_code</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.integration"><code class="docutils literal notranslate"><span class="pre">MethodInfo.integration</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.image"><code class="docutils literal notranslate"><span class="pre">MethodInfo.image</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.supported_data"><code class="docutils literal notranslate"><span class="pre">MethodInfo.supported_data</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.parameters"><code class="docutils literal notranslate"><span class="pre">MethodInfo.parameters</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.MethodInfo.has_dockerfile"><code class="docutils literal notranslate"><span class="pre">MethodInfo.has_dockerfile</span></code></a></li>
@@ -120,6 +134,32 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.EvaluationResults.to_dict"><code class="docutils literal notranslate"><span class="pre">EvaluationResults.to_dict()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.models.ServiceCleanupResult"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ServiceCleanupResult.experiment"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.experiment</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ServiceCleanupResult.removed"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.removed</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ServiceCleanupResult.reason"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.reason</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ServiceCleanupResult.to_dict"><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult.to_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.models.ClearItem"><code class="docutils literal notranslate"><span class="pre">ClearItem</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearItem.kind"><code class="docutils literal notranslate"><span class="pre">ClearItem.kind</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearItem.name"><code class="docutils literal notranslate"><span class="pre">ClearItem.name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearItem.reason"><code class="docutils literal notranslate"><span class="pre">ClearItem.reason</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearItem.size_bytes"><code class="docutils literal notranslate"><span class="pre">ClearItem.size_bytes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearItem.removed"><code class="docutils literal notranslate"><span class="pre">ClearItem.removed</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearItem.to_dict"><code class="docutils literal notranslate"><span class="pre">ClearItem.to_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.models.ClearReport"><code class="docutils literal notranslate"><span class="pre">ClearReport</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.applied"><code class="docutils literal notranslate"><span class="pre">ClearReport.applied</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.items"><code class="docutils literal notranslate"><span class="pre">ClearReport.items</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.freed_bytes"><code class="docutils literal notranslate"><span class="pre">ClearReport.freed_bytes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.errors"><code class="docutils literal notranslate"><span class="pre">ClearReport.errors</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.registry_collected"><code class="docutils literal notranslate"><span class="pre">ClearReport.registry_collected</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.removed"><code class="docutils literal notranslate"><span class="pre">ClearReport.removed</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.to_dict"><code class="docutils literal notranslate"><span class="pre">ClearReport.to_dict()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.models.RunProgress"><code class="docutils literal notranslate"><span class="pre">RunProgress</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.RunProgress.experiment_name"><code class="docutils literal notranslate"><span class="pre">RunProgress.experiment_name</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.RunProgress.status"><code class="docutils literal notranslate"><span class="pre">RunProgress.status</span></code></a></li>
@@ -134,14 +174,6 @@
 <li class="toctree-l1"><a class="reference internal" href="ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../demo.html">Demo Video</a></li>
 </ul>
 
         </div>
@@ -225,7 +257,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.models.MethodInfo">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">MethodInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supported_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_dockerfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#MethodInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.MethodInfo" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">MethodInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integration</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">supported_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">~typing.Any]</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_dockerfile</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">has_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#MethodInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.MethodInfo" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Method metadata.</p>
 <dl class="py attribute">
@@ -242,6 +274,23 @@
 <dt class="sig sig-object py" id="graflag.models.MethodInfo.source_code">
 <span class="sig-name descname"><span class="pre">source_code</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#graflag.models.MethodInfo.source_code" title="Link to this definition"></a></dt>
 <dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.MethodInfo.integration">
+<span class="sig-name descname"><span class="pre">integration</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#graflag.models.MethodInfo.integration" title="Link to this definition"></a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">upstream</span></code> (the image runs the authors’ implementation) or
+<code class="docutils literal notranslate"><span class="pre">reimplementation</span></code> (this repository’s code, written from the paper).
+Empty for a method whose <code class="docutils literal notranslate"><span class="pre">.env</span></code> predates the key – rendered as
+“unstated”, which is what it is, rather than assumed to be either.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.MethodInfo.image">
+<span class="sig-name descname"><span class="pre">image</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">''</span></span><a class="headerlink" href="#graflag.models.MethodInfo.image" title="Link to this definition"></a></dt>
+<dd><p>The shared image this method builds from, from <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> in its
+<code class="docutils literal notranslate"><span class="pre">.env</span></code>. Empty when the method builds its own – which is the common
+case; the seventeen <code class="docutils literal notranslate"><span class="pre">bond_*</span></code> methods share <code class="docutils literal notranslate"><span class="pre">bond_base</span></code>.</p>
+</dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="graflag.models.MethodInfo.supported_data">
@@ -449,6 +498,130 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.models.EvaluationResults.to_dict">
 <span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/graflag/models.html#EvaluationResults.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.EvaluationResults.to_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.models.ServiceCleanupResult">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">ServiceCleanupResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">experiment</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">removed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#ServiceCleanupResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ServiceCleanupResult" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Outcome of considering one finished service for removal.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ServiceCleanupResult.experiment">
+<span class="sig-name descname"><span class="pre">experiment</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.models.ServiceCleanupResult.experiment" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ServiceCleanupResult.removed">
+<span class="sig-name descname"><span class="pre">removed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#graflag.models.ServiceCleanupResult.removed" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ServiceCleanupResult.reason">
+<span class="sig-name descname"><span class="pre">reason</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.models.ServiceCleanupResult.reason" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.models.ServiceCleanupResult.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/graflag/models.html#ServiceCleanupResult.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ServiceCleanupResult.to_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.models.ClearItem">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">ClearItem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">removed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#ClearItem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ClearItem" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>One thing <cite>graflag clear</cite> considered removing, and why.</p>
+<p>Every candidate is reported whether or not it was removed, so a dry run
+and an applied run print the same rows – the difference is <cite>removed</cite>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearItem.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.models.ClearItem.kind" title="Link to this definition"></a></dt>
+<dd><p>experiment | dataset | image | registry | stray</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearItem.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.models.ClearItem.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearItem.reason">
+<span class="sig-name descname"><span class="pre">reason</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.models.ClearItem.reason" title="Link to this definition"></a></dt>
+<dd><p>The evidence for the verdict, in the words the report prints.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearItem.size_bytes">
+<span class="sig-name descname"><span class="pre">size_bytes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></span><a class="headerlink" href="#graflag.models.ClearItem.size_bytes" title="Link to this definition"></a></dt>
+<dd><p>Bytes on disk, 0 when not measured (registry repos before a GC).</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearItem.removed">
+<span class="sig-name descname"><span class="pre">removed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#graflag.models.ClearItem.removed" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.models.ClearItem.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/graflag/models.html#ClearItem.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ClearItem.to_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="graflag.models.ClearReport">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">ClearReport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">applied</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#graflag.models.ClearItem" title="graflag.models.ClearItem"><span class="pre">ClearItem</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freed_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry_collected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#ClearReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ClearReport" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>What <cite>graflag clear</cite> found, and what it did about it.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.applied">
+<span class="sig-name descname"><span class="pre">applied</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#graflag.models.ClearReport.applied" title="Link to this definition"></a></dt>
+<dd><p>False for a dry run – nothing was removed.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.items">
+<span class="sig-name descname"><span class="pre">items</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#graflag.models.ClearItem" title="graflag.models.ClearItem"><span class="pre">ClearItem</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#graflag.models.ClearReport.items" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.freed_bytes">
+<span class="sig-name descname"><span class="pre">freed_bytes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></span><a class="headerlink" href="#graflag.models.ClearReport.freed_bytes" title="Link to this definition"></a></dt>
+<dd><p>Bytes actually reclaimed. 0 on a dry run; on an applied run this is
+the sum over removed items, which for the registry counts only what a
+garbage collection actually freed, not the manifests deleted before it.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.errors">
+<span class="sig-name descname"><span class="pre">errors</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#graflag.models.ClearReport.errors" title="Link to this definition"></a></dt>
+<dd><p>a failure to remove one
+item must not abort the sweep or fail the caller.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Non-fatal problems. Clearing is housekeeping</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.registry_collected">
+<span class="sig-name descname"><span class="pre">registry_collected</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#graflag.models.ClearReport.registry_collected" title="Link to this definition"></a></dt>
+<dd><p>True when registry blobs were collected, which needs the registry
+stopped – see <cite>core.clear</cite>.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.removed">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">removed</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#graflag.models.ClearItem" title="graflag.models.ClearItem"><span class="pre">ClearItem</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#graflag.models.ClearReport.removed" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="../_modules/graflag/models.html#ClearReport.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ClearReport.to_dict" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>

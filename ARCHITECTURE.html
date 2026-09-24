@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GraFlag Architecture &mdash; GraFlag 1.0.0 documentation</title>
+  <title>GraFlag Architecture &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Demo Video" href="demo.html" />
-    <link rel="prev" title="Graph Anomaly Detection Result Types" href="RESULTS_STANDARD.html" /> 
+    <link rel="next" title="graflag package" href="api/graflag.html" />
+    <link rel="prev" title="Method Integration Skill" href="AGENT_SKILL.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,22 +48,17 @@
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">GraFlag Architecture</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#system-overview">System Overview</a></li>
@@ -98,6 +93,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag-runner">graflag_runner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag-bond">graflag_bond</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag-evaluator">graflag_evaluator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag-data">graflag_data</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#data-flow">Data Flow</a><ul>
@@ -114,6 +110,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#evaluation-services">Evaluation Services</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#housekeeping">Housekeeping</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#client-configuration">Client Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#cluster-configuration-hosts-yml">Cluster Configuration (hosts.yml)</a></li>
@@ -123,7 +120,16 @@
 <li class="toctree-l2"><a class="reference internal" href="#experiment-output-structure">Experiment Output Structure</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="demo.html">Demo Video</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/graflag.html">graflag package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/core.html">graflag.core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/models.html">graflag.models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/config.html">graflag.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
 </ul>
 
         </div>
@@ -166,6 +172,7 @@
 <li><p><a class="reference internal" href="#data-flow">Data Flow</a></p></li>
 <li><p><a class="reference internal" href="#experiment-lifecycle">Experiment Lifecycle</a></p></li>
 <li><p><a class="reference internal" href="#docker-swarm-service-model">Docker Swarm Service Model</a></p></li>
+<li><p><a class="reference internal" href="#housekeeping">Housekeeping</a></p></li>
 <li><p><a class="reference internal" href="#configuration">Configuration</a></p></li>
 <li><p><a class="reference internal" href="#experiment-output-structure">Experiment Output Structure</a></p></li>
 </ol>
@@ -192,6 +199,7 @@
 <li><p><strong>Result standardization</strong>: All methods produce a <code class="docutils literal notranslate"><span class="pre">results.json</span></code> file conforming to a fixed schema, enabling uniform evaluation across heterogeneous methods.</p></li>
 <li><p><strong>Separation of concerns</strong>: The orchestration layer (CLI/API) never executes method code directly. It builds images, deploys services, and reads results from shared storage.</p></li>
 <li><p><strong>Shared storage as the integration point</strong>: NFS provides a single namespace (<code class="docutils literal notranslate"><span class="pre">/shared</span></code> or configurable) visible to all nodes, used for datasets, method source, experiment output, and shared libraries.</p></li>
+<li><p><strong>One shell, not two</strong>: a remote command is parsed by exactly one shell – the manager’s. The client never runs a shell of its own, and every value interpolated into a remote command is quoted at the point of interpolation.</p></li>
 </ul>
 </section>
 <hr class="docutils" />
@@ -215,8 +223,9 @@
                           <span class="o">|</span>  <span class="o">+--</span><span class="n">v</span><span class="o">-----------+</span>  <span class="o">+----------------</span><span class="n">v</span><span class="o">--+</span>   <span class="o">|</span>
                           <span class="o">|</span>  <span class="o">|</span> <span class="n">SSHManager</span>   <span class="o">|</span>  <span class="o">|</span> <span class="n">DockerManager</span>     <span class="o">|</span>   <span class="o">|</span>
                           <span class="o">|</span>  <span class="o">|</span> <span class="p">(</span><span class="n">ssh</span><span class="o">.</span><span class="n">py</span><span class="p">)</span>     <span class="o">|</span>  <span class="o">|</span> <span class="p">(</span><span class="n">docker_ops</span><span class="o">.</span><span class="n">py</span><span class="p">)</span>   <span class="o">|</span>   <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">|</span> <span class="n">file</span> <span class="n">ops</span><span class="p">,</span>    <span class="o">|</span>  <span class="o">|</span> <span class="n">Docker</span> <span class="n">SDK</span> <span class="n">via</span>    <span class="o">|</span>   <span class="o">|</span>
-                          <span class="o">|</span>  <span class="o">|</span> <span class="n">rsync</span><span class="p">,</span> <span class="n">build</span> <span class="o">|</span>  <span class="o">|</span> <span class="n">SSH</span> <span class="n">tunnel</span>        <span class="o">|</span>   <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">|</span> <span class="n">file</span> <span class="n">ops</span><span class="p">,</span>    <span class="o">|</span>  <span class="o">|</span> <span class="n">SDK</span> <span class="n">via</span> <span class="n">SSH</span>       <span class="o">|</span>   <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">|</span> <span class="n">rsync</span>        <span class="o">|</span>  <span class="o">|</span> <span class="n">tunnel</span><span class="p">;</span> <span class="n">builds</span>    <span class="o">|</span>   <span class="o">|</span>
+                          <span class="o">|</span>  <span class="o">|</span>              <span class="o">|</span>  <span class="o">|</span> <span class="ow">and</span> <span class="n">logs</span> <span class="n">over</span> <span class="n">SSH</span> <span class="o">|</span>   <span class="o">|</span>
                           <span class="o">|</span>  <span class="o">+------+-------+</span>  <span class="o">+--------+----------+</span>   <span class="o">|</span>
                           <span class="o">+---------|-------------------|---------------+</span>
                                     <span class="o">|</span>                   <span class="o">|</span>
@@ -289,6 +298,12 @@
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluate</span></code></p></td>
 <td><p>Run evaluation on a completed experiment</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cleanup</span></code></p></td>
+<td><p>Remove the Swarm services of finished runs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">clear</span></code></p></td>
+<td><p>Report, or with <code class="docutils literal notranslate"><span class="pre">--apply</span></code> remove, storage nothing owns</p></td>
+</tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">copy</span></code></p></td>
 <td><p>Transfer files between local and remote (rsync)</p></td>
 </tr>
@@ -305,10 +320,12 @@
 </table>
 <p>Key flags for <code class="docutils literal notranslate"><span class="pre">run</span></code>:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">--from-config</span> <span class="pre">CONFIG_FILE</span></code>: Replay an experiment from a saved <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--build</span></code>: Build (or rebuild) the Docker image before deploying; <code class="docutils literal notranslate"><span class="pre">--force-rm</span></code> also removes the build’s containers when it fails.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--params</span> <span class="pre">KEY=VALUE</span></code>: Override method parameters at runtime.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code>: Disable GPU resource reservation.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--build</span></code>: Build (or rebuild) the Docker image before deploying.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code>: Deploy without a GPU reservation, and set the method’s <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> to <code class="docutils literal notranslate"><span class="pre">-1</span></code> (CPU).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--keep-service</span></code>: Leave the finished service in place instead of removing it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--from-config</span> <span class="pre">CONFIG_FILE</span></code>: Replay an experiment from a saved <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--tag</span> <span class="pre">TAG</span></code>: Image tag (default <code class="docutils literal notranslate"><span class="pre">latest</span></code>).</p></li>
 </ul>
 </section>
 <section id="core-py-graflag-orchestration-class">
@@ -318,13 +335,16 @@
 <ul class="simple">
 <li><p><strong>Initialization</strong>: Loads <code class="docutils literal notranslate"><span class="pre">GraflagConfig</span></code>, creates <code class="docutils literal notranslate"><span class="pre">SSHManager</span></code> and <code class="docutils literal notranslate"><span class="pre">DockerManager</span></code> instances.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">status()</span></code></strong>: Returns a <code class="docutils literal notranslate"><span class="pre">ClusterInfo</span></code> dataclass with nodes, services, and shared directory contents.</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">run()</span></code></strong>: Validates method and dataset existence on remote, creates experiment directory, optionally builds the Docker image, deploys the Docker Swarm service, follows logs, and returns the experiment name.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">run()</span></code></strong>: Validates that the method and dataset exist, downloads the dataset’s files if they are missing (<code class="docutils literal notranslate"><span class="pre">graflag_data</span> <span class="pre">...</span> <span class="pre">fetch</span></code>, run on the manager), creates the experiment directory, optionally builds the image, deploys the Swarm service, follows its logs, removes the finished service (unless <code class="docutils literal notranslate"><span class="pre">keep_service</span></code>), and returns the experiment name.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">list_methods()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">List[MethodInfo]</span></code> with method metadata parsed from <code class="docutils literal notranslate"><span class="pre">.env</span></code> files.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">list_datasets()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">List[DatasetInfo]</span></code> with size and file count.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">list_experiments()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">List[ExperimentInfo]</span></code> with status, sorted by timestamp.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">get_experiment_results()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">ExperimentResults</span></code> parsed from <code class="docutils literal notranslate"><span class="pre">results.json</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">get_evaluation_results()</span></code></strong>: Returns <code class="docutils literal notranslate"><span class="pre">EvaluationResults</span></code> parsed from <code class="docutils literal notranslate"><span class="pre">eval/evaluation.json</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">evaluate()</span></code></strong>: Deploys a <code class="docutils literal notranslate"><span class="pre">graflag-evaluator</span></code> service against a completed experiment.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">stop()</span></code></strong>: Stops a running experiment’s service, optionally deleting its directory.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">cleanup_services()</span></code></strong>: Removes the services of finished runs – only terminal ones, and never one whose run cannot be diagnosed from disk (see <a class="reference internal" href="#housekeeping">Housekeeping</a>).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">clear()</span></code></strong>: Reports, or removes, storage and images that nothing owns any more, returning a <code class="docutils literal notranslate"><span class="pre">ClearReport</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">register_metric()</span></code></strong>: Saves a custom metric function as a plugin file on the cluster (global or per-experiment) so the evaluator can load it at runtime.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">copy_files()</span></code></strong>: Bidirectional file transfer using rsync over SSH.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">sync()</span></code></strong>: Sync a local method or library directory to the remote shared storage.</p></li>
@@ -359,7 +379,13 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">EvaluationResults</span></code></p></td>
 <td><p>Parsed evaluation.json with metrics and plots</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BenchmarkProgress</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ServiceCleanupResult</span></code></p></td>
+<td><p>What <code class="docutils literal notranslate"><span class="pre">cleanup_services()</span></code> did, per service</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ClearItem</span></code>, <code class="docutils literal notranslate"><span class="pre">ClearReport</span></code></p></td>
+<td><p>What <code class="docutils literal notranslate"><span class="pre">clear()</span></code> found, and what it removed</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RunProgress</span></code></p></td>
 <td><p>Progress tracking for experiment execution</p></td>
 </tr>
 </tbody>
@@ -371,8 +397,8 @@
 <p><code class="docutils literal notranslate"><span class="pre">GraflagConfig</span></code> loads configuration from a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file and exposes typed properties.</p>
 <p><strong>Config resolution order</strong>:</p>
 <ol class="arabic simple">
-<li><p>Explicit path passed via <code class="docutils literal notranslate"><span class="pre">--config</span></code> flag.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the current working directory.</p></li>
+<li><p>Explicit path passed via <code class="docutils literal notranslate"><span class="pre">--config</span></code> flag (an error if the file does not exist).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the current working directory, <strong>only if it defines <code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code></strong> – so an unrelated project’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> is not mistaken for the GraFlag configuration.</p></li>
 <li><p>Standard location: <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>.</p></li>
 </ol>
 <p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">setup</span></code> runs an interactive wizard (<code class="docutils literal notranslate"><span class="pre">init_config()</span></code>) that prompts for values and stores them in the standard location.</p>
@@ -415,6 +441,11 @@
 <td><p><code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code></p></td>
 <td><p>Path to hosts.yml with worker IPs</p></td>
 </tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">graflag_libs</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GRAFLAG_LIBS</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">local</span></code></p></td>
+<td><p>Where method images get <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code>/<code class="docutils literal notranslate"><span class="pre">graflag_bond</span></code>: <code class="docutils literal notranslate"><span class="pre">local</span></code> (the share’s <code class="docutils literal notranslate"><span class="pre">libs/</span></code>) or <code class="docutils literal notranslate"><span class="pre">pypi</span></code> (the release)</p></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -422,11 +453,49 @@
 <h4>ssh.py – SSH Operations<a class="headerlink" href="#ssh-py-ssh-operations" title="Link to this heading"></a></h4>
 <p><code class="docutils literal notranslate"><span class="pre">SSHManager</span></code> provides remote command execution and file transfer:</p>
 <ul class="simple">
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">execute(command)</span></code></strong>: Runs a command on the manager via <code class="docutils literal notranslate"><span class="pre">ssh</span></code> subprocess. Always connects as <code class="docutils literal notranslate"><span class="pre">root&#64;MANAGER_IP</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">execute(command)</span></code></strong>: Runs a command on the manager. Always connects as <code class="docutils literal notranslate"><span class="pre">root&#64;MANAGER_IP</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">copy_files()</span></code></strong>: Bidirectional rsync over SSH. Handles both local-to-remote and remote-to-local transfers.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">path_exists()</span></code>, <code class="docutils literal notranslate"><span class="pre">read_file()</span></code>, <code class="docutils literal notranslate"><span class="pre">mkdir()</span></code>, <code class="docutils literal notranslate"><span class="pre">list_dir()</span></code></strong>: File system operations on the remote via SSH.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">remote_path(*parts)</span></code></strong>: Joins path components and quotes the result for the remote shell.</p></li>
 </ul>
 <p>All SSH commands use <code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">StrictHostKeyChecking=no</span></code> and authenticate with the configured SSH key.</p>
+<p><strong>Command construction contract.</strong> <code class="docutils literal notranslate"><span class="pre">execute()</span></code> passes its argument to <code class="docutils literal notranslate"><span class="pre">ssh</span></code> as a
+single element of an argv list; <code class="docutils literal notranslate"><span class="pre">subprocess</span></code> is called without <code class="docutils literal notranslate"><span class="pre">shell=True</span></code>, so
+no shell on the client ever sees the command. This is what allows the command to
+carry newlines, embedded quotes and heredocs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;build.log&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;BUILDEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">log</span><span class="si">}</span><span class="se">\n</span><span class="s2">BUILDEOF&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The quoted delimiter <code class="docutils literal notranslate"><span class="pre">&lt;&lt;</span> <span class="pre">'BUILDEOF'</span></code> is what tells the manager’s shell to treat
+the heredoc body as literal text. Wrapping the command in quotes on the client
+(as an earlier version did) collapses it to <code class="docutils literal notranslate"><span class="pre">&lt;&lt;</span> <span class="pre">BUILDEOF</span></code>, after which the
+manager expands <code class="docutils literal notranslate"><span class="pre">$VAR</span></code> and executes <code class="docutils literal notranslate"><span class="pre">$(...)</span></code> and backticks appearing anywhere in
+Docker build output – corrupting the saved log and running arbitrary commands as
+root.</p>
+<p>The manager’s shell <em>does</em> parse the command string, so callers quote every
+interpolated value:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Interpolating</p></th>
+<th class="head"><p>Use</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>a path built from user input</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">remote_path(shared_dir,</span> <span class="pre">&quot;experiments&quot;,</span> <span class="pre">name)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>a bare value (image tag, service name)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">shlex.quote(value)</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>a glob or redirect</p></td>
+<td><p>leave <strong>outside</strong> the quoted part: <code class="docutils literal notranslate"><span class="pre">f&quot;ls</span> <span class="pre">{remote_path(d)}/*.png&quot;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>Values that arrive over HTTP are additionally screened by <code class="docutils literal notranslate"><span class="pre">_valid_name()</span></code> in
+<code class="docutils literal notranslate"><span class="pre">gui/server.py</span></code> before reaching this layer. <code class="docutils literal notranslate"><span class="pre">graflag/tests/test_ssh.py</span></code> pins the
+contract down by capturing what a fake <code class="docutils literal notranslate"><span class="pre">ssh</span></code> receives and executing it with a
+real shell.</p>
 </section>
 <section id="docker-ops-py-docker-swarm-operations">
 <h4>docker_ops.py – Docker Swarm Operations<a class="headerlink" href="#docker-ops-py-docker-swarm-operations" title="Link to this heading"></a></h4>
@@ -437,16 +506,17 @@
 <li><p><strong>Swarm management</strong>: <code class="docutils literal notranslate"><span class="pre">setup_swarm_manager()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.swarm.init()</span></code>, <code class="docutils literal notranslate"><span class="pre">get_swarm_token()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.swarm.attrs</span></code>, <code class="docutils literal notranslate"><span class="pre">get_nodes()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.nodes.list()</span></code>.</p></li>
 <li><p><strong>Registry</strong>: <code class="docutils literal notranslate"><span class="pre">setup_local_registry()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.services.create()</span></code>.</p></li>
 <li><p><strong>Service creation</strong>: <code class="docutils literal notranslate"><span class="pre">create_service()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.services.create()</span></code> with <code class="docutils literal notranslate"><span class="pre">ServiceMode</span></code>, <code class="docutils literal notranslate"><span class="pre">RestartPolicy</span></code>, <code class="docutils literal notranslate"><span class="pre">Resources</span></code>, <code class="docutils literal notranslate"><span class="pre">Mount</span></code>, and network configuration.</p></li>
-<li><p><strong>Service lifecycle</strong>: <code class="docutils literal notranslate"><span class="pre">list_services()</span></code>, <code class="docutils literal notranslate"><span class="pre">stop_service()</span></code>, <code class="docutils literal notranslate"><span class="pre">get_service_logs()</span></code>, <code class="docutils literal notranslate"><span class="pre">follow_service_logs()</span></code> via <code class="docutils literal notranslate"><span class="pre">service.logs(follow=True,</span> <span class="pre">stream=True)</span></code>.</p></li>
+<li><p><strong>Service lifecycle</strong>: <code class="docutils literal notranslate"><span class="pre">list_services()</span></code>, <code class="docutils literal notranslate"><span class="pre">stop_service()</span></code>, <code class="docutils literal notranslate"><span class="pre">service_exists()</span></code>, <code class="docutils literal notranslate"><span class="pre">is_service_failed()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.services.*</span></code>.</p></li>
 <li><p><strong>Cluster status</strong>: <code class="docutils literal notranslate"><span class="pre">get_cluster_status()</span></code> via <code class="docutils literal notranslate"><span class="pre">client.info()</span></code> and node/service listing.</p></li>
 </ul>
-<p><strong>Operations using SSH</strong> (build context is on the remote host):</p>
+<p><strong>Operations using SSH</strong> (build context is on the remote host, or the SDK is unreliable):</p>
 <ul class="simple">
-<li><p><strong>Image building</strong>: <code class="docutils literal notranslate"><span class="pre">build_method_image()</span></code> – runs <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">push</span></code> via SSH because the build context (shared directory with methods and libs) resides on the remote host.</p></li>
-<li><p><strong>Evaluator image</strong>: <code class="docutils literal notranslate"><span class="pre">build_evaluator_image()</span></code> – same rationale.</p></li>
+<li><p><strong>Image building</strong>: <code class="docutils literal notranslate"><span class="pre">build_method_image()</span></code> – runs <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">build</span></code> and <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">push</span></code> via SSH because the build context (shared directory with methods and libs) resides on the remote host. It passes the method’s <code class="docutils literal notranslate"><span class="pre">SOURCE_CODE</span></code> and <code class="docutils literal notranslate"><span class="pre">SOURCE_REF</span></code> and the cluster’s <code class="docutils literal notranslate"><span class="pre">GRAFLAG_LIBS</span></code> as <code class="docutils literal notranslate"><span class="pre">--build-arg</span></code>, and returns the log that is saved as <code class="docutils literal notranslate"><span class="pre">build.log</span></code>; a failed build raises <code class="docutils literal notranslate"><span class="pre">BuildFailed</span></code>, which carries the same log.</p></li>
+<li><p><strong>Evaluator image</strong>: <code class="docutils literal notranslate"><span class="pre">build_evaluator_image()</span></code> – same rationale. Its tag is a hash of the <code class="docutils literal notranslate"><span class="pre">libs/graflag_evaluator</span></code> sources, so a source change produces a new tag and a real rebuild, while an unchanged tree reuses the image already in the registry.</p></li>
+<li><p><strong>Log retrieval</strong>: <code class="docutils literal notranslate"><span class="pre">get_service_logs()</span></code> and <code class="docutils literal notranslate"><span class="pre">follow_service_logs()</span></code> shell out to <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">service</span> <span class="pre">logs</span></code> over SSH. The SDK’s <code class="docutils literal notranslate"><span class="pre">service.logs(follow=True,</span> <span class="pre">stream=True)</span></code> does not stream reliably for swarm services.</p></li>
 </ul>
 <p><strong>Worker setup</strong>: <code class="docutils literal notranslate"><span class="pre">setup_workers()</span></code> uses SSH to execute <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">swarm</span> <span class="pre">join</span></code> on each worker node, since the Docker SDK connection only reaches the manager.</p>
-<p><strong>Reserved environment variables</strong> (defined in <code class="docutils literal notranslate"><span class="pre">ReservedEnvVars</span></code> enum): <code class="docutils literal notranslate"><span class="pre">DATA</span></code>, <code class="docutils literal notranslate"><span class="pre">EXP</span></code>, <code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code>, <code class="docutils literal notranslate"><span class="pre">MONITOR_INTERVAL</span></code>. These cannot be overridden by user-supplied <code class="docutils literal notranslate"><span class="pre">--params</span></code>.</p>
+<p><strong>Reserved environment variables</strong> (defined in <code class="docutils literal notranslate"><span class="pre">ReservedEnvVars</span></code> enum): <code class="docutils literal notranslate"><span class="pre">DATA</span></code>, <code class="docutils literal notranslate"><span class="pre">EXP</span></code>, <code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code>, <code class="docutils literal notranslate"><span class="pre">MONITOR_INTERVAL</span></code>. A <code class="docutils literal notranslate"><span class="pre">--params</span></code> key that collides with one is silently dropped.</p>
 </section>
 <section id="api-py-python-api">
 <h4>api.py – Python API<a class="headerlink" href="#api-py-python-api" title="Link to this heading"></a></h4>
@@ -487,8 +557,7 @@
 <p>A Docker Compose-based virtual cluster for local development and testing, located in <code class="docutils literal notranslate"><span class="pre">graflag/graflag/devcluster/</span></code>. Accessible via <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">devcluster</span> <span class="pre">--hosts</span> <span class="pre">hosts.yml</span> <span class="pre">[--pubkey</span> <span class="pre">KEY]</span></code>. Use <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">devcluster</span> <span class="pre">--down</span></code> to stop and remove the cluster.</p>
 <p><strong>Components</strong>:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code>: Defines a manager node and multiple worker nodes (up to 4) on a bridged network (<code class="docutils literal notranslate"><span class="pre">192.168.100.0/24</span></code>).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">deploy.sh</span></code>: Automated deployment script that generates SSH keys, builds the Docker Compose configuration from <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code>, and starts the cluster.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">deploy.sh</span></code>: Automated deployment script that generates SSH keys, writes <code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> from <code class="docutils literal notranslate"><span class="pre">hosts.yml</span></code> (one service per worker listed there, on the subnet it names) and starts the cluster. The generated files live in <code class="docutils literal notranslate"><span class="pre">$XDG_STATE_HOME/graflag/devcluster</span></code>, not in the installed package.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">manager/</span></code>: Dockerfile and configuration for the manager container (Docker-in-Docker with SSH, NFS server).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">worker/</span></code>: Dockerfile and configuration for worker containers (Docker-in-Docker with SSH, NFS client).</p></li>
 </ul>
@@ -505,14 +574,19 @@
 <h3>graflag-shared (NFS Shared Storage)<a class="headerlink" href="#graflag-shared-nfs-shared-storage" title="Link to this heading"></a></h3>
 <p>The shared storage directory is NFS-exported by the manager node and mounted on all worker nodes. Structure:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span><span class="o">-</span><span class="n">shared</span><span class="o">/</span>
+<span class="o">+--</span> <span class="o">.</span><span class="n">dockerignore</span>         <span class="c1"># Keeps datasets/ and experiments/ out of image builds</span>
 <span class="o">+--</span> <span class="n">methods</span><span class="o">/</span>              <span class="c1"># GAD method implementations</span>
 <span class="o">|</span>   <span class="o">+--</span> <span class="o">&lt;</span><span class="n">method_name</span><span class="o">&gt;/</span>
 <span class="o">|</span>       <span class="o">+--</span> <span class="o">.</span><span class="n">env</span>          <span class="c1"># Method metadata and default parameters</span>
-<span class="o">|</span>       <span class="o">+--</span> <span class="n">Dockerfile</span>    <span class="c1"># Container definition</span>
+<span class="o">|</span>       <span class="o">+--</span> <span class="n">Dockerfile</span>    <span class="c1"># Container definition (absent when .env sets IMAGE=)</span>
 <span class="o">|</span>       <span class="o">+--</span> <span class="n">train_graflag</span><span class="o">.</span><span class="n">py</span>  <span class="c1"># GraFlag integration script</span>
+<span class="o">|</span>       <span class="o">+--</span> <span class="n">README</span><span class="o">.</span><span class="n">md</span>     <span class="c1"># What the integration does, and what it changes</span>
 <span class="o">|</span>       <span class="o">+--</span> <span class="o">...</span>
+<span class="o">+--</span> <span class="n">images</span><span class="o">/</span>               <span class="c1"># Dockerfiles shared by several methods</span>
+<span class="o">|</span>   <span class="o">+--</span> <span class="n">bond_base</span><span class="o">/</span>        <span class="c1"># The 17 PyGOD detectors</span>
 <span class="o">+--</span> <span class="n">datasets</span><span class="o">/</span>             <span class="c1"># Benchmark datasets</span>
 <span class="o">|</span>   <span class="o">+--</span> <span class="o">&lt;</span><span class="n">dataset_name</span><span class="o">&gt;/</span>
+<span class="o">|</span>       <span class="o">+--</span> <span class="n">metadata</span><span class="o">.</span><span class="n">json</span> <span class="c1"># Source URLs and checksums; files are fetched on demand</span>
 <span class="o">|</span>       <span class="o">+--</span> <span class="o">...</span>
 <span class="o">+--</span> <span class="n">experiments</span><span class="o">/</span>          <span class="c1"># Experiment results (one directory per run)</span>
 <span class="o">|</span>   <span class="o">+--</span> <span class="n">exp__</span><span class="o">&lt;</span><span class="n">method</span><span class="o">&gt;</span><span class="n">__</span><span class="o">&lt;</span><span class="n">dataset</span><span class="o">&gt;</span><span class="n">__</span><span class="o">&lt;</span><span class="n">timestamp</span><span class="o">&gt;/</span>
@@ -530,6 +604,7 @@
     <span class="o">+--</span> <span class="n">graflag_evaluator</span><span class="o">/</span>
     <span class="o">|</span>   <span class="o">+--</span> <span class="n">plugins</span><span class="o">/</span>      <span class="c1"># Global custom metric plugins</span>
     <span class="o">+--</span> <span class="n">graflag_bond</span><span class="o">/</span>
+    <span class="o">+--</span> <span class="n">graflag_data</span><span class="o">/</span>     <span class="c1"># Dataset download and build (graflag-data)</span>
 </pre></div>
 </div>
 </section>
@@ -550,6 +625,7 @@
 <ul class="simple">
 <li><p>SSH to manager to verify <code class="docutils literal notranslate"><span class="pre">methods/taddy/</span></code> exists.</p></li>
 <li><p>SSH to manager to verify <code class="docutils literal notranslate"><span class="pre">datasets/uci/</span></code> exists.</p></li>
+<li><p>Download the dataset’s files if they are missing: <code class="docutils literal notranslate"><span class="pre">graflag_data</span> <span class="pre">...</span> <span class="pre">fetch</span> <span class="pre">uci</span></code> runs on the manager, so the files land directly on the share.</p></li>
 <li><p>Create experiment directory: <code class="docutils literal notranslate"><span class="pre">experiments/exp__taddy__uci__20260309_143000/</span></code>.</p></li>
 </ul>
 </section>
@@ -557,7 +633,10 @@
 <h3>3. Image Build (if <code class="docutils literal notranslate"><span class="pre">--build</span></code>)<a class="headerlink" href="#image-build-if-build" title="Link to this heading"></a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">status</span><span class="o">.</span><span class="n">json</span> <span class="o">&lt;-</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;building&quot;</span><span class="p">}</span>
 
-<span class="n">docker</span> <span class="n">build</span> <span class="o">--</span><span class="n">network</span><span class="o">=</span><span class="n">host</span> \
+<span class="n">docker</span> <span class="n">build</span> <span class="o">--</span><span class="n">network</span><span class="o">=</span><span class="n">host</span> <span class="p">[</span><span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">rm</span><span class="p">]</span> \
+  <span class="o">--</span><span class="n">build</span><span class="o">-</span><span class="n">arg</span> <span class="n">SOURCE_CODE</span><span class="o">=</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">yuetan031</span><span class="o">/</span><span class="n">TADDY_pytorch</span> \
+  <span class="o">--</span><span class="n">build</span><span class="o">-</span><span class="n">arg</span> <span class="n">SOURCE_REF</span><span class="o">=</span><span class="n">dfe15ddbbc179ed0ca9a96482fe1696dfbcb5bcd</span> \
+  <span class="o">--</span><span class="n">build</span><span class="o">-</span><span class="n">arg</span> <span class="n">GRAFLAG_LIBS</span><span class="o">=</span><span class="n">local</span> \
   <span class="o">-</span><span class="n">f</span> <span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">methods</span><span class="o">/</span><span class="n">taddy</span><span class="o">/</span><span class="n">Dockerfile</span> \
   <span class="o">-</span><span class="n">t</span> <span class="n">taddy</span><span class="p">:</span><span class="n">latest</span> \
   <span class="o">-</span><span class="n">t</span> <span class="n">MANAGER_IP</span><span class="p">:</span><span class="mi">5000</span><span class="o">/</span><span class="n">taddy</span><span class="p">:</span><span class="n">latest</span> \
@@ -566,8 +645,8 @@
 <span class="n">docker</span> <span class="n">push</span> <span class="n">MANAGER_IP</span><span class="p">:</span><span class="mi">5000</span><span class="o">/</span><span class="n">taddy</span><span class="p">:</span><span class="n">latest</span>
 </pre></div>
 </div>
-<p>The build context is the entire shared directory, giving the Dockerfile access to <code class="docutils literal notranslate"><span class="pre">libs/</span></code> for installing <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> and other shared libraries.</p>
-<p>Build output is saved to <code class="docutils literal notranslate"><span class="pre">experiments/exp__*/build.log</span></code>.</p>
+<p>The build context is the entire shared directory, giving the Dockerfile access to <code class="docutils literal notranslate"><span class="pre">libs/</span></code> for installing <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> and other shared libraries; the <code class="docutils literal notranslate"><span class="pre">.dockerignore</span></code> at its root keeps <code class="docutils literal notranslate"><span class="pre">datasets/</span></code> and <code class="docutils literal notranslate"><span class="pre">experiments/</span></code> out, and the build warns when that file is missing. <code class="docutils literal notranslate"><span class="pre">SOURCE_CODE</span></code> and <code class="docutils literal notranslate"><span class="pre">SOURCE_REF</span></code> come from the method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code>, so the Dockerfile clones the one commit the <code class="docutils literal notranslate"><span class="pre">.env</span></code> pins. A method whose <code class="docutils literal notranslate"><span class="pre">.env</span></code> sets <code class="docutils literal notranslate"><span class="pre">IMAGE=</span></code> builds <code class="docutils literal notranslate"><span class="pre">images/&lt;name&gt;/Dockerfile</span></code> instead, tagged with that name.</p>
+<p>Build output is saved to <code class="docutils literal notranslate"><span class="pre">experiments/exp__*/build.log</span></code>, for a failed build as well as a successful one.</p>
 </section>
 <section id="service-deployment">
 <h3>4. Service Deployment<a class="headerlink" href="#service-deployment" title="Link to this heading"></a></h3>
@@ -576,7 +655,7 @@
   <span class="o">--</span><span class="n">name</span> <span class="n">exp__taddy__uci__20260309_143000</span> \
   <span class="o">--</span><span class="n">restart</span><span class="o">-</span><span class="n">condition</span> <span class="n">none</span> \
   <span class="o">--</span><span class="n">network</span> <span class="n">host</span> \
-  <span class="o">--</span><span class="n">generic</span><span class="o">-</span><span class="n">resource</span> <span class="n">NVIDIA</span><span class="o">-</span><span class="n">GPU</span><span class="o">=</span><span class="mi">0</span> \
+  <span class="o">--</span><span class="n">generic</span><span class="o">-</span><span class="n">resource</span> <span class="n">NVIDIA</span><span class="o">-</span><span class="n">GPU</span><span class="o">=</span><span class="mi">1</span> \
   <span class="o">--</span><span class="n">env</span> <span class="n">METHOD_NAME</span><span class="o">=</span><span class="n">taddy</span> \
   <span class="o">--</span><span class="n">env</span> <span class="n">DATA</span><span class="o">=/</span><span class="n">shared</span><span class="o">/</span><span class="n">datasets</span><span class="o">/</span><span class="n">uci</span><span class="o">/</span> \
   <span class="o">--</span><span class="n">env</span> <span class="n">EXP</span><span class="o">=/</span><span class="n">shared</span><span class="o">/</span><span class="n">experiments</span><span class="o">/</span><span class="n">exp__taddy__uci__20260309_143000</span><span class="o">/</span> \
@@ -585,36 +664,41 @@
   <span class="n">MANAGER_IP</span><span class="p">:</span><span class="mi">5000</span><span class="o">/</span><span class="n">taddy</span><span class="p">:</span><span class="n">latest</span>
 </pre></div>
 </div>
-<p>is performed via <code class="docutils literal notranslate"><span class="pre">client.services.create()</span></code> with <code class="docutils literal notranslate"><span class="pre">ServiceMode</span></code>, <code class="docutils literal notranslate"><span class="pre">RestartPolicy</span></code>, <code class="docutils literal notranslate"><span class="pre">Resources</span></code>, <code class="docutils literal notranslate"><span class="pre">Mount</span></code>, and <code class="docutils literal notranslate"><span class="pre">env</span></code> parameters. The method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> is read and merged into the env list (rather than using <code class="docutils literal notranslate"><span class="pre">--env-file</span></code>), giving the orchestrator full control over parameter precedence.</p>
-<p>Service configuration is saved to <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code> before deployment. Service details (including assigned worker node) are saved to <code class="docutils literal notranslate"><span class="pre">service_details.json</span></code> after creation.</p>
+<p>is performed via <code class="docutils literal notranslate"><span class="pre">client.services.create()</span></code> with <code class="docutils literal notranslate"><span class="pre">ServiceMode</span></code>, <code class="docutils literal notranslate"><span class="pre">RestartPolicy</span></code>, <code class="docutils literal notranslate"><span class="pre">Resources</span></code>, <code class="docutils literal notranslate"><span class="pre">Mount</span></code>, and <code class="docutils literal notranslate"><span class="pre">env</span></code> parameters. The method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> is read and merged into the env list (rather than using <code class="docutils literal notranslate"><span class="pre">--env-file</span></code>), giving the orchestrator full control over parameter precedence. <code class="docutils literal notranslate"><span class="pre">GRAFLAG_PARAMS</span></code> lists which <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed variables are parameters, and with <code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code> the GPU reservation is dropped and the method’s <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> is set to <code class="docutils literal notranslate"><span class="pre">-1</span></code>.</p>
+<p>Service configuration is saved to <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code> before deployment. Service details are saved to <code class="docutils literal notranslate"><span class="pre">service_details.json</span></code> right after creation: the service ID and image, and the task’s state at that moment – usually <code class="docutils literal notranslate"><span class="pre">pending</span></code>, before Swarm has placed it, so the node ID is often empty.</p>
 </section>
 <section id="method-execution-inside-container">
 <h3>5. Method Execution (inside container)<a class="headerlink" href="#method-execution-inside-container" title="Link to this heading"></a></h3>
-<p>The container’s CMD invokes <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code>:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">graflag_runner</span> <span class="o">--</span><span class="k">pass</span><span class="o">-</span><span class="n">env</span><span class="o">-</span><span class="n">args</span>
+<p>Every method image has the same entry point:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">CMD</span> <span class="p">[</span><span class="s2">&quot;python3&quot;</span><span class="p">,</span> <span class="s2">&quot;-m&quot;</span><span class="p">,</span> <span class="s2">&quot;graflag_runner&quot;</span><span class="p">]</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">MethodRunner.from_env()</span></code> reads environment variables and:</p>
+<p><code class="docutils literal notranslate"><span class="pre">MethodRunner.from_env()</span></code> reads the environment and:</p>
 <ol class="arabic simple">
-<li><p>Extracts <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed env vars and converts them to CLI arguments (e.g., <code class="docutils literal notranslate"><span class="pre">_MAX_EPOCH=100</span></code> becomes <code class="docutils literal notranslate"><span class="pre">--max_epoch</span> <span class="pre">100</span></code>).</p></li>
-<li><p>Validates dataset compatibility if <code class="docutils literal notranslate"><span class="pre">SUPPORTED_DATASETS</span></code> is defined.</p></li>
+<li><p>Checks the dataset against <code class="docutils literal notranslate"><span class="pre">SUPPORTED_DATASETS</span></code>, when the <code class="docutils literal notranslate"><span class="pre">.env</span></code> defines it, and refuses to start if no pattern matches.</p></li>
 <li><p>Writes <code class="docutils literal notranslate"><span class="pre">status.json</span></code> with status <code class="docutils literal notranslate"><span class="pre">running</span></code>.</p></li>
-<li><p>Starts <code class="docutils literal notranslate"><span class="pre">ResourceMonitor</span></code> in a background thread (tracks CPU, memory, GPU usage via <code class="docutils literal notranslate"><span class="pre">psutil</span></code> and <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code>).</p></li>
-<li><p>Executes the method command via subprocess with real-time output capture.</p></li>
-<li><p>On completion, writes final <code class="docutils literal notranslate"><span class="pre">status.json</span></code> with status <code class="docutils literal notranslate"><span class="pre">completed</span></code> or <code class="docutils literal notranslate"><span class="pre">failed</span></code>, execution time, and resource summary.</p></li>
-<li><p>Saves captured output to <code class="docutils literal notranslate"><span class="pre">method_output.txt</span></code>.</p></li>
+<li><p>Starts <code class="docutils literal notranslate"><span class="pre">ResourceMonitor</span></code> in a background thread, sampling CPU memory (<code class="docutils literal notranslate"><span class="pre">psutil</span></code>) and GPU memory (<code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code>) over the whole process tree.</p></li>
+<li><p>Runs the <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code> from the <code class="docutils literal notranslate"><span class="pre">.env</span></code> in a subprocess, with real-time output capture.</p></li>
+<li><p>Checks that <code class="docutils literal notranslate"><span class="pre">results.json</span></code> exists and parses – exit code 0 alone is not taken as success – and merges its own <code class="docutils literal notranslate"><span class="pre">exec_time_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">peak_memory_mb</span></code> and <code class="docutils literal notranslate"><span class="pre">peak_gpu_mb</span></code> into the metadata, where they override anything the method recorded.</p></li>
+<li><p>Writes the final <code class="docutils literal notranslate"><span class="pre">status.json</span></code> (<code class="docutils literal notranslate"><span class="pre">completed</span></code> or <code class="docutils literal notranslate"><span class="pre">failed</span></code>) and saves the captured output to <code class="docutils literal notranslate"><span class="pre">method_output.txt</span></code>.</p></li>
 </ol>
-<p>The method code itself uses <code class="docutils literal notranslate"><span class="pre">ResultWriter</span></code> to produce <code class="docutils literal notranslate"><span class="pre">results.json</span></code>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span>
+<p>The method reads its parameters with <code class="docutils literal notranslate"><span class="pre">graflag_runner.params()</span></code> and writes <code class="docutils literal notranslate"><span class="pre">results.json</span></code> with <code class="docutils literal notranslate"><span class="pre">ResultWriter</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">graflag_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ResultWriter</span><span class="p">,</span> <span class="n">params</span>
 
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span>
+    <span class="n">max_epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span>
+
+<span class="n">config</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">(</span><span class="n">Config</span><span class="p">))</span>   <span class="c1"># _MAX_EPOCH=100 -&gt; config.max_epoch == 100</span>
+<span class="c1"># ... run the detector, score the test split ...</span>
 <span class="n">writer</span> <span class="o">=</span> <span class="n">ResultWriter</span><span class="p">()</span>
-<span class="c1"># ... run detection algorithm ...</span>
-<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span><span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;EDGE_STREAM_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">save_scores</span><span class="p">(</span><span class="n">result_type</span><span class="o">=</span><span class="s2">&quot;TEMPORAL_EDGE_ANOMALY_SCORES&quot;</span><span class="p">,</span> <span class="n">scores</span><span class="o">=</span><span class="n">scores</span><span class="p">,</span> <span class="n">ground_truth</span><span class="o">=</span><span class="n">gt</span><span class="p">)</span>
 <span class="n">writer</span><span class="o">.</span><span class="n">add_metadata</span><span class="p">(</span><span class="n">method_name</span><span class="o">=</span><span class="s2">&quot;taddy&quot;</span><span class="p">,</span> <span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;uci&quot;</span><span class="p">)</span>
-<span class="n">writer</span><span class="o">.</span><span class="n">add_resource_metrics</span><span class="p">(</span><span class="n">exec_time_ms</span><span class="o">=</span><span class="mf">45230.15</span><span class="p">,</span> <span class="n">peak_memory_mb</span><span class="o">=</span><span class="mf">2048.5</span><span class="p">,</span> <span class="n">peak_gpu_mb</span><span class="o">=</span><span class="mf">4096.0</span><span class="p">)</span>
-<span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>  <span class="c1"># Writes results.json</span>
+<span class="n">writer</span><span class="o">.</span><span class="n">finalize</span><span class="p">()</span>  <span class="c1"># writes results.json atomically</span>
 </pre></div>
 </div>
+<p><code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">-m</span> <span class="pre">graflag_runner</span> <span class="pre">--pass-env-args</span></code> is also supported: it appends the parameters to <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code> as CLI flags (<code class="docutils literal notranslate"><span class="pre">_MAX_EPOCH=100</span></code> becomes <code class="docutils literal notranslate"><span class="pre">--max_epoch</span> <span class="pre">100</span></code>). No method uses it.</p>
 </section>
 <section id="evaluation-optional-triggered-separately">
 <h3>6. Evaluation (optional, triggered separately)<a class="headerlink" href="#evaluation-optional-triggered-separately" title="Link to this heading"></a></h3>
@@ -624,10 +708,12 @@
 <p>This deploys a separate <code class="docutils literal notranslate"><span class="pre">graflag-evaluator</span></code> Docker service that:</p>
 <ol class="arabic simple">
 <li><p>Loads <code class="docutils literal notranslate"><span class="pre">results.json</span></code> from the experiment directory.</p></li>
+<li><p>Flattens scores and labels and leaves out sentinel (<code class="docutils literal notranslate"><span class="pre">-1</span></code>, <code class="docutils literal notranslate"><span class="pre">-2</span></code>) and non-finite scores, counting them (<code class="docutils literal notranslate"><span class="pre">preprocessing.py</span></code>).</p></li>
 <li><p>Computes metrics (AUC-ROC, AUC-PR, etc.) via <code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code>.</p></li>
-<li><p>Generates plots (ROC curve, PR curve, score distribution, spot curves) via <code class="docutils literal notranslate"><span class="pre">PlotGenerator</span></code>.</p></li>
+<li><p>Generates plots (ROC curve, PR curve, score distribution, one curve plot per spot CSV) via <code class="docutils literal notranslate"><span class="pre">PlotGenerator</span></code>, from the same filtered pairs.</p></li>
 <li><p>Saves <code class="docutils literal notranslate"><span class="pre">evaluation.json</span></code> and plot PNGs to the <code class="docutils literal notranslate"><span class="pre">eval/</span></code> subdirectory.</p></li>
 </ol>
+<p>The service is removed when it finishes.</p>
 </section>
 </section>
 <hr class="docutils" />
@@ -645,10 +731,16 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">runner.py</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">MethodRunner</span></code> – main execution wrapper. Manages lifecycle, resource monitoring, status tracking, and output capture.</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MethodRunner</span></code> – main execution wrapper. Manages lifecycle, resource monitoring, status tracking, output capture, and the check that <code class="docutils literal notranslate"><span class="pre">results.json</span></code> parses.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">results.py</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">ResultWriter</span></code> – standardized result serialization. Supports <code class="docutils literal notranslate"><span class="pre">save_scores()</span></code>, <code class="docutils literal notranslate"><span class="pre">add_metadata()</span></code>, <code class="docutils literal notranslate"><span class="pre">add_resource_metrics()</span></code>, <code class="docutils literal notranslate"><span class="pre">spot()</span></code> (CSV-based metric tracking), and <code class="docutils literal notranslate"><span class="pre">finalize()</span></code>.</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">method.py</span></code></p></td>
+<td><p>The SDK for integration scripts: <code class="docutils literal notranslate"><span class="pre">params()</span></code> and <code class="docutils literal notranslate"><span class="pre">apply_params()</span></code> (parameters from <code class="docutils literal notranslate"><span class="pre">_FOO</span></code> variables), <code class="docutils literal notranslate"><span class="pre">device()</span></code> (<code class="docutils literal notranslate"><span class="pre">_GPU</span></code>, with <code class="docutils literal notranslate"><span class="pre">-1</span></code> meaning CPU), <code class="docutils literal notranslate"><span class="pre">paths()</span></code> (<code class="docutils literal notranslate"><span class="pre">DATA</span></code>/<code class="docutils literal notranslate"><span class="pre">EXP</span></code>), <code class="docutils literal notranslate"><span class="pre">upstream()</span></code> (the clone on <code class="docutils literal notranslate"><span class="pre">sys.path</span></code>), <code class="docutils literal notranslate"><span class="pre">seed_all()</span></code>, and the dataset loaders <code class="docutils literal notranslate"><span class="pre">load_dataset()</span></code>, <code class="docutils literal notranslate"><span class="pre">load_snapshots()</span></code>, <code class="docutils literal notranslate"><span class="pre">load_edge_list()</span></code>, <code class="docutils literal notranslate"><span class="pre">load_attributed_graph()</span></code>, <code class="docutils literal notranslate"><span class="pre">split_test_edges()</span></code>, <code class="docutils literal notranslate"><span class="pre">write_mat()</span></code>/<code class="docutils literal notranslate"><span class="pre">read_mat()</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">results.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ResultWriter</span></code> – standardized result serialization. Supports <code class="docutils literal notranslate"><span class="pre">save_scores()</span></code>, <code class="docutils literal notranslate"><span class="pre">add_metadata()</span></code>, <code class="docutils literal notranslate"><span class="pre">add_resource_metrics()</span></code>, <code class="docutils literal notranslate"><span class="pre">spot()</span></code> (CSV-based metric tracking), and <code class="docutils literal notranslate"><span class="pre">finalize()</span></code>, which writes to a temporary file and renames it into place.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">serialization.py</span></code></p></td>
+<td><p>JSON encoding of NumPy types for <code class="docutils literal notranslate"><span class="pre">results.json</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">monitor.py</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ResourceMonitor</span></code> – background thread tracking CPU memory (via <code class="docutils literal notranslate"><span class="pre">psutil</span></code>), GPU memory (via <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code>), with periodic CSV logging through <code class="docutils literal notranslate"><span class="pre">ResultWriter.spot()</span></code>.</p></td>
@@ -695,7 +787,7 @@
 </tr>
 </tbody>
 </table>
-<p>Usage pattern: methods prefixed with <code class="docutils literal notranslate"><span class="pre">bond_</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">bond_dominant</span></code>) use this library to instantiate and train PyGOD detectors without writing boilerplate code. Their <code class="docutils literal notranslate"><span class="pre">.env</span></code> sets <code class="docutils literal notranslate"><span class="pre">COMMAND=python3</span> <span class="pre">-m</span> <span class="pre">graflag_bond.train</span></code> and their Dockerfile uses <code class="docutils literal notranslate"><span class="pre">CMD</span> <span class="pre">[&quot;python3&quot;,</span> <span class="pre">&quot;-m&quot;,</span> <span class="pre">&quot;graflag_runner&quot;]</span></code> (without <code class="docutils literal notranslate"><span class="pre">--pass-env-args</span></code>).</p>
+<p>Usage pattern: methods prefixed with <code class="docutils literal notranslate"><span class="pre">bond_</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">bond_dominant</span></code>) use this library to instantiate and train PyGOD detectors without writing boilerplate code. Their <code class="docutils literal notranslate"><span class="pre">.env</span></code> sets <code class="docutils literal notranslate"><span class="pre">COMMAND=python3</span> <span class="pre">-m</span> <span class="pre">graflag_bond.train</span></code> and <code class="docutils literal notranslate"><span class="pre">IMAGE=bond_base</span></code>: all 17 run the one image built from <code class="docutils literal notranslate"><span class="pre">images/bond_base/Dockerfile</span></code>, and stay distinct because <code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code> is set per service.</p>
 </section>
 <section id="graflag-evaluator">
 <h3>graflag_evaluator<a class="headerlink" href="#graflag-evaluator" title="Link to this heading"></a></h3>
@@ -710,6 +802,12 @@
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">evaluator.py</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">Evaluator</span></code> – orchestrator that loads results, computes metrics, generates plots, and saves <code class="docutils literal notranslate"><span class="pre">evaluation.json</span></code>. Loads custom metric plugins on init.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">preprocessing.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">prepare_pairs()</span></code> – flattens scores and labels and drops sentinel and non-finite scores, reporting the counts. Metrics and plots both go through it, so they are computed on the same samples.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">compare_metrics.py</span></code></p></td>
+<td><p>Recomputes an existing experiment with the previous metric implementation and prints what changes.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">metrics.py</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> – computes AUC-ROC, AUC-PR, and other metrics based on result type. Handles ragged arrays (e.g., temporal edge scores with varying snapshot sizes). Supports plugin-based custom metrics via <code class="docutils literal notranslate"><span class="pre">register_metric()</span></code> and <code class="docutils literal notranslate"><span class="pre">load_plugins()</span></code>.</p></td>
@@ -731,6 +829,11 @@
 <li><p><strong>Per-experiment plugins</strong>: <code class="docutils literal notranslate"><span class="pre">experiments/&lt;exp_name&gt;/custom_metrics/</span></code> – scoped to a single experiment.</p></li>
 </ol>
 <p>Each plugin file imports <code class="docutils literal notranslate"><span class="pre">MetricCalculator</span></code> and calls <code class="docutils literal notranslate"><span class="pre">register_metric()</span></code> at module level. Plugins can be created manually or via the Python API (<code class="docutils literal notranslate"><span class="pre">GraFlag.register_metric()</span></code>), which extracts the function source and writes it as a plugin file on the cluster.</p>
+</section>
+<section id="graflag-data">
+<h3>graflag_data<a class="headerlink" href="#graflag-data" title="Link to this heading"></a></h3>
+<p><strong>Location</strong>: <code class="docutils literal notranslate"><span class="pre">graflag-shared/libs/graflag_data/</span></code></p>
+<p>Downloads dataset files from their original sources. Each dataset directory holds only a <code class="docutils literal notranslate"><span class="pre">metadata.json</span></code> naming its files, their URLs, how to extract them and, optionally, their sha256; a derived dataset instead names the dataset it is built from and the command that builds it. The <code class="docutils literal notranslate"><span class="pre">graflag-data</span></code> command (<code class="docutils literal notranslate"><span class="pre">list</span></code>, <code class="docutils literal notranslate"><span class="pre">status</span></code>, <code class="docutils literal notranslate"><span class="pre">fetch</span></code>, <code class="docutils literal notranslate"><span class="pre">verify</span></code>) runs on the manager, and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">run</span></code> calls <code class="docutils literal notranslate"><span class="pre">fetch</span></code> for its dataset before deploying.</p>
 </section>
 </section>
 <hr class="docutils" />
@@ -755,9 +858,9 @@
 <li><p>The method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> file defines metadata (<code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code>, <code class="docutils literal notranslate"><span class="pre">DESCRIPTION</span></code>) and default parameters (underscore-prefixed: <code class="docutils literal notranslate"><span class="pre">_BATCH_SIZE=128</span></code>).</p></li>
 <li><p>The method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> is read by <code class="docutils literal notranslate"><span class="pre">DockerManager._build_service_env()</span></code> and parsed into a dict.</p></li>
 <li><p>Reserved variables (<code class="docutils literal notranslate"><span class="pre">DATA</span></code>, <code class="docutils literal notranslate"><span class="pre">EXP</span></code>, <code class="docutils literal notranslate"><span class="pre">METHOD_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">COMMAND</span></code>, <code class="docutils literal notranslate"><span class="pre">MONITOR_INTERVAL</span></code>) are set by the orchestrator and cannot be overridden by <code class="docutils literal notranslate"><span class="pre">--params</span></code>.</p></li>
-<li><p>User <code class="docutils literal notranslate"><span class="pre">--params</span></code> are merged into the dict as <code class="docutils literal notranslate"><span class="pre">_KEY=VALUE</span></code>, overriding any defaults from the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file.</p></li>
-<li><p>The merged dict is passed as the <code class="docutils literal notranslate"><span class="pre">env</span></code> parameter to <code class="docutils literal notranslate"><span class="pre">client.services.create()</span></code>.</p></li>
-<li><p>Inside the container, <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> with <code class="docutils literal notranslate"><span class="pre">--pass-env-args</span></code> extracts <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed env vars and converts them to CLI arguments: <code class="docutils literal notranslate"><span class="pre">_MAX_EPOCH=100</span></code> becomes <code class="docutils literal notranslate"><span class="pre">--max_epoch</span> <span class="pre">100</span></code>.</p></li>
+<li><p>User <code class="docutils literal notranslate"><span class="pre">--params</span></code> are merged into the dict as <code class="docutils literal notranslate"><span class="pre">_KEY=VALUE</span></code>, overriding any defaults from the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file. With <code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code>, <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> becomes <code class="docutils literal notranslate"><span class="pre">-1</span></code> unless <code class="docutils literal notranslate"><span class="pre">--params</span></code> sets it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GRAFLAG_PARAMS</span></code> is added, listing the <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed keys, and the merged dict is passed as the <code class="docutils literal notranslate"><span class="pre">env</span></code> parameter to <code class="docutils literal notranslate"><span class="pre">client.services.create()</span></code>.</p></li>
+<li><p>Inside the container, the integration script reads them with <code class="docutils literal notranslate"><span class="pre">params()</span></code>: the underscore is stripped, the name lowercased and the value coerced to the type its <code class="docutils literal notranslate"><span class="pre">Config</span></code> field declares (<code class="docutils literal notranslate"><span class="pre">_MAX_EPOCH=100</span></code> becomes <code class="docutils literal notranslate"><span class="pre">max_epoch=100</span></code>, an <code class="docutils literal notranslate"><span class="pre">int</span></code>).</p></li>
 </ol>
 </section>
 <section id="result-standardization">
@@ -813,10 +916,10 @@
                                                 <span class="o">--&gt;</span> <span class="n">pr_curve</span><span class="o">.</span><span class="n">png</span>
                                                 <span class="o">--&gt;</span> <span class="n">score_distribution</span><span class="o">.</span><span class="n">png</span>
 
-<span class="o">*.</span><span class="n">csv</span> <span class="p">(</span><span class="n">spot</span> <span class="n">files</span><span class="p">)</span> <span class="o">--&gt;</span> <span class="n">PlotGenerator</span> <span class="o">--&gt;</span> <span class="n">spot_curves</span><span class="o">.</span><span class="n">png</span> <span class="p">(</span><span class="n">per</span> <span class="n">metric</span> <span class="n">group</span><span class="p">)</span>
+<span class="o">*.</span><span class="n">csv</span> <span class="p">(</span><span class="n">spot</span> <span class="n">files</span><span class="p">)</span> <span class="o">--&gt;</span> <span class="n">PlotGenerator</span> <span class="o">--&gt;</span> <span class="o">&lt;</span><span class="n">key</span><span class="o">&gt;</span><span class="n">_curves</span><span class="o">.</span><span class="n">png</span> <span class="p">(</span><span class="n">one</span> <span class="n">per</span> <span class="n">spot</span> <span class="n">file</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>On initialization the <code class="docutils literal notranslate"><span class="pre">Evaluator</span></code> loads custom metric plugins from the global <code class="docutils literal notranslate"><span class="pre">plugins/</span></code> directory and the experiment’s <code class="docutils literal notranslate"><span class="pre">custom_metrics/</span></code> directory. Each plugin registers additional metric functions that are then included in the evaluation alongside the built-in metrics (AUC-ROC, AUC-PR, etc.). The evaluator flattens scores and ground truth arrays, handles ragged temporal data, and computes all registered metrics.</p>
+<p>On initialization the <code class="docutils literal notranslate"><span class="pre">Evaluator</span></code> loads custom metric plugins from the global <code class="docutils literal notranslate"><span class="pre">plugins/</span></code> directory and the experiment’s <code class="docutils literal notranslate"><span class="pre">custom_metrics/</span></code> directory. Each plugin registers additional metric functions that are then included in the evaluation alongside the built-in metrics (AUC-ROC, AUC-PR, etc.). The built-in metrics flatten scores and ground truth (ragged temporal data included) and leave out <code class="docutils literal notranslate"><span class="pre">-1</span></code>/<code class="docutils literal notranslate"><span class="pre">-2</span></code> sentinels and non-finite scores; the counts are reported under <code class="docutils literal notranslate"><span class="pre">metrics.filtering</span></code>. See <a class="reference internal" href="RESULTS_STANDARD.html"><span class="std std-doc">RESULTS_STANDARD</span></a>.</p>
 </section>
 </section>
 <hr class="docutils" />
@@ -845,14 +948,18 @@
             <span class="o">+----------+</span>
 </pre></div>
 </div>
-<p><strong>State determination logic</strong> (in <code class="docutils literal notranslate"><span class="pre">core.py</span></code>):</p>
+<p><strong>State determination logic</strong> (in <code class="docutils literal notranslate"><span class="pre">core.py</span></code>, <code class="docutils literal notranslate"><span class="pre">_build_experiment_info</span></code>):</p>
+<p><code class="docutils literal notranslate"><span class="pre">status.json</span></code> is transferred base64-encoded, because the probe’s reply is parsed
+line by line while <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> writes the file indented – reading it with a
+plain <code class="docutils literal notranslate"><span class="pre">cat</span></code> captured only the opening <code class="docutils literal notranslate"><span class="pre">{</span></code>, so every runner-written status was
+silently discarded and finished experiments reported <code class="docutils literal notranslate"><span class="pre">running</span></code> indefinitely.</p>
 <ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">status.json</span></code> is the source of truth when present.</p></li>
 <li><p>Terminal states (<code class="docutils literal notranslate"><span class="pre">completed</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>) from <code class="docutils literal notranslate"><span class="pre">status.json</span></code> are definitive.</p></li>
-<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">running</span></code> but no Docker service exists, status is <code class="docutils literal notranslate"><span class="pre">stopped</span></code>.</p></li>
-<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">building</span></code> but no service exists and <code class="docutils literal notranslate"><span class="pre">build.log</span></code> is present, status is <code class="docutils literal notranslate"><span class="pre">failed</span></code>.</p></li>
-<li><p>If no <code class="docutils literal notranslate"><span class="pre">status.json</span></code> exists but the Docker service is present, status is <code class="docutils literal notranslate"><span class="pre">running</span></code>.</p></li>
-<li><p>Legacy experiments without <code class="docutils literal notranslate"><span class="pre">status.json</span></code> that have <code class="docutils literal notranslate"><span class="pre">results.json</span></code> are assumed <code class="docutils literal notranslate"><span class="pre">completed</span></code>.</p></li>
+<li><p>Otherwise, if the Docker task has failed, the status is <code class="docutils literal notranslate"><span class="pre">failed</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">building</span></code>: <code class="docutils literal notranslate"><span class="pre">running</span></code> once the service exists; <code class="docutils literal notranslate"><span class="pre">failed</span></code> if the service never appeared and <code class="docutils literal notranslate"><span class="pre">build.log</span></code> is present; <code class="docutils literal notranslate"><span class="pre">building</span></code> otherwise.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">running</span></code> but no Docker service exists, the status is <code class="docutils literal notranslate"><span class="pre">stopped</span></code>.</p></li>
+<li><p>If there is no usable <code class="docutils literal notranslate"><span class="pre">status.json</span></code> but the Docker service is present, the status is <code class="docutils literal notranslate"><span class="pre">running</span></code>.</p></li>
+<li><p>Experiments without a status that have <code class="docutils literal notranslate"><span class="pre">results.json</span></code> or an evaluation are <code class="docutils literal notranslate"><span class="pre">completed</span></code>.</p></li>
 <li><p>All other cases are <code class="docutils literal notranslate"><span class="pre">unknown</span></code>.</p></li>
 </ol>
 <p><code class="docutils literal notranslate"><span class="pre">status.json</span></code> is written at multiple points:</p>
@@ -884,9 +991,9 @@
 <section id="key-design-decisions">
 <h3>Key Design Decisions<a class="headerlink" href="#key-design-decisions" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">--restart-condition</span> <span class="pre">none</span></code></strong>: Experiments are one-shot tasks. If the method crashes, the service transitions to <code class="docutils literal notranslate"><span class="pre">Complete</span></code> (with non-zero exit code) rather than restarting. The status is tracked in <code class="docutils literal notranslate"><span class="pre">status.json</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">--restart-condition</span> <span class="pre">none</span></code></strong>: Experiments are one-shot tasks. A method that exits non-zero leaves its task <code class="docutils literal notranslate"><span class="pre">Failed</span></code> and is not restarted, so a failed run stays failed. The status is tracked in <code class="docutils literal notranslate"><span class="pre">status.json</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">--network</span> <span class="pre">host</span></code></strong>: Containers share the host’s network stack. This provides DNS resolution and internet access (for methods that download models or data).</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">--generic-resource</span> <span class="pre">NVIDIA-GPU=0</span></code></strong>: Reserves a GPU via Docker’s generic resource model. The <code class="docutils literal notranslate"><span class="pre">0</span></code> is the GPU index. This requires the NVIDIA runtime and GPU resource advertisement on worker nodes.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">--generic-resource</span> <span class="pre">NVIDIA-GPU=1</span></code></strong>: Reserves one GPU through Docker’s generic resource model (a <code class="docutils literal notranslate"><span class="pre">DiscreteResourceSpec</span></code> named <code class="docutils literal notranslate"><span class="pre">NVIDIA-GPU</span></code>). The value is a count, not an index: <code class="docutils literal notranslate"><span class="pre">0</span></code> would reserve nothing and constrain nothing. Workers advertise their GPU as a node generic resource, and the NVIDIA runtime exposes the assigned device.</p></li>
 <li><p><strong>Bind mount</strong>: The shared directory is bind-mounted at the same path inside the container, so all paths (DATA, EXP) are consistent between host and container.</p></li>
 </ul>
 </section>
@@ -898,6 +1005,13 @@
 <h3>Evaluation Services<a class="headerlink" href="#evaluation-services" title="Link to this heading"></a></h3>
 <p>Evaluation runs as a separate service named <code class="docutils literal notranslate"><span class="pre">eval__exp__method__dataset__ts</span></code>. It uses the <code class="docutils literal notranslate"><span class="pre">graflag-evaluator</span></code> image, mounts shared storage at <code class="docutils literal notranslate"><span class="pre">/shared</span></code>, and receives the experiment path as a command argument. The evaluator service is removed after completion.</p>
 </section>
+</section>
+<hr class="docutils" />
+<section id="housekeeping">
+<h2>Housekeeping<a class="headerlink" href="#housekeeping" title="Link to this heading"></a></h2>
+<p><strong>Services.</strong> <code class="docutils literal notranslate"><span class="pre">run()</span></code> removes the service when the run ends, unless <code class="docutils literal notranslate"><span class="pre">--keep-service</span></code> is given, and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">stop</span></code> removes the service of the run it stops; <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">cleanup</span></code> removes the ones left otherwise, by a run the client detached from or one started with <code class="docutils literal notranslate"><span class="pre">--keep-service</span></code>. Both go through <code class="docutils literal notranslate"><span class="pre">cleanup_services()</span></code>, which touches only terminal experiments and keeps a service unless the run can be diagnosed from disk – a <code class="docutils literal notranslate"><span class="pre">method_output.txt</span></code>, or a <code class="docutils literal notranslate"><span class="pre">status.json</span></code> recording an error – because <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">logs</span></code> falls back to that file once the service is gone. Cleanup never turns a completed run into a failed one.</p>
+<p><strong>Storage.</strong> <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">clear</span></code> sweeps what <code class="docutils literal notranslate"><span class="pre">cleanup</span></code> leaves: experiments whose <code class="docutils literal notranslate"><span class="pre">methods/&lt;name&gt;</span></code> is gone, datasets referenced only by such experiments, images (local or in the registry) whose owner is not a method, and strays at the root of the share. It removes only on that evidence, and only with <code class="docutils literal notranslate"><span class="pre">--apply</span></code>; without it, it reports the same list.</p>
+<p><strong>Registry blobs.</strong> Deleting a repository frees no disk until the registry’s blobs are garbage-collected, which <code class="docutils literal notranslate"><span class="pre">--gc</span></code> does. Collection is not safe against a live registry – it deletes blobs the running registry still reports as present, so a later push skips layers that are gone and leaves an image workers cannot pull – so <code class="docutils literal notranslate"><span class="pre">clear</span> <span class="pre">--gc</span></code> scales the registry to zero first and back up afterwards.</p>
 </section>
 <hr class="docutils" />
 <section id="configuration">
@@ -913,9 +1027,11 @@
 <span class="nv">SSH_KEY</span><span class="o">=</span>~/.ssh/id_ed25519
 <span class="nv">SHARED_DIR</span><span class="o">=</span>/shared
 <span class="nv">HOSTS_FILE</span><span class="o">=</span>hosts.yml
+<span class="nv">NFS_PORT</span><span class="o">=</span><span class="m">2049</span>
+<span class="nv">GRAFLAG_LIBS</span><span class="o">=</span><span class="nb">local</span><span class="w">        </span><span class="c1"># or pypi</span>
 </pre></div>
 </div>
-<p>Config resolution order: <code class="docutils literal notranslate"><span class="pre">--config</span></code> flag &gt; <code class="docutils literal notranslate"><span class="pre">.env</span></code> in working directory &gt; <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>.</p>
+<p>Config resolution order: <code class="docutils literal notranslate"><span class="pre">--config</span></code> flag &gt; a <code class="docutils literal notranslate"><span class="pre">.env</span></code> in the working directory that defines <code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code> &gt; <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>.</p>
 </section>
 <section id="cluster-configuration-hosts-yml">
 <h3>Cluster Configuration (hosts.yml)<a class="headerlink" href="#cluster-configuration-hosts-yml" title="Link to this heading"></a></h3>
@@ -935,18 +1051,21 @@
 <p>Each method has a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in its directory:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Metadata (read by orchestrator)</span>
 <span class="nv">METHOD_NAME</span><span class="o">=</span>taddy
-<span class="nv">DESCRIPTION</span><span class="o">=</span>Temporal<span class="w"> </span>anomaly<span class="w"> </span>detection<span class="w"> </span>on<span class="w"> </span>dynamic<span class="w"> </span>graphs
-<span class="nv">SOURCE_CODE</span><span class="o">=</span>https://github.com/example/taddy
+<span class="nv">DESCRIPTION</span><span class="o">=</span>Temporal<span class="w"> </span>Anomaly<span class="w"> </span>Detection<span class="w"> </span><span class="k">in</span><span class="w"> </span>Dynamic<span class="w"> </span>Networks<span class="w"> </span>via<span class="w"> </span>Transformer
+<span class="nv">SOURCE_CODE</span><span class="o">=</span>https://github.com/yuetan031/TADDY_pytorch
+<span class="nv">SOURCE_REF</span><span class="o">=</span>dfe15ddbbc179ed0ca9a96482fe1696dfbcb5bcd<span class="w">   </span><span class="c1"># the commit the image clones</span>
+<span class="nv">INTEGRATION</span><span class="o">=</span>upstream<span class="w">                                 </span><span class="c1"># or reimplementation</span>
+<span class="nv">SUPPORTED_DATASETS</span><span class="o">=</span>uci,btc_alpha,btc_otc,digg<span class="w">        </span><span class="c1"># enforced by the runner</span>
 <span class="nv">COMMAND</span><span class="o">=</span>python3<span class="w"> </span>train_graflag.py
-<span class="nv">SUPPORTED_DATASETS</span><span class="o">=</span>uci,btc_alpha,btc_otc
 
 <span class="c1"># Default parameters (underscore prefix, overridable via --params)</span>
 <span class="nv">_MAX_EPOCH</span><span class="o">=</span><span class="m">200</span>
-<span class="nv">_BATCH_SIZE</span><span class="o">=</span><span class="m">128</span>
 <span class="nv">_LEARNING_RATE</span><span class="o">=</span><span class="m">0</span>.001
-<span class="nv">_HIDDEN_DIM</span><span class="o">=</span><span class="m">64</span>
+<span class="nv">_EMBEDDING_DIM</span><span class="o">=</span><span class="m">32</span>
+<span class="nv">_GPU</span><span class="o">=</span><span class="m">0</span>
 </pre></div>
 </div>
+<p>A method that shares an image declares <code class="docutils literal notranslate"><span class="pre">IMAGE=&lt;name&gt;</span></code> and has no Dockerfile of its own. <code class="docutils literal notranslate"><span class="pre">graflag-shared/tests/test_methods.py</span></code> enforces this contract.</p>
 </section>
 </section>
 <hr class="docutils" />
@@ -955,8 +1074,8 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">experiments</span><span class="o">/</span><span class="n">exp__taddy__uci__20260309_143000</span><span class="o">/</span>
 <span class="o">+--</span> <span class="n">status</span><span class="o">.</span><span class="n">json</span>            <span class="c1"># Execution status (building/running/completed/failed)</span>
 <span class="o">+--</span> <span class="n">service_config</span><span class="o">.</span><span class="n">json</span>    <span class="c1"># Full service configuration (reproducible)</span>
-<span class="o">+--</span> <span class="n">service_details</span><span class="o">.</span><span class="n">json</span>   <span class="c1"># Docker service metadata (node, task ID, etc.)</span>
-<span class="o">+--</span> <span class="n">build</span><span class="o">.</span><span class="n">log</span>              <span class="c1"># Docker image build output (if --build was used)</span>
+<span class="o">+--</span> <span class="n">service_details</span><span class="o">.</span><span class="n">json</span>   <span class="c1"># Service and task IDs, and the task&#39;s state at creation</span>
+<span class="o">+--</span> <span class="n">build</span><span class="o">.</span><span class="n">log</span>              <span class="c1"># Pinned commit, libraries source, docker build + push output (--build only)</span>
 <span class="o">+--</span> <span class="n">method_output</span><span class="o">.</span><span class="n">txt</span>      <span class="c1"># Captured stdout/stderr from method execution</span>
 <span class="o">+--</span> <span class="n">results</span><span class="o">.</span><span class="n">json</span>           <span class="c1"># Standardized method output (scores, ground_truth)</span>
 <span class="o">+--</span> <span class="n">training</span><span class="o">.</span><span class="n">csv</span>           <span class="c1"># Training metrics from writer.spot(&quot;training&quot;, ...)</span>
@@ -968,10 +1087,11 @@
     <span class="o">+--</span> <span class="n">roc_curve</span><span class="o">.</span><span class="n">png</span>      <span class="c1"># ROC curve plot</span>
     <span class="o">+--</span> <span class="n">pr_curve</span><span class="o">.</span><span class="n">png</span>       <span class="c1"># Precision-Recall curve plot</span>
     <span class="o">+--</span> <span class="n">score_distribution</span><span class="o">.</span><span class="n">png</span>  <span class="c1"># Score histogram by class</span>
-    <span class="o">+--</span> <span class="n">spot_curves</span><span class="o">.</span><span class="n">png</span>    <span class="c1"># Spot metric curves (if spot files exist)</span>
+    <span class="o">+--</span> <span class="n">training_curves</span><span class="o">.</span><span class="n">png</span>   <span class="c1"># One &lt;key&gt;_curves.png per spot CSV</span>
+    <span class="o">+--</span> <span class="n">resources_curves</span><span class="o">.</span><span class="n">png</span>  <span class="c1"># (always present: the runner&#39;s monitor)</span>
 </pre></div>
 </div>
-<p>The <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code> file contains all information needed to reproduce an experiment:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code> file records how the experiment was run:</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;experiment_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;exp__taddy__uci__20260309_143000&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;method_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;taddy&quot;</span><span class="p">,</span>
@@ -992,10 +1112,12 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>To replay an experiment:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>graflag<span class="w"> </span>run<span class="w"> </span>--from-config<span class="w"> </span>./experiments/exp__taddy__uci__20260309_143000/service_config.json
+<p>To replay an experiment, copy the file to the client and pass it to <code class="docutils literal notranslate"><span class="pre">run</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>graflag<span class="w"> </span>copy<span class="w"> </span>--from-remote<span class="w"> </span>-s<span class="w"> </span>experiments/exp__taddy__uci__20260309_143000/service_config.json<span class="w"> </span>--dest<span class="w"> </span>.
+graflag<span class="w"> </span>run<span class="w"> </span>--from-config<span class="w"> </span>service_config.json
 </pre></div>
 </div>
+<p>The replay takes the method, the dataset, the <code class="docutils literal notranslate"><span class="pre">_</span></code>-prefixed parameters, the <code class="docutils literal notranslate"><span class="pre">tag</span></code> and <code class="docutils literal notranslate"><span class="pre">gpu_required</span></code> from the file; options given on the command line override them. A replay without a GPU switches the method’s <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> to <code class="docutils literal notranslate"><span class="pre">-1</span></code> like any <code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code> run, since the recorded <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> is the <code class="docutils literal notranslate"><span class="pre">.env</span></code> default rather than a choice. The image is whatever the registry holds under that tag now: a method rebuilt since the original run replays with the new build.</p>
 </section>
 </section>
 
@@ -1003,8 +1125,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="RESULTS_STANDARD.html" class="btn btn-neutral float-left" title="Graph Anomaly Detection Result Types" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="demo.html" class="btn btn-neutral float-right" title="Demo Video" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="AGENT_SKILL.html" class="btn btn-neutral float-left" title="Method Integration Skill" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api/graflag.html" class="btn btn-neutral float-right" title="graflag package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -6,20 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Demo Video &mdash; GraFlag 1.0.0 documentation</title>
+  <title>Demo Video &mdash; GraFlag 1.1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=fc837d61"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="GraFlag Architecture" href="ARCHITECTURE.html" /> 
+    <link rel="next" title="GraFlag Method Integration Guide" href="METHOD_INTEGRATION_GUIDE.html" />
+    <link rel="prev" title="Development Cluster" href="devcluster.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,11 +43,27 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="gui.html">Web Dashboard</a></li>
 <li class="toctree-l1"><a class="reference internal" href="devcluster.html">Development Cluster</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Demo Video</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#chapters">Chapters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#about-the-recording">About the recording</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Integrating Methods</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AGENT_SKILL.html">Method Integration Skill</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Internals</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
 <ul>
@@ -57,17 +74,6 @@
 <li class="toctree-l1"><a class="reference internal" href="api/ssh.html">graflag.ssh</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/docker_ops.html">graflag.docker_ops</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/api_module.html">graflag.api</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="METHOD_INTEGRATION_GUIDE.html">GraFlag Method Integration Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AGENT_METHOD_INTEGRATION.html">AI Agent Instructions: GraFlag Method Integration</a></li>
-<li class="toctree-l1"><a class="reference internal" href="RESULTS_STANDARD.html">Graph Anomaly Detection Result Types</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ARCHITECTURE.html">GraFlag Architecture</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Demo Video</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#scenarios">Scenarios</a></li>
-</ul>
-</li>
 </ul>
 
         </div>
@@ -96,26 +102,68 @@
              
   <section id="demo-video">
 <h1>Demo Video<a class="headerlink" href="#demo-video" title="Link to this heading"></a></h1>
-<p>A full walkthrough of GraFlag demonstrating GUI and CLI workflows on a real cluster
-with GPU-enabled workers.</p>
-<video controls width="100%" style="border-radius:8px; margin:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
-  <source src="_static/graflag_full_demo.mp4" type="video/mp4">
+<p>A narrated walkthrough, in under four minutes: the command line, a method
+integration, a GPU run, the web dashboard, and a replayed experiment.</p>
+<video id="demo-player" controls preload="metadata" width="100%"
+       poster="_static/graflag_demo_poster.jpg"
+       style="border-radius:8px; margin:16px 0; box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+  <source src="_static/graflag_demo.mp4" type="video/mp4">
+  <track kind="captions" src="_static/graflag_demo.vtt" srclang="en" label="English">
   Your browser does not support the video tag.
-</video><section id="scenarios">
-<h2>Scenarios<a class="headerlink" href="#scenarios" title="Link to this heading"></a></h2>
-<dl class="simple">
-<dt><strong>GUI Dashboard</strong></dt><dd><p>Live walkthrough of the web dashboard: cluster status, launching experiments,
-streaming logs, and viewing evaluation metrics and plots.</p>
-</dd>
-<dt><strong>CLI Overview</strong></dt><dd><p>Cluster setup, status, and browsing available methods and datasets from the terminal.</p>
-</dd>
-<dt><strong>Scenario 1: Comparative Benchmarking</strong></dt><dd><p>Comparing DOMINANT vs CONAD on bond_inj_cora with automated evaluation.</p>
-</dd>
-<dt><strong>Scenario 2: Custom Method Integration</strong></dt><dd><p>Integrating TADDY into the framework using the <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> SDK.</p>
-</dd>
-<dt><strong>Scenario 3: Reproducibility Verification</strong></dt><dd><p>Reproducing an experiment from its saved <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code> and comparing results.</p>
-</dd>
-</dl>
+</video><section id="chapters">
+<h2>Chapters<a class="headerlink" href="#chapters" title="Link to this heading"></a></h2>
+<p>Select a time to jump to that chapter.</p>
+<style>
+  .wy-table-responsive table.demo-chapters td { white-space: normal; vertical-align: top; }
+  .wy-table-responsive table.demo-chapters code { white-space: normal; }
+  @media (max-width: 480px) {
+    .wy-table-responsive table.demo-chapters td,
+    .wy-table-responsive table.demo-chapters th { padding: 6px 8px; }
+  }
+</style>
+<table class="docutils align-default demo-chapters">
+  <thead><tr><th>Time</th><th>Chapter</th><th>What it shows</th></tr></thead>
+  <tbody>
+    <tr><td><a href="#demo-player" data-seek="0">0:00</a></td><td>Introduction</td>
+        <td>What GraFlag is for.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="14">0:14</a></td><td>How it works</td>
+        <td>The client, the Docker Swarm cluster, one service per experiment, and the shared NFS store.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="31">0:31</a></td><td>Command line</td>
+        <td><code>graflag status</code>, then the method and dataset catalogues.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="54">0:54</a></td><td>Integrating a method</td>
+        <td>The files that make up RARE's integration, its <code>.env</code> pinned to the authors' commit, and the contract tests every method definition passes.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="78">1:18</a></td><td>Running a method</td>
+        <td><code>graflag run</code> on a GPU worker: the method's own AUROC, the runner's time and memory measurements, the service removed, then <code>graflag evaluate</code>.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="124">2:04</a></td><td>Web dashboard</td>
+        <td>Launching AnoGraph on ISCX, evaluating it, and opening its plots.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="178">2:58</a></td><td>Reproducing a run</td>
+        <td>Replaying a saved <code>service_config.json</code> on another worker, then evaluating the replay: the same AUC-ROC as the original.</td></tr>
+    <tr><td><a href="#demo-player" data-seek="210">3:30</a></td><td>Getting started</td>
+        <td><code>pip install graflag</code>.</td></tr>
+  </tbody>
+</table>
+<script>
+  document.querySelectorAll('a[data-seek]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var v = document.getElementById('demo-player');
+      v.currentTime = Number(a.dataset.seek);
+      v.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      v.play();
+    });
+  });
+</script></section>
+<section id="about-the-recording">
+<h2>About the recording<a class="headerlink" href="#about-the-recording" title="Link to this heading"></a></h2>
+<p>The video was recorded on the development cluster that <a class="reference internal" href="devcluster.html"><span class="doc">graflag devcluster</span></a>
+deploys: a manager and four workers, running as Docker containers on one workstation
+and sharing its GPU, an NVIDIA RTX A2000 (12 GB). Swarm schedules them as five
+separate nodes, so the worker names in the logs are the ones a physical cluster
+would show.</p>
+<p>Every command in the terminal scenes was really run, and the output on screen is
+exactly what it printed. Long pauses are shortened, and the one sped-up stretch,
+RARE’s search phase, is labelled on screen. The dashboard scene plays in real time.</p>
+<p>Captions are available from the player’s captions menu.</p>
 </section>
 </section>
 
@@ -123,7 +171,8 @@ streaming logs, and viewing evaluation metrics and plots.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ARCHITECTURE.html" class="btn btn-neutral float-left" title="GraFlag Architecture" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="devcluster.html" class="btn btn-neutral float-left" title="Development Cluster" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="METHOD_INTEGRATION_GUIDE.html" class="btn btn-neutral float-right" title="GraFlag Method Integration Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

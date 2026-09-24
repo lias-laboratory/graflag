@@ -33,14 +33,25 @@ export default {
 
             // Find the selected method
             const method = this.methods.find(m => m.name === this.form.method);
-            if (!method || !method.supported_datasets || method.supported_datasets.length === 0) {
-                // No restrictions, show all datasets
+            // The API field is `supported_data`, a comma-separated string --
+            // the fnmatch patterns straight out of the method's .env. This
+            // read `supported_datasets` and expected an array, so the length
+            // check always short-circuited and every method offered every
+            // dataset. Nothing ever filtered.
+            const patterns = String((method && method.supported_data) || '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+            if (!method || patterns.length === 0) {
+                // The method declares no restriction: every dataset is fair
+                // game, which is what an empty SUPPORTED_DATASETS means.
                 return this.datasets;
             }
 
-            // Filter datasets based on supported_datasets patterns
+            // Same fnmatch dialect the runner enforces, so the dropdown
+            // offers exactly what graflag_runner.from_env() would accept.
             return this.datasets.filter(dataset => {
-                return method.supported_datasets.some(pattern => {
+                return patterns.some(pattern => {
                     // Convert wildcard pattern to regex
                     // e.g., "bond_*" -> /^bond_.*$/, "*_snapshot" -> /^.*_snapshot$/
                     const regexPattern = pattern
@@ -121,7 +132,7 @@ export default {
         async submitRun() {
             console.log('[DEBUG] submitRun called');
 
-            this.status = '<div style="color:var(--primary); font-weight:500;">⏳ Starting run...</div>';
+            this.status = '<div style="color:var(--primary); font-weight:500;"> Starting run...</div>';
             this.showLogs = true;
             this.logsContent = 'Initializing...';
             this.isLogsPaused = false;
@@ -133,7 +144,14 @@ export default {
             Object.entries(this.methodParams).forEach(([key, value]) => {
                 // Remove leading underscore from parameter name
                 const cleanKey = key.startsWith('_') ? key.substring(1) : key;
-                params[cleanKey] = !isNaN(value) ? parseFloat(value) : value;
+                // Send the raw string. Everything downstream is a string
+                // (parameters become container environment variables), and
+                // coercing here corrupted values: isNaN('') is false, so an
+                // empty value -- the bare-boolean-flag convention -- became
+                // NaN and serialised as null, reaching the method as
+                // "--use_memory None"; and parseFloat turned '0x10' into 0
+                // and '1e5' into 100000.
+                params[cleanKey] = String(value);
             });
 
             console.log('[DEBUG] Making POST request to /api/run');
@@ -157,7 +175,7 @@ export default {
                 if (res.ok) {
                     this.currentExperiment = data.experiment_name;
                     console.log('[DEBUG] Run started:', this.currentExperiment);
-                    this.status = `<div style="background:#D1FAE5; color:#065F46; padding:0.75rem; border-radius:6px; margin-top:1rem;">✅ Run started: <strong>${data.experiment_name}</strong></div>`;
+                    this.status = `<div style="background:#D1FAE5; color:#065F46; padding:0.75rem; border-radius:6px; margin-top:1rem;">[OK] Run started: <strong>${data.experiment_name}</strong></div>`;
                     this.showLogs = true;
                     this.logsContent = 'Waiting for logs...';
 
@@ -217,7 +235,7 @@ export default {
                                                 if (expData.status !== 'running') {
                                                     clearInterval(this.logPollingInterval);
                                                     this.logPollingInterval = null;
-                                                    this.status += '<div style="background:#DBEAFE; color:#1E40AF; padding:0.75rem; border-radius:6px; margin-top:0.5rem;">✨ Experiment completed</div>';
+                                                    this.status += '<div style="background:#DBEAFE; color:#1E40AF; padding:0.75rem; border-radius:6px; margin-top:0.5rem;"> Experiment completed</div>';
                                                     this.$emit('submit');
                                                 }
                                             }
@@ -250,17 +268,17 @@ export default {
                         }
                     }, 600000);
                 } else {
-                    this.status = `<div style="background:#FEE2E2; color:#991B1B; padding:0.75rem; border-radius:6px; margin-top:1rem;">❌ Error: ${data.error}</div>`;
+                    this.status = `<div style="background:#FEE2E2; color:#991B1B; padding:0.75rem; border-radius:6px; margin-top:1rem;">[FAIL] Error: ${data.error}</div>`;
                 }
             } catch (error) {
-                this.status = `<div style="background:#FEE2E2; color:#991B1B; padding:0.75rem; border-radius:6px; margin-top:1rem;">❌ Error: ${error.message}</div>`;
+                this.status = `<div style="background:#FEE2E2; color:#991B1B; padding:0.75rem; border-radius:6px; margin-top:1rem;">[FAIL] Error: ${error.message}</div>`;
             }
         }
     },
     template: `
         <div class="section" :class="{ 'section-collapsed': collapsed }">
             <div class="section-header" @click="collapsed = !collapsed" style="cursor:pointer; user-select:none;">
-                <h2>🚀 Run</h2>
+                <h2> Run</h2>
                 <button class="collapse-btn" :title="collapsed ? 'Expand' : 'Collapse'">
                     <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;stroke-width:2.5;fill:none;transition:transform 0.2s ease;" :style="collapsed ? 'transform:rotate(-90deg)' : ''"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
@@ -300,10 +318,7 @@ export default {
                         <span style="font-size:0.6rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); font-weight:600;">Params</span>
                         <div v-for="(value, key) in methodParams" :key="key" style="display:flex; align-items:center; gap:0.2rem;">
                             <label style="font-size:0.65rem; color:var(--text-muted); white-space:nowrap;">{{ key.substring(1).replace(/_/g, ' ') }}</label>
-                            <input :type="isNumber(value) ? 'number' : 'text'"
-                                   v-model="methodParams[key]"
-                                   step="any"
-                                   style="width:5rem; padding:0.15rem 0.3rem; font-size:0.7rem;">
+                            <input :type="isNumber(value) ? 'number' : 'text'"v-model="methodParams[key]"step="any"style="width:5rem; padding:0.15rem 0.3rem; font-size:0.7rem;">
                         </div>
                     </div>
                 </div>
@@ -318,7 +333,7 @@ export default {
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <span style="font-size:0.7rem; font-family:monospace; color:var(--text-muted);">TERMINAL</span>
                         <span :style="{fontSize:'0.65rem', color: isLive ? 'var(--success)' : '#F59E0B'}">
-                            {{ isLive ? '● Live' : '⏸ Paused' }}
+                            {{ isLive ? '● Live' : ' Paused' }}
                         </span>
                     </div>
                     <div style="display:flex; gap:0.25rem;">

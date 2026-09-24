@@ -26,6 +26,15 @@ class MethodInfo:
     name: str
     description: str = ""
     source_code: str = ""
+    #: ``upstream`` (the image runs the authors' implementation) or
+    #: ``reimplementation`` (this repository's code, written from the paper).
+    #: Empty for a method whose ``.env`` predates the key -- rendered as
+    #: "unstated", which is what it is, rather than assumed to be either.
+    integration: str = ""
+    #: The shared image this method builds from, from ``IMAGE=`` in its
+    #: ``.env``. Empty when the method builds its own -- which is the common
+    #: case; the seventeen ``bond_*`` methods share ``bond_base``.
+    image: str = ""
     supported_data: str = ""
     parameters: Dict[str, Any] = field(default_factory=dict)
     has_dockerfile: bool = False
@@ -89,6 +98,62 @@ class EvaluationResults:
     metrics: Dict[str, float] = field(default_factory=dict)
     plots_available: List[str] = field(default_factory=list)
     evaluation_path: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class ServiceCleanupResult:
+    """Outcome of considering one finished service for removal."""
+    experiment: str
+    removed: bool
+    reason: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class ClearItem:
+    """One thing `graflag clear` considered removing, and why.
+
+    Every candidate is reported whether or not it was removed, so a dry run
+    and an applied run print the same rows -- the difference is `removed`.
+    """
+    #: experiment | dataset | image | registry | stray
+    kind: str
+    name: str
+    #: The evidence for the verdict, in the words the report prints.
+    reason: str
+    #: Bytes on disk, 0 when not measured (registry repos before a GC).
+    size_bytes: int = 0
+    removed: bool = False
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass
+class ClearReport:
+    """What `graflag clear` found, and what it did about it."""
+    #: False for a dry run -- nothing was removed.
+    applied: bool
+    items: List[ClearItem] = field(default_factory=list)
+    #: Bytes actually reclaimed. 0 on a dry run; on an applied run this is
+    #: the sum over removed items, which for the registry counts only what a
+    #: garbage collection actually freed, not the manifests deleted before it.
+    freed_bytes: int = 0
+    #: Non-fatal problems. Clearing is housekeeping: a failure to remove one
+    #: item must not abort the sweep or fail the caller.
+    errors: List[str] = field(default_factory=list)
+    #: True when registry blobs were collected, which needs the registry
+    #: stopped -- see `core.clear`.
+    registry_collected: bool = False
+
+    @property
+    def removed(self) -> List[ClearItem]:
+        return [i for i in self.items if i.removed]
 
     def to_dict(self) -> dict:
         return asdict(self)

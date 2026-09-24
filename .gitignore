@@ -1,8 +1,33 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.egg-info/
-dist/
 build/
+dist/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Sphinx output (docs/_build is rebuilt from docs/)
+docs/_build/
+
+# Local configuration. The repository ships .env.example; a .env here would
+# become the configuration of every command run from this directory.
 .env
+
+# Files a replay or a copy from the cluster drops in the working directory
+service_config.json
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Workspace scratch
 shared/
 .gc/

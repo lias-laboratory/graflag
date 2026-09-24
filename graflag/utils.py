@@ -28,9 +28,69 @@ def load_method_env(ssh_manager, remote_shared_dir: str, method_name: str) -> Di
         if result.returncode == 0:
             # Parse .env file into dictionary
             for line in result.stdout.split("\n"):
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    env_vars[key.strip()] = value.strip()
+                parsed = parse_env_line(line)
+                if parsed:
+                    env_vars[parsed[0]] = parsed[1]
 
     return env_vars
+
+
+def parse_env_line(line: str):
+    """Parse one line of a ``.env`` file into ``(key, value)``, or None.
+
+    Returns None for blanks and comment lines.
+
+    Handles the idioms a hand-written ``.env`` actually contains, each of which
+    used to be carried into the value verbatim:
+
+    - ``export KEY=value`` -- the key became ``"export KEY"``, so the real key
+      was never set and a file that visibly defined MANAGER_IP failed as
+      "missing MANAGER_IP".
+    - ``KEY=value  # comment`` -- the comment became part of the value, so
+      ``SSH_PORT=22  # default`` produced ``ssh: Bad port '22  # default'``.
+    - ``KEY="value"`` -- the quotes became part of the value. Since commands are
+      built as argv with no shell to strip them, ``MANAGER_IP="10.0.0.1"``
+      produced ``Could not resolve hostname "10.0.0.1"``.
+
+    An inline comment must be preceded by whitespace, so values that legitimately
+    contain ``#`` are preserved -- method ``.env`` files carry URLs with
+    fragments, e.g. ``SOURCE_CODE=https://docs.pygod.org/...#pygod.detector.CoLA``.
+    """
+    line = line.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        return None
+
+    if line.startswith("export ") or line.startswith("export\t"):
+        line = line[len("export"):].lstrip()
+        if "=" not in line:
+            return None
+
+    key, _, value = line.partition("=")
+    key = key.strip()
+    if not key:
+        return None
+
+    value = value.strip()
+
+    # A quoted value is taken literally, including any '#' inside it, and ends
+    # at its closing quote -- whatever follows is a comment.
+    #
+    # Matching on "first and last character are the same quote" instead put the
+    # two rules in the wrong order: KEY="value"  # note ends in `e`, so it was
+    # not a quoted value, and the comment rule then returned `"value"` with the
+    # quotes still attached. Since commands are built as argv with no shell to
+    # strip them, that is the `Could not resolve hostname "10.0.0.1"` failure
+    # this function exists to prevent, reachable by adding a comment to a line
+    # that already worked.
+    if value[:1] in ("'", '"'):
+        closing = value.find(value[0], 1)
+        if closing != -1:
+            return key, value[1:closing]
+
+    # Otherwise an inline comment starts at whitespace followed by '#'.
+    for i, ch in enumerate(value):
+        if ch == "#" and i > 0 and value[i - 1] in (" ", "\t"):
+            value = value[:i]
+            break
+
+    return key, value.strip()

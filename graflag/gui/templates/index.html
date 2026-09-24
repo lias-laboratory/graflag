@@ -5,12 +5,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GraFlag Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16.png') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Served from the manager, not from a CDN. Measured: roughly one
+         load in three came back with Vue undefined, and the page then
+         rendered its own template source with every panel missing and no
+         error shown. See static/js/vendor/README.md. -->
+    <script src="{{ url_for('static', filename='js/vendor/vue.global.prod.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/vendor/socket.io.min.js') }}"></script>
 </head>
 
 <body>
@@ -26,7 +34,11 @@
 
         <nav class="navbar">
             <div class="brand">
-                <div class="brand-icon">⚡</div>
+                <!-- A literal path, not url_for: everything below
+                     {% raw %} is handed to Vue, which would try to evaluate
+                     `url_for(...)` as a JS expression and render no src. -->
+                <img class="brand-icon" src="/static/img/logo.svg"
+                     width="26" height="26" alt="">
                 GraFlag
             </div>
 
@@ -34,59 +46,90 @@
             <cluster-status :cluster-info="clusterInfo"></cluster-status>
 
             <div style="display:flex; align-items:center; gap:0.5rem;">
-                <button class="theme-toggle" @click="toggleNotifications"
-                    :title="notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled'"
-                    :style="{ opacity: notificationsEnabled ? 1 : 0.5 }">
-                    {{ notificationsEnabled ? '🔔' : '🔕' }}
+                <button class="theme-toggle" @click="toggleNotifications":title="notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled'":style="{ opacity: notificationsEnabled ? 1 : 0.5 }">
+                    {{ notificationsEnabled ? '' : '' }}
                 </button>
                 <button class="theme-toggle" @click="toggleTheme" :title="isDarkMode ? 'Light Mode' : 'Dark Mode'">
-                    {{ isDarkMode ? '☀️' : '🌙' }}
+                    {{ isDarkMode ? '' : '' }}
                 </button>
             </div>
         </nav>
 
         <div class="container">
+            <!--
+              Connection banner. Until this existed the dashboard had no error
+              surface at all: every failed fetch became an empty array, so an
+              unreachable cluster rendered identically to a healthy empty one
+              and 78 experiments appeared to have vanished.
+            -->
+            <!-- A dead push used to be invisible: the banner below watches
+                 REST failures, and when the socket dropped there were no
+                 REST calls to fail. Statuses simply stopped moving. -->
+            <div v-if="!connectionError && liveState === 'polling'"
+                 class="connection-banner connection-banner--warn" role="status">
+                <strong>Live updates reconnecting.</strong>
+                Statuses are refreshing on a timer until the connection is back.
+            </div>
+
+            <div v-if="connectionError" class="connection-banner" role="alert">
+                <strong>Cannot reach the cluster.</strong>
+                {{ connectionError.message }}
+                <span class="connection-banner-detail">
+                    ({{ connectionError.count }} panel<span v-if="connectionError.count !== 1">s</span>
+                    affected: {{ connectionError.panels }}. Values shown may be stale.)
+                </span>
+            </div>
+
             <!-- Run Form -->
             <run-form :methods="methods" :datasets="datasets" @submit="loadExperiments">
             </run-form>
 
             <!-- Methods & Datasets -->
             <div class="grid-2">
-                <data-table title="Methods" icon="🔬" :data="methods" :page="methodPage"
-                    @update:page="methodPage = $event" key-field="name" :columns="[
-                    { key: 'name', label: 'Method' },
-                    { key: 'description', label: 'Description' },
-                    { key: 'source_code', label: 'Source' },
-                    { key: 'features', label: 'Features' }
-                ]">
+                <data-table title="Methods" icon="" :data="methods" :page="methodPage"@update:page="methodPage = $event" key-field="name" :columns="[
+                    { key: 'name', label: 'Method', width: '18%' },
+                    { key: 'description', label: 'Description', width: '34%' },
+                    { key: 'source_code', label: 'Source', width: '8%' },
+                    { key: 'integration', label: 'Runs', width: '18%' },
+                    { key: 'features', label: 'Features', width: '22%' }
+                ]" :state="methodsRes.state.value" :error-message="methodsRes.error.value">
                     <template #cell-name="{ item }">
-                        <span style="font-weight:600;">{{ item.name }}</span>
+                        <span style="font-weight:600;" :title="item.name">{{ item.name }}</span>
                     </template>
                     <template #cell-description="{ item }">
-                        <span style="display:block; min-width:60px; max-width:15vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.7rem;" :title="item.description">{{ item.description || '-' }}</span>
+                        <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.7rem;" :title="item.description">{{ item.description || '-' }}</span>
                     </template>
                     <template #cell-source_code="{ item }">
-                        <a v-if="item.source_code" :href="item.source_code" target="_blank" rel="noopener noreferrer"
-                           style="color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:0.15rem;"
-                           :title="item.source_code">
+                        <a v-if="item.source_code" :href="item.source_code" target="_blank" rel="noopener noreferrer"style="color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:0.15rem;":title="item.source_code">
                             <span>Link</span>
-                            <span style="font-size:0.65rem;">↗</span>
+                            <span style="font-size:0.65rem;"></span>
                         </a>
                         <span v-else style="color:var(--text-muted);">-</span>
                     </template>
+                    <!-- What the row's numbers came from. `Source` links the
+                         paper's repository whether or not the image builds from
+                         it, which is how a reimplementation came to look like
+                         the authors' code; this column says which it is. -->
+                    <template #cell-integration="{ item }">
+                        <span class="tag" :style="item.integration === 'reimplementation' ? 'color:var(--warning);' : ''":title="item.integration === 'reimplementation' ? 'Implemented in this repository from the paper -- not the authors\' code' : (item.integration === 'upstream' ? 'The image builds and runs the authors\' implementation' : 'This method does not declare INTEGRATION in its .env')">
+                            {{ item.integration || 'unstated' }}
+                        </span>
+                    </template>
                     <template #cell-features="{ item }">
                         <span class="tag">{{ item.has_dockerfile ? 'Dockerfile' : 'No Dockerfile' }}</span>
+                        <span v-if="item.image" class="tag" :title="'Builds from the shared image images/' + item.image + '/Dockerfile, not a Dockerfile of its own'">
+                            {{ item.image }}
+                        </span>
                     </template>
                 </data-table>
 
-                <data-table title="Datasets" icon="📁" :data="datasets" :page="datasetPage"
-                    @update:page="datasetPage = $event" key-field="name" :columns="[
-                    { key: 'name', label: 'Dataset' },
-                    { key: 'size_mb', label: 'Size (MB)' },
-                    { key: 'file_count', label: 'Files' }
-                ]">
+                <data-table title="Datasets" icon="" :data="datasets" :page="datasetPage"@update:page="datasetPage = $event" key-field="name" :columns="[
+                    { key: 'name', label: 'Dataset', width: '52%' },
+                    { key: 'size_mb', label: 'Size (MB)', width: '26%' },
+                    { key: 'file_count', label: 'Files', width: '22%' }
+                ]" :state="datasetsRes.state.value" :error-message="datasetsRes.error.value">
                     <template #cell-name="{ item }">
-                        <span style="font-weight:600;">{{ item.name }}</span>
+                        <span style="font-weight:600;" :title="item.name">{{ item.name }}</span>
                     </template>
                     <template #cell-size_mb="{ item }">
                         {{ item.size_mb.toFixed(2) }}
@@ -95,18 +138,24 @@
             </div>
 
             <!-- Running Services -->
-            <data-table title="Running Services" icon="⚡" :data="services" :page="servicePage"
-                @update:page="servicePage = $event" key-field="name" :columns="[
-                { key: 'name', label: 'Service' },
-                { key: 'status', label: 'Status' },
-                { key: 'replicas', label: 'Replicas' },
+            <data-table title="Running Services" icon="" :data="services" :page="servicePage"@update:page="servicePage = $event" key-field="name" :columns="[
+                { key: 'name', label: 'Service', width: '38%' },
+                { key: 'status', label: 'Status', width: '14%' },
+                { key: 'replicas', label: 'Replicas', width: '14%' },
                 { key: 'image', label: 'Image' }
-            ]">
+            ]" :state="servicesRes.state.value" :error-message="servicesRes.error.value">
                 <template #cell-name="{ item }">
                     <span style="font-weight:500;">{{ item.name }}</span>
                 </template>
                 <template #cell-status="{ item }">
-                    <span class="badge badge-sm" :class="{'badge-running': item.status === 'running', 'badge-pending': item.status === 'pending', 'badge-stopped': item.status === 'partially running'}">{{ item.status }}</span>
+                    <!-- Was a hardcoded map of three statuses, one of which
+                         ('partially running') list_services never produced.
+                         It left the new terminal statuses unstyled: a
+                         finished service rendered as bare text next to a
+                         pill. Same dynamic class the experiments table uses,
+                         so a new status cannot be forgotten here again. -->
+                    <span class="badge badge-sm"
+                          :class="'badge-' + (item.status || 'unknown').replace(/\s+/g, '-')">{{ item.status }}</span>
                 </template>
                 <template #cell-image="{ item }">
                     <code
@@ -117,13 +166,35 @@
             <!-- Experiments + Detail Panel -->
             <div class="section experiments-split">
                 <div class="section-header">
-                    <h2>🧪 Experiments <span style="color:var(--text-muted); font-weight:400; font-size:0.7rem;">{{ experiments.length }}</span></h2>
+                    <h2> Experiments <span style="color:var(--text-muted); font-weight:400; font-size:0.7rem;">{{ experimentTotal !== null ? experimentTotal : experiments.length }}</span></h2>
                 </div>
                 <div class="experiments-split-body">
                     <!-- Table Side -->
                     <div class="experiments-table-side">
+                        <!-- Same height reservation as the shared table
+                             component: without it the last page (which has
+                             fewer than a full page of rows) collapses the
+                             panel and the pager jumps under the cursor. -->
                         <div class="table-container">
                             <table>
+                                <!-- Declared widths, as the shared table
+                                     component uses. Measured before this,
+                                     paging moved this table's first column
+                                     by 93.4px -- the widest shift on the
+                                     page, because experiment names vary in
+                                     length far more than anything else. -->
+                                <!-- Measured across all 16 pages: the name
+                                     needs 299px, the status badges 150px with
+                                     all three showing, the buttons 113px. At
+                                     22% the status column was 146px, so the
+                                     badges wrapped and the row -- and the
+                                     whole table -- grew 6.1px on any page
+                                     holding a completed run. -->
+                                <colgroup>
+                                    <col style="width:48%">
+                                    <col style="width:28%">
+                                    <col style="width:24%">
+                                </colgroup>
                                 <thead>
                                     <tr>
                                         <th>Experiment</th>
@@ -132,9 +203,26 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <!-- Same three states the DataTable panels
+                                         render. This table is still inline
+                                         markup rather than the shared table
+                                         component; the behaviour is unified
+                                         here, the structure is not. -->
+                                    <tr v-if="experimentsRes.state.value === 'error'">
+                                        <td colspan="4" class="panel-state panel-state--error">
+                                            Could not load experiments.
+                                            {{ experimentsRes.error.value || 'The cluster did not answer.' }}
+                                        </td>
+                                    </tr>
+                                    <tr v-else-if="experimentsRes.state.value === 'loading' && paginatedExperiments.length === 0">
+                                        <td colspan="4" class="panel-state">Loading…</td>
+                                    </tr>
+                                    <tr v-else-if="paginatedExperiments.length === 0">
+                                        <td colspan="4" class="panel-state panel-state--empty">No experiments yet.</td>
+                                    </tr>
                                     <tr v-for="item in paginatedExperiments" :key="item.name" :class="{ 'row-selected': viewExperiment === item.name }">
                                         <td>
-                                            <span style="font-weight:500; font-size:0.7rem; display:block; max-width:20vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" :title="'Method: ' + item.method + '\nDataset: ' + item.dataset + '\nTime: ' + item.timestamp">{{ item.name }}</span>
+                                            <span style="font-weight:500; font-size:0.7rem; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" :title="'Method: ' + item.method + '\nDataset: ' + item.dataset + '\nTime: ' + item.timestamp">{{ item.name }}</span>
                                         </td>
                                         <td>
                                             <div style="display:flex; align-items:center; gap:0.2rem; flex-wrap:wrap;">
@@ -145,51 +233,65 @@
                                         </td>
                                         <td>
                                             <div class="btn-group">
-                                                <button v-if="item.status === 'running'" class="btn-icon btn-danger"
-                                                    @click.stop="stopExperiment(item.name)" title="Stop Experiment">
+                                                <button v-if="item.status === 'running'" class="btn-icon btn-danger"@click.stop="stopExperiment(item.name)" title="Stop Experiment">
                                                     <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none"/></svg>
                                                 </button>
-                                                <button v-if="item.has_results && !item.has_evaluation && evaluatingExperiment !== item.name"
-                                                    class="btn-icon btn-success"
-                                                    @click.stop="evaluateExperiment(item.name)" title="Run Evaluation">
+                                                <button v-if="item.has_results && !item.has_evaluation && evaluatingExperiment !== item.name"class="btn-icon btn-success"@click.stop="evaluateExperiment(item.name)" title="Run Evaluation">
                                                     <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 5-9"/></svg>
                                                 </button>
-                                                <button v-if="evaluatingExperiment === item.name"
-                                                    class="btn-icon btn-success" disabled
+                                                <button v-if="evaluatingExperiment === item.name"class="btn-icon btn-success" disabled
                                                     style="cursor:wait;" title="Evaluating...">
                                                     <span class="btn-spinner"></span>
                                                 </button>
-                                                <button v-if="item.has_evaluation" class="btn-icon" style="background:#8B5CF6; color:white;"
-                                                    @click.stop="showEvaluation(item.name)" title="View Evaluation">
+                                                <button v-if="item.has_evaluation" class="btn-icon" style="background:#8B5CF6; color:white;"@click.stop="showEvaluation(item.name)" title="View Evaluation">
                                                     <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 12l4-5 4 3 5-6"/><circle cx="20" cy="4" r="1.5" fill="currentColor" stroke="none"/></svg>
                                                 </button>
-                                                <button class="btn-icon" style="background:#4B5563; color:white;"
-                                                    @click.stop="viewLogs(item.name)" title="View Logs">
+                                                <button class="btn-icon" style="background:#4B5563; color:white;"@click.stop="viewLogs(item.name)" title="View Logs">
                                                     <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h7"/></svg>
                                                 </button>
-                                                <button v-if="item.status !== 'running'" class="btn-icon" style="background:#991B1B; color:white;"
-                                                    @click.stop="deleteExperiment(item.name)" title="Delete Experiment">
+                                                <button v-if="item.status !== 'running'" class="btn-icon" style="background:#991B1B; color:white;"@click.stop="deleteExperiment(item.name)" title="Delete Experiment">
                                                     <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14"/><path d="M10 11v6M14 11v6"/></svg>
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
+                                    <!-- Same filler padding the shared table
+                                         component uses: a short last page
+                                         would otherwise shrink the panel and
+                                         move the pager under the cursor. -->
+                                    <tr v-for="n in experimentFillerRows" :key="'filler-' + n" class="filler-row" aria-hidden="true">
+                                        <td colspan="4"><span class="tag" style="visibility:hidden;">&nbsp;</span></td>
+                                    </tr>
                                 </tbody>
                             </table>
                             <div v-if="experimentTotalPages > 1" style="display:flex; justify-content:space-between; align-items:center; padding:0.3rem 0.5rem; border-top:1px solid var(--border);">
                                 <div style="color:var(--text-muted); font-size:0.7rem;">
-                                    {{ (experimentPage - 1) * 5 + 1 }}-{{ Math.min(experimentPage * 5, experiments.length) }} of {{ experiments.length }}
+                                    <!-- Server-side paging: experiments.length
+                                         is one page, not the whole list, so
+                                         the old arithmetic
+                                         (page-1)*5+1 .. min(page*5, length)
+                                         read "6-5 of 5" on page two. The
+                                         range is the window; the total comes
+                                         from the share. -->
+                                    {{ experimentRangeStart }}-{{ experimentRangeEnd }} of {{ experimentTotal !== null ? experimentTotal : experiments.length }}<!--
+                                    The loaded count is not necessarily the
+                                    total. The API caps the list (50 by
+                                    default) and paginating 5 at a time over
+                                    that cap made a truncated set look like
+                                    complete pagination. -->
+                                    <span v-if="experimentsTruncated" class="truncation-note"
+                                          :title="'Showing ' + experiments.length + ' of ' + experimentTotal + ' experiments on the share.'">
+                                        <button type="button" class="btn-link" @click="loadAllExperiments">show all</button>
+                                    </span>
                                 </div>
                                 <div style="display:flex; gap:0.3rem; align-items:center;">
-                                    <button class="btn-page" :disabled="experimentPage === 1"
-                                            @click="experimentPage = Math.max(1, experimentPage - 1)">
+                                    <button class="btn-page" :disabled="experimentPage === 1"@click="goToExperimentPage(experimentPage - 1)">
                                         <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
                                     </button>
                                     <span style="font-size:0.7rem; color:var(--text-muted); padding:0 0.25rem;">
                                         {{ experimentPage }}/{{ experimentTotalPages }}
                                     </span>
-                                    <button class="btn-page" :disabled="experimentPage === experimentTotalPages"
-                                            @click="experimentPage = Math.min(experimentTotalPages, experimentPage + 1)">
+                                    <button class="btn-page" :disabled="experimentPage === experimentTotalPages"@click="goToExperimentPage(experimentPage + 1)">
                                         <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
                                     </button>
                                 </div>
@@ -212,17 +314,15 @@
                             <div style="display:flex; align-items:center; gap:0.4rem;">
                                 <span style="font-size:0.65rem; font-family:'JetBrains Mono',monospace; color:var(--text-muted); text-transform:uppercase;">{{ viewMode === 'logs' ? 'Logs' : 'Evaluation' }}</span>
                                 <span v-if="viewMode === 'logs'" :style="{fontSize:'0.6rem', color: viewLogsPaused ? '#F59E0B' : 'var(--success)'}">
-                                    {{ viewLogsPaused ? '⏸ Paused' : '● Live' }}
+                                    {{ viewLogsPaused ? ' Paused' : '● Live' }}
                                 </span>
                             </div>
                             <div style="display:flex; gap:0.25rem;">
-                                <button v-if="viewMode === 'logs'" class="btn-icon" style="background:#6B7280; color:white; min-width:24px; height:24px;"
-                                    @click="viewLogsPaused = !viewLogsPaused">
+                                <button v-if="viewMode === 'logs'" class="btn-icon" style="background:#6B7280; color:white; min-width:24px; height:24px;"@click="viewLogsPaused = !viewLogsPaused">
                                     <svg v-if="viewLogsPaused" viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;stroke:none;"><path d="M8 5v14l11-7z"/></svg>
                                     <svg v-else viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;stroke:none;"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
                                 </button>
-                                <button class="btn-icon" style="background:#6B7280; color:white; min-width:24px; height:24px;"
-                                    @click="closeDetailPanel">
+                                <button class="btn-icon" style="background:#6B7280; color:white; min-width:24px; height:24px;"@click="closeDetailPanel">
                                     <svg viewBox="0 0 24 24" style="width:13px;height:13px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
                                 </button>
                             </div>
@@ -246,9 +346,19 @@
                             <div v-else>
                                 <!-- Metrics two-column grid -->
                                 <div v-if="viewEval_data.metrics" class="eval-two-col">
-                                    <div v-for="(value, key) in viewEval_data.metrics" :key="key" class="eval-row">
-                                        <span class="ek">{{ key.replace(/_/g, ' ') }}</span>
-                                        <span class="ev">{{ typeof value === 'number' ? value.toFixed(4) : value }}</span>
+                                    <!-- Scalars only. `filtering` is an object of sample
+                                         counts, and printing it here rendered raw JSON
+                                         in the middle of the grid; it is summarised as
+                                         one row below when anything was excluded. -->
+                                    <template v-for="(value, key) in viewEval_data.metrics" :key="key">
+                                        <div v-if="value === null || typeof value !== 'object'" class="eval-row">
+                                            <span class="ek">{{ key.replace(/_/g, ' ') }}</span>
+                                            <span class="ev">{{ formatMetric(key, value) }}</span>
+                                        </div>
+                                    </template>
+                                    <div v-if="excludedSamples(viewEval_data.metrics) > 0" class="eval-row">
+                                        <span class="ek">excluded samples</span>
+                                        <span class="ev">{{ excludedSamples(viewEval_data.metrics) }}</span>
                                     </div>
                                     <div v-if="viewResults_data && viewResults_data.execution_time_ms" class="eval-row">
                                         <span class="ek">time</span>
@@ -267,10 +377,7 @@
                                 <!-- Plots Slider -->
                                 <div v-if="viewEval_data.plots_available && viewEval_data.plots_available.length > 0" class="plots-slider" style="margin-top:0.4rem;">
                                     <div class="plots-slider-track">
-                                        <img v-for="(plot, idx) in viewEval_data.plots_available" :key="plot"
-                                            :src="'/api/experiments/' + viewExperiment + '/plot/' + plot"
-                                            class="plots-slider-img"
-                                            :alt="plot" @click="openLightbox(idx)">
+                                        <img v-for="(plot, idx) in viewEval_data.plots_available" :key="plot":src="'/api/experiments/' + viewExperiment + '/plot/' + plot"class="plots-slider-img":alt="plot" @click="openLightbox(idx)">
                                     </div>
                                 </div>
                             </div>
@@ -288,9 +395,7 @@
                     <button class="lightbox-nav lightbox-prev" @click="lightboxPrev">
                         <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:white;stroke-width:2.5;fill:none;"><path d="M15 18l-6-6 6-6"/></svg>
                     </button>
-                    <img :src="'/api/experiments/' + viewExperiment + '/plot/' + viewEval_data.plots_available[lightboxIndex]"
-                         :alt="viewEval_data.plots_available[lightboxIndex]"
-                         class="lightbox-img">
+                    <img :src="'/api/experiments/' + viewExperiment + '/plot/' + viewEval_data.plots_available[lightboxIndex]":alt="viewEval_data.plots_available[lightboxIndex]"class="lightbox-img">
                     <button class="lightbox-nav lightbox-next" @click="lightboxNext">
                         <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:white;stroke-width:2.5;fill:none;"><path d="M9 18l6-6-6-6"/></svg>
                     </button>
@@ -305,6 +410,23 @@
     </div>
 
     <script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Last resort. If the runtime is missing, the page renders its own
+        // template source -- mustaches and all -- which reads as a corrupted
+        // dashboard rather than as a failed script load. Say which it is.
+        window.addEventListener('load', function () {
+            if (typeof Vue !== 'undefined') return;
+            var app = document.getElementById('app');
+            if (!app) return;
+            app.innerHTML =
+                '<div style="max-width:40rem;margin:4rem auto;padding:1rem 1.25rem;' +
+                'border:1px solid #dc2626;border-radius:6px;color:#b91c1c;' +
+                'font-family:system-ui,sans-serif;font-size:0.9rem;">' +
+                '<strong>GraFlag could not start.</strong> The Vue runtime did ' +
+                'not load, so nothing on this page is live. Reload; if it ' +
+                'persists, check that /static/js/vendor/ is being served.</div>';
+        });
+    </script>
 </body>
 
 </html>

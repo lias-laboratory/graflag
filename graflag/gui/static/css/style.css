@@ -132,15 +132,14 @@ body {
     flex-shrink: 0;
 }
 
+/* The gradient tile is part of logo.svg now, so the mark in the navbar and
+   the one in the browser tab are the same artwork. */
 .brand-icon {
     width: 26px;
     height: 26px;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
     border-radius: 6px;
-    display: grid;
-    place-items: center;
-    color: white;
-    font-size: 0.9rem;
+    display: block;
+    flex: 0 0 auto;
 }
 
 /* Navbar Cluster Status */
@@ -248,7 +247,12 @@ body {
     gap: 0.75rem;
 }
 
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+/* Methods carries five columns, Datasets three, and Datasets' content
+   needs ~271px of the 654px an even split gave it -- while `Runs` was
+   clipping `reimplementation`. Weight the row toward Methods so every
+   column fits its content instead of trading percentages inside a
+   table that is too narrow either way. */
+.grid-2 { display: grid; grid-template-columns: 1.6fr 1fr; gap: 0.75rem; }
 .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem; }
 .grid-main { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
 
@@ -755,9 +759,11 @@ tbody tr.row-selected {
 }
 
 /* Plots Slider */
+/* Every plot visible at once. This was a horizontal carousel of fixed-height
+   thumbnails, which left the last plot behind a 4px scrollbar most users
+   would not notice. A grid fills the panel and wraps only when it is narrow. */
 .plots-slider {
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: visible;
     border-radius: 4px;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
@@ -775,14 +781,15 @@ tbody tr.row-selected {
 }
 
 .plots-slider-track {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 0.4rem;
     padding-bottom: 0.3rem;
 }
 
 .plots-slider-img {
-    height: 140px;
-    flex-shrink: 0;
+    width: 100%;
+    height: auto;
     border-radius: 4px;
     border: 1px solid var(--border);
     cursor: pointer;
@@ -877,4 +884,130 @@ tbody tr.row-selected {
     font-size: 0.75rem;
     white-space: nowrap;
     text-transform: capitalize;
+}
+
+
+/* Shown when /api/experiments truncated its list. Deliberately styled as a
+   warning rather than muted text: a dashboard that silently hides 28 of 78
+   experiments is worse than one that looks slightly alarming. */
+.truncation-note {
+    color: var(--warning, #b45309);
+    font-weight: 500;
+    cursor: help;
+}
+
+
+/* Connection banner. Deliberately loud: the failure it reports used to be
+   completely invisible, and a monitoring dashboard that quietly shows nothing
+   is worse than one that shows an alarming message. */
+.connection-banner {
+    background: var(--danger-bg, #fef2f2);
+    border: 1px solid var(--danger, #dc2626);
+    color: var(--danger, #b91c1c);
+    border-radius: 6px;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+}
+.connection-banner-detail { opacity: 0.85; font-weight: 400; }
+
+/* Reconnecting is a warning, not a failure: the data on screen is still
+   arriving, just on a timer rather than a push. */
+.connection-banner--warn {
+    background: var(--warning-bg, #fffbeb);
+    border-color: var(--warning, #d97706);
+    color: var(--warning, #b45309);
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin-left: 0.35rem;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Panel states: "asking", "nothing there" and "could not ask" were all a
+   blank table before. */
+.panel-state { padding: 0.9rem; font-size: 0.8rem; text-align: center; }
+.panel-state--error { color: var(--danger, #b91c1c); }
+.panel-state--empty { opacity: 0.65; }
+
+
+/* Uniform row height across pages.
+   Measured jitter before any of this: Methods 89.6px, Datasets 95.2px.
+
+   The first attempt reserved a page's worth of height, which fixed the short
+   last page but not the real cause -- a table row grows to its content
+   whatever height you give the row or a max-height you give the cell, both of
+   which table layout treats as advisory. Rows ran 42px to 67.6px because the
+   Features cell carries two tags and wraps when they do not fit, and every
+   bond_* method carries `image: bond_base`. Pinning the container then just
+   traded a moving panel for 93px of content hidden behind a scrollbar.
+
+   Keeping cell content on one line is what actually makes the rows equal, and
+   equal rows make the panel height constant for free. Cells already carry
+   title attributes, so the full value stays available on hover. */
+.table-container tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Tag groups sit side by side rather than stacking onto a second line. */
+.table-container tbody td .tag {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+
+/* Filler rows keep a short last page the same height as a full one. Invisible
+   but occupying a row's space; aria-hidden so they are not announced. */
+.filler-row td {
+    border-color: transparent;
+}
+
+
+/* Fixed column widths.
+   Without this the browser sizes columns from the rows it can see, so paging
+   re-measured them and the text slid sideways -- 50px in Methods, 53px in
+   Datasets, 93px in Experiments. Fixed layout makes a column's width a
+   property of the table rather than of the current page, and pairs with the
+   nowrap/ellipsis rule above so overlong values are clipped rather than
+   widening their column. */
+/* Column resize handles. The grip straddles the border so it is grabbable
+   without stealing clicks from the header itself. */
+.table-container th.th-resizable { position: relative; }
+.col-resizer {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 2;
+}
+.col-resizer::after {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 2px;
+    width: 2px;
+    height: 60%;
+    background: var(--border);
+    transition: background 0.12s ease;
+}
+.col-resizer:hover::after,
+.col-resizer:active::after {
+    background: var(--primary);
+    top: 0;
+    height: 100%;
+}
+
+.table-container table {
+    table-layout: fixed;
+    width: 100%;
 }

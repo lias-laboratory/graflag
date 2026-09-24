@@ -6,6 +6,49 @@ import subprocess
 from pathlib import Path
 
 
+
+# deploy.sh writes docker-compose.yml, hosts.yml and the SSH keys into its own
+# directory. When that is the installed package it means writing into
+# site-packages: a root-owned or read-only install fails outright, an editable
+# install dirties the git checkout, and the compose file is global state, so
+# deploying a second cluster overwrites the first's and `--down` then tears
+# down the wrong one. Work in a per-user directory instead.
+def _work_dir() -> Path:
+    base = os.environ.get("XDG_STATE_HOME") or (Path.home() / ".local" / "state")
+    return Path(base) / "graflag" / "devcluster"
+
+
+def _prepare_work_dir(package_dir: Path) -> Path:
+    """Copy the packaged templates into the work dir and return it."""
+    import shutil
+
+    work = _work_dir()
+    work.mkdir(parents=True, exist_ok=True)
+    for name in ("deploy.sh", "manager", "worker"):
+        src = package_dir / name
+        dst = work / name
+        if not src.exists():
+            continue
+        if src.is_dir():
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, dst)
+            dst.chmod(0o755)
+    return work
+
+
+def _deployed_dir(package_dir: Path) -> Path:
+    """Where a cluster was last deployed from.
+
+    Prefers the work dir, falling back to the package dir so a cluster
+    deployed by an older version can still be torn down.
+    """
+    work = _work_dir()
+    if (work / "docker-compose.yml").is_file():
+        return work
+    return package_dir
+
+
 def main(hosts_yml: str = None, pubkey: str = None, down: bool = False):
     """Deploy or tear down the development cluster.
 
@@ -14,9 +57,10 @@ def main(hosts_yml: str = None, pubkey: str = None, down: bool = False):
         pubkey: Path to SSH public key file (default: ~/.ssh/id_ed25519.pub).
         down: If True, stop and remove the cluster.
     """
-    devcluster_dir = Path(__file__).parent
+    package_dir = Path(__file__).parent
 
     if down:
+        devcluster_dir = _deployed_dir(package_dir)
         compose_file = devcluster_dir / "docker-compose.yml"
         if not compose_file.exists():
             print("[ERROR] No docker-compose.yml found -- cluster not deployed?")
@@ -44,6 +88,8 @@ def main(hosts_yml: str = None, pubkey: str = None, down: bool = False):
     if not hosts_path.exists():
         print(f"[ERROR] hosts.yml not found: {hosts_path}")
         sys.exit(1)
+
+    devcluster_dir = _prepare_work_dir(package_dir)
 
     if pubkey is None:
         pubkey = str(Path.home() / ".ssh" / "id_ed25519.pub")

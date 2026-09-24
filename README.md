@@ -86,20 +86,81 @@ graflag evaluate -e exp__bond_dominant__bond_inj_cora__20260309_120000
 | `graflag logs -e EXP [-f]` | View experiment logs |
 | `graflag stop -e EXP [--rm]` | Stop an experiment |
 | `graflag evaluate -e EXP` | Evaluate experiment results |
-| `graflag copy -s SRC -d DST [-r]` | Copy files to/from remote |
+| `graflag cleanup [--dry-run]` | Remove Swarm services for finished experiments |
+| `graflag copy -s SRC --dest DST [-r]` | Copy files to/from remote |
 | `graflag sync [--lib] [--path PATH]` | Sync method or library |
-| `graflag gui [--port PORT]` | Start web dashboard |
+| `graflag gui [--port PORT]` | Start web dashboard (binds `0.0.0.0`, no auth -- see note below) |
 | `graflag devcluster --hosts FILE` | Deploy virtual cluster |
 | `graflag devcluster --down` | Stop virtual cluster |
 
+> **Note on the dashboard.** `graflag gui` binds `0.0.0.0:5000` by default and
+> has no authentication. Everything it exposes runs on the swarm manager as
+> `root`, including deleting experiment directories. Run it on a trusted
+> network or bind it explicitly with `graflag gui --host 127.0.0.1`.
+
 ## Development Cluster
 
-For local development without a physical cluster:
+For local development without a physical cluster, describe the virtual nodes in
+a `hosts.yml`:
+
+```yaml
+subnet: 192.168.100.0/24
+manager: 192.168.100.10
+workers:
+  - 192.168.100.11
+  - 192.168.100.12
+```
+
+then deploy it and point GraFlag at it:
 
 ```bash
 graflag devcluster --hosts hosts.yml
 graflag setup
 ```
+
+## Development
+
+Install in editable mode and run the test suite (no cluster or network needed):
+
+```bash
+pip install -e .
+python3 -m unittest discover -s tests -v
+```
+
+The suite covers remote-command construction, experiment naming, and the GUI's
+input validation. `tests/test_ssh.py` puts a fake `ssh` on `PATH` that records
+the command the swarm manager would receive, then runs that string through a
+real shell -- so it asserts on the actual effect rather than on a string shape.
+Use that harness for any change that builds a remote command.
+
+Two rules the tests enforce, worth knowing before editing `ssh.py`:
+
+- `execute()` passes the command to `ssh` as a single argv element with no local
+  shell. Reintroducing `shell=True` or wrapping the command in quotes breaks
+  heredocs and lets Docker build output execute on the manager.
+- The manager's shell still parses the command, so interpolated values are
+  quoted at the point of use -- `remote_path()` for paths, `shlex.quote()` for
+  bare values.
+
+The shared libraries have their own suites:
+
+```bash
+cd ../graflag-shared/libs
+PYTHONPATH=. python3 -m unittest discover -s graflag_data/tests -v
+PYTHONPATH=. python3 -m unittest discover -s graflag_runner/tests -v
+```
+
+The documentation sources are in `docs/` (Sphinx, published at
+https://lias-laboratory.github.io/graflag/):
+
+```bash
+pip install sphinx sphinx-rtd-theme myst-parser
+cd docs && make html        # output in docs/_build/html
+```
+
+Publishing a GitHub release runs `.github/workflows/publish.yml`: the test
+suite, then a build whose version must match the release tag, then the upload
+to PyPI through Trusted Publishing.
 
 ## Dependencies
 
@@ -122,4 +183,5 @@ graflag/
     utils.py         Shared utility functions
     gui/             Web dashboard subpackage (Flask + Vue.js)
     devcluster/      Virtual cluster subpackage (Docker Compose)
+tests/               Unit tests (unittest, no cluster required)
 ```

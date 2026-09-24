@@ -1,5 +1,6 @@
 """SSH operations for GraFlag."""
 
+import shlex
 import subprocess
 from pathlib import Path
 from typing import List
@@ -8,44 +9,91 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def remote_path(*parts: str) -> str:
+    """Join path components and quote the result for the remote shell.
+
+    Every remote command is a string interpreted by the manager's shell, so
+    any component that comes from user input (experiment name, method name,
+    dataset) must be quoted before interpolation. Use this for paths and
+    :func:`shlex.quote` for bare values.
+
+    Separators are collapsed only at the join boundaries -- the content of a
+    component is never altered, so a name that happens to contain ``/`` stays
+    intact (and quoted) rather than being silently rewritten.
+    """
+    cleaned = []
+    last = len(parts) - 1
+    for i, part in enumerate(parts):
+        p = str(part)
+        if i > 0:
+            p = p.lstrip("/")
+        if i < last:
+            p = p.rstrip("/")
+        if p:
+            cleaned.append(p)
+    return shlex.quote("/".join(cleaned))
+
+
 class SSHManager:
     """Handle SSH operations to remote manager."""
-    
+
     def __init__(self, manager_ip: str, ssh_port: str = "22", ssh_key: str = None):
         """Initialize SSH manager."""
         self.manager_ip = manager_ip
         self.ssh_port = ssh_port
         self.ssh_key = ssh_key
-    
+
+    def _ssh_args(self) -> List[str]:
+        """Build the ssh argv prefix shared by execute() and log following."""
+        args = ["ssh"]
+        if self.ssh_key:
+            args.extend(["-i", str(Path(self.ssh_key).expanduser())])
+        args.extend([
+            "-p", str(self.ssh_port),
+            "-o", "StrictHostKeyChecking=no",
+            f"root@{self.manager_ip}",
+        ])
+        return args
+
     def execute(self, command: str, capture_output: bool = True) -> subprocess.CompletedProcess:
-        """Execute command on manager via SSH."""
-        ssh_cmd = f"ssh -i {self.ssh_key} -p {self.ssh_port} -o StrictHostKeyChecking=no root@{self.manager_ip} '{command}'"
-        logger.debug(f"Executing SSH command: {ssh_cmd}")
+        """Execute command on manager via SSH.
+
+        The command is passed to ssh as a single argv element, so no local
+        shell ever parses it. This keeps quoting, heredocs and newlines in
+        ``command`` intact -- the manager's shell sees exactly what was built
+        here. Callers are still responsible for quoting values they
+        interpolate (see :func:`remote_path`), because the *remote* shell does
+        parse the string.
+        """
+        ssh_args = self._ssh_args() + [command]
+        logger.debug(f"Executing SSH command: {command}")
 
         return subprocess.run(
-            ssh_cmd, shell=True, capture_output=capture_output, text=True
+            ssh_args, capture_output=capture_output, text=True
         )
-    
+
     def path_exists(self, remote_shared_dir: str, path: str) -> bool:
         """Check if path exists on remote manager."""
-        result = self.execute(f"test -e {remote_shared_dir}/{path}")
+        result = self.execute(f"test -e {remote_path(remote_shared_dir, path)}")
         return result.returncode == 0
-    
+
     def read_file(self, remote_shared_dir: str, path: str) -> str:
         """Read file content from remote manager."""
-        result = self.execute(f"cat {remote_shared_dir}/{path}")
+        result = self.execute(f"cat {remote_path(remote_shared_dir, path)}")
         if result.returncode == 0:
             return result.stdout
         return ""
-    
+
     def mkdir(self, remote_shared_dir: str, path: str) -> bool:
         """Create directory on remote manager."""
-        result = self.execute(f"mkdir -p {remote_shared_dir}/{path}")
+        result = self.execute(f"mkdir -p {remote_path(remote_shared_dir, path)}")
         return result.returncode == 0
-    
+
     def list_dir(self, remote_shared_dir: str, path: str) -> List[str]:
         """List directory contents on remote manager."""
-        result = self.execute(f"ls -1 {remote_shared_dir}/{path} 2>/dev/null || true")
+        result = self.execute(
+            f"ls -1 {remote_path(remote_shared_dir, path)} 2>/dev/null || true"
+        )
         if result.returncode == 0 and result.stdout.strip():
             return [
                 item.strip()
@@ -61,7 +109,7 @@ class SSHManager:
         Args:
             source_paths: Source path(s) - can be single string or list
             dest_path: Destination path
-            recursive: Include recursive flag (automatically added for directories)
+            recursive: Accepted for compatibility; rsync -a always recurses
             from_remote: If True, copy from remote to local; if False (default), copy from local to remote
         
         Returns:
@@ -90,11 +138,16 @@ class SSHManager:
         
         # Ensure remote destination directory exists
         parent_dir = str(Path(remote_dest).parent)
-        self.execute(f"mkdir -p {parent_dir}")
+        self.execute(f"mkdir -p {shlex.quote(parent_dir)}")
         
         logger.info(f"[INFO] Copying {len(local_paths)} item(s) to {self.manager_ip}:{remote_dest}")
         
-        # Build rsync command - more robust than scp
+        # Build rsync command - more robust than scp.
+        # -a implies -r, so recursion is always on and the `recursive`
+        # argument has no effect. Left that way deliberately: rsync without
+        # -r skips directories *silently* and still exits 0, so honouring the
+        # flag would turn a harmless no-op into a copy that quietly does
+        # nothing. The CLI help documents recursion as automatic instead.
         rsync_parts = ["rsync", "-avz", "--progress", "--force"]
         
         # SSH options
@@ -109,9 +162,15 @@ class SSHManager:
         
         rsync_parts.extend(["-e", f"ssh {' '.join(ssh_opts)}"])
         
-        # Add all source paths
-        for local_path_obj in local_path_objs:
-            rsync_parts.append(str(local_path_obj))
+        # Add all source paths. rsync's trailing slash is load-bearing:
+        # "src/" copies the *contents* of src into dest, "src" copies src
+        # itself as a child of dest. Path() normalises that slash away, so
+        # sync()'s f"{local_dir}/" silently became a copy into
+        # methods/<name>/<name>/ -- a directory nothing reads -- and still
+        # reported [OK]. Validate through Path, transmit the caller's spelling.
+        for original, local_path_obj in zip(local_paths, local_path_objs):
+            trailing = "/" if str(original).endswith(("/", "/.")) else ""
+            rsync_parts.append(str(local_path_obj) + trailing)
         
         # Add destination
         rsync_parts.append(f"root@{self.manager_ip}:{remote_dest}")

@@ -1,9 +1,11 @@
+import { enableColumnResize } from './columnResize.js';
 import ClusterStatus from './components/ClusterStatus.js';
 import RunForm from './components/RunForm.js';
 import DataTable from './components/DataTable.js';
 import ExperimentModal from './components/ExperimentModal.js';
+import { useResource } from './composables/useResource.js';
 
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
 createApp({
     components: {
@@ -19,6 +21,14 @@ createApp({
         const methods = ref([]);
         const datasets = ref([]);
         const experiments = ref([]);
+        // Total on the share and whether the list above is only part of it.
+        const experimentTotal = ref(null);
+        const experimentsTruncated = ref(false);
+        // Server-side paging. The page used to be a client slice of whatever
+        // the API had capped, so the last page was the end of the cap rather
+        // than the end of the data.
+        const experimentPageSize = 5;
+        const experimentLimit = ref(experimentPageSize);
         const services = ref([]);
         
         // Modal (kept for backward compat)
@@ -41,13 +51,42 @@ createApp({
 
         // Experiment pagination (inline, not via DataTable)
         const experimentTotalPages = computed(() => {
-            if (!experiments.value || experiments.value.length === 0) return 1;
-            return Math.ceil(experiments.value.length / 5);
+            // Off the server's total, so the page count is the real one.
+            const total = experimentTotal.value;
+            if (total === null || total === undefined) {
+                return Math.max(1, Math.ceil(
+                    (experiments.value?.length || 0) / experimentPageSize));
+            }
+            return Math.max(1, Math.ceil(total / experimentPageSize));
         });
-        const paginatedExperiments = computed(() => {
-            const start = (experimentPage.value - 1) * 5;
-            return experiments.value.slice(start, start + 5);
+        // The server already returned exactly this page, so there is nothing
+        // left to slice.
+        const paginatedExperiments = computed(() => experiments.value || []);
+
+        // Range of the current window, 1-based and inclusive. Derived from
+        // the page and what the server actually returned, not from
+        // experiments.length -- which is now one page.
+        const experimentRangeStart = computed(() => {
+            if (!experiments.value || experiments.value.length === 0) return 0;
+            return (experimentPage.value - 1) * experimentPageSize + 1;
         });
+        const experimentRangeEnd = computed(() =>
+            experimentRangeStart.value === 0
+                ? 0
+                : experimentRangeStart.value + experiments.value.length - 1);
+
+        const experimentFillerRows = computed(() => {
+            if (experimentTotalPages.value <= 1) return 0;
+            return Math.max(0, experimentPageSize - (experiments.value?.length || 0));
+        });
+
+        const goToExperimentPage = async (page) => {
+            const target = Math.min(Math.max(1, page), experimentTotalPages.value);
+            if (target === experimentPage.value) return;
+            experimentPage.value = target;
+            experimentLimit.value = experimentPageSize;
+            await loadExperiments();
+        };
 
         // Loading states
         const evaluatingExperiment = ref(null);
@@ -104,7 +143,7 @@ createApp({
             }
         };
 
-        const sendNotification = (title, body, icon = '⚡') => {
+        const sendNotification = (title, body, icon = '') => {
             if (!notificationsEnabled.value) return;
 
             try {
@@ -168,17 +207,17 @@ createApp({
                     if (prevState.status === 'running' && exp.status !== 'running') {
                         if (exp.status === 'completed') {
                             sendNotification(
-                                '✅ Experiment Completed',
+                                '[OK] Experiment Completed',
                                 `${exp.method} on ${exp.dataset} has finished successfully`
                             );
                         } else if (exp.status === 'failed') {
                             sendNotification(
-                                '❌ Experiment Failed',
+                                '[FAIL] Experiment Failed',
                                 `${exp.method} on ${exp.dataset} has failed`
                             );
                         } else if (exp.status === 'stopped') {
                             sendNotification(
-                                '⏹️ Experiment Stopped',
+                                '[STOP] Experiment Stopped',
                                 `${exp.method} on ${exp.dataset} was stopped`
                             );
                         }
@@ -187,7 +226,7 @@ createApp({
                     // Check for evaluation completed
                     if (!prevState.has_evaluation && exp.has_evaluation) {
                         sendNotification(
-                            '📊 Evaluation Completed',
+                            '[EVAL] Evaluation Completed',
                             `Evaluation for ${exp.method} on ${exp.dataset} is ready`
                         );
                     }
@@ -206,83 +245,100 @@ createApp({
         requestNotificationPermission();
 
         // API Methods
-        const loadClusterInfo = async () => {
-            try {
-                const res = await fetch('/api/cluster/info');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                if (data) {
-                    clusterInfo.value = data;
-                    console.log('Loaded cluster info:', data);
-                }
-            } catch (error) {
-                console.error('Error loading cluster info:', error);
-                clusterInfo.value = null;
+        // One resource per panel. Each carries its own state ('loading' |
+        // 'ready' | 'error') and message, so the template can tell "asking",
+        // "nothing there" and "could not ask" apart. Before this every loader
+        // swallowed its error into an empty array and the UI showed the same
+        // blank table for all three.
+        const clusterRes = useResource('/api/cluster/info');
+        const methodsRes = useResource('/api/methods', { initial: [] });
+        const datasetsRes = useResource('/api/datasets', { initial: [] });
+        const servicesRes = useResource('/api/services', { initial: [] });
+        const experimentsRes = useResource('/api/experiments', { initial: [] });
+
+        // One line at the top of the page when anything is failing. Panels
+        // show their own error too, but a user whose cluster is unreachable
+        // should not have to notice four empty tables to work that out.
+        const connectionError = computed(() => {
+            const failed = [
+                ['cluster', clusterRes], ['methods', methodsRes],
+                ['datasets', datasetsRes], ['services', servicesRes],
+                ['experiments', experimentsRes],
+            ].filter(([, r]) => r.state.value === 'error');
+            if (failed.length === 0) return null;
+            return {
+                count: failed.length,
+                panels: failed.map(([name]) => name).join(', '),
+                message: failed[0][1].error.value,
+            };
+        });
+
+        const loadClusterInfo = async (opts) => {
+            await clusterRes.load({}, opts);
+            // Keep the last good value on failure. Overwriting with null is
+            // how a momentary blip became a header reading "0M 0W" over a
+            // perfectly healthy five-node swarm.
+            if (clusterRes.data.value) {
+                clusterInfo.value = clusterRes.data.value;
             }
         };
-        
-        const loadMethods = async () => {
-            try {
-                const res = await fetch('/api/methods');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    methods.value = data;
-                    console.log('Loaded methods:', data.length);
-                }
-            } catch (error) {
-                console.error('Error loading methods:', error);
-                methods.value = [];
-            }
+
+        // Cluster status was fetched once, at mount, and never again -- so a
+        // failure while the SSH tunnel was still cold (which is exactly when
+        // the first request lands, right after a restart) left the header
+        // showing a disconnected cluster until someone reloaded the page.
+        // The endpoint is cached server-side for 30s, so re-asking costs
+        // almost nothing; a failed attempt retries sooner than a good one.
+        let clusterTimer = null;
+        const scheduleClusterRefresh = () => {
+            if (clusterTimer) clearTimeout(clusterTimer);
+            const delay = clusterRes.state.value === 'error' ? 5000 : 20000;
+            clusterTimer = setTimeout(async () => {
+                await loadClusterInfo({ quiet: true });
+                scheduleClusterRefresh();
+            }, delay);
         };
-        
-        const loadDatasets = async () => {
-            try {
-                const res = await fetch('/api/datasets');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    datasets.value = data;
-                    console.log('Loaded datasets:', data.length);
-                }
-            } catch (error) {
-                console.error('Error loading datasets:', error);
-                datasets.value = [];
-            }
+
+        const loadMethods = async (opts) => {
+            const data = await methodsRes.load({}, opts);
+            if (Array.isArray(data)) methods.value = data;
         };
-        
-        const loadExperiments = async () => {
-            try {
-                const res = await fetch('/api/experiments');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    // Update states and check for changes (notifications only after notificationReady)
-                    checkExperimentChanges(data);
-                    experiments.value = data;
-                    console.log('Loaded experiments:', data.length);
-                }
-            } catch (error) {
-                console.error('Error loading experiments:', error);
-                experiments.value = [];
-            }
+
+        const loadDatasets = async (opts) => {
+            const data = await datasetsRes.load({}, opts);
+            if (Array.isArray(data)) datasets.value = data;
         };
-        
-        const loadServices = async () => {
-            try {
-                const res = await fetch('/api/services');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                    services.value = data;
-                    console.log('Loaded services:', data.length);
-                }
-            } catch (error) {
-                console.error('Error loading services:', error);
-                services.value = [];
-            }
+
+        const loadServices = async (opts) => {
+            const data = await servicesRes.load({}, opts);
+            if (Array.isArray(data)) services.value = data;
         };
-        
+
+        const loadExperiments = async (opts = {}) => {
+            const params = { limit: experimentLimit.value,
+                             offset: (experimentPage.value - 1) * experimentPageSize };
+            const body = await experimentsRes.load(params, opts);
+            if (!body) return;                    // error; experimentsRes.state says so
+            // The API answers {items,total,limit,offset,truncated}. The bare
+            // array is still accepted: the WebSocket updater broadcasts one,
+            // and so would an older server.
+            const items = Array.isArray(body) ? body : body.items;
+            if (!Array.isArray(items)) return;
+            checkExperimentChanges(items);
+            experiments.value = items;
+            experimentTotal.value = Array.isArray(body) ? null : body.total;
+            experimentsTruncated.value = Array.isArray(body) ? false : !!body.truncated;
+        };
+
+        // "Load all" for the truncation notice: ask for everything the share
+        // has rather than the default window. Cheap now that the endpoint is
+        // cached server-side.
+        const loadAllExperiments = async () => {
+            experimentLimit.value = Math.max(experimentTotal.value || 0, 500);
+            experimentPage.value = 1;
+            await loadExperiments();
+        };
+
         const stopExperiment = async (name) => {
             if (!confirm(`Stop experiment ${name}?`)) return;
 
@@ -292,10 +348,10 @@ createApp({
                 if (data.success) {
                     loadExperiments();
                 } else {
-                    alert('❌ Failed to stop experiment');
+                    alert('[FAIL] Failed to stop experiment');
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                alert('[FAIL] Error: ' + error.message);
             }
         };
 
@@ -309,10 +365,10 @@ createApp({
                     loadExperiments();
                     loadServices();
                 } else {
-                    alert('❌ Failed to delete experiment');
+                    alert('[FAIL] Failed to delete experiment');
                 }
             } catch (error) {
-                alert('❌ Error: ' + error.message);
+                alert('[FAIL] Error: ' + error.message);
             }
         };
 
@@ -341,11 +397,11 @@ createApp({
                     }, 300000);
                 } else {
                     evaluatingExperiment.value = null;
-                    alert('❌ Error: ' + data.error);
+                    alert('[FAIL] Error: ' + data.error);
                 }
             } catch (error) {
                 evaluatingExperiment.value = null;
-                alert('❌ Error: ' + error.message);
+                alert('[FAIL] Error: ' + error.message);
             }
         };
         
@@ -353,7 +409,9 @@ createApp({
 
         const clearLogPolling = () => {
             if (logPollingInterval) {
-                clearInterval(logPollingInterval);
+                // setTimeout now, not setInterval: the delay changes between
+                // ticks, which an interval cannot express.
+                clearTimeout(logPollingInterval);
                 logPollingInterval = null;
             }
         };
@@ -365,19 +423,49 @@ createApp({
             viewLogs_text.value = 'Loading logs...';
             viewLogsPaused.value = false;
 
+            // Terminal experiments never emit another line, so polling them
+            // is pure load on the manager. Anything else backs off when the
+            // output stops changing: a long training run that logs once a
+            // minute was being asked thirty times for the same bytes.
+            const TERMINAL = ['completed', 'failed', 'stopped'];
+            const MIN_DELAY = 2000;
+            const MAX_DELAY = 30000;
+            let delay = MIN_DELAY;
+            let previous = null;
+
+            const scheduleNext = () => {
+                clearLogPolling();
+                logPollingInterval = setTimeout(fetchLogs, delay);
+            };
+
             const fetchLogs = async () => {
                 if (viewLogsPaused.value || viewMode.value !== 'logs' || viewExperiment.value !== name) return;
                 try {
                     const res = await fetch(`/api/experiments/${name}/logs?tail=200`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     const data = await res.json();
-                    viewLogs_text.value = data.logs.join('\n') || 'No logs available';
+                    const text = data.logs.join('\n') || 'No logs available';
+                    // Unchanged output means the run is quiet, not that it is
+                    // gone: double the wait rather than stopping.
+                    delay = (text === previous)
+                        ? Math.min(delay * 2, MAX_DELAY)
+                        : MIN_DELAY;
+                    previous = text;
+                    viewLogs_text.value = text;
+
+                    const exp = (experiments.value || []).find(e => e.name === name);
+                    if (exp && TERMINAL.includes(String(exp.status).toLowerCase())) {
+                        clearLogPolling();      // finished: nothing more will arrive
+                        return;
+                    }
                 } catch (error) {
                     viewLogs_text.value = `Error: ${error.message}`;
+                    delay = Math.min(delay * 2, MAX_DELAY);   // back off on failure too
                 }
+                scheduleNext();
             };
 
             await fetchLogs();
-            logPollingInterval = setInterval(fetchLogs, 2000);
         };
 
         const showEvaluation = async (name) => {
@@ -438,11 +526,77 @@ createApp({
             showModal.value = false;
         };
         
+        // Counts are counts: `num_samples` printed as 2751.0000 read as a
+        // measurement. Everything else keeps four decimals, so an AUC of
+        // exactly 1 still reads 1.0000 rather than 1.
+        const COUNT_METRIC = /^(num_|total_)/;
+        const formatMetric = (key, value) => {
+            if (typeof value !== 'number') return value;
+            if (COUNT_METRIC.test(key) || key === 'k' || key === 'temporal_span') {
+                return String(Math.round(value));
+            }
+            return value.toFixed(4);
+        };
+
+        // Samples the evaluator left out (sentinel or non-finite scores),
+        // from the `filtering` block it reports alongside the metrics.
+        const excludedSamples = (metrics) => {
+            const f = metrics && metrics.filtering;
+            if (!f || typeof f !== 'object') return 0;
+            const total = Number(f.total), kept = Number(f.kept);
+            return Number.isFinite(total) && Number.isFinite(kept) ? total - kept : 0;
+        };
+
         // WebSocket connection
         let socket = null;
         let updateTimeouts = {};
         let reconnectAttempts = 0;
-        const maxReconnectAttempts = 5;
+
+        // Every live status on this page came from the Socket.IO push and
+        // from nothing else: `disconnect` and `connect_error` only wrote to
+        // the console, and socket.io gave up for good after five attempts.
+        // So a dropped connection froze every badge on screen -- silently,
+        // because the banner watches REST failures and the REST calls were
+        // not being made -- until somebody reloaded the page. REST polling
+        // is now the floor underneath the push: a slow safety net while the
+        // socket is delivering, the primary source when it is not.
+        //   'connecting' -> starting up, say nothing yet
+        //   'live'       -> the push is working
+        //   'polling'    -> no push; the page is refetching on a timer
+        const liveState = ref('connecting');
+
+        const LIVE_IDLE_MS = 30000;     // safety net; the push does the work
+        const LIVE_FALLBACK_MS = 4000;  // the updater's own cadence, roughly
+        let liveTimer = null;
+
+        const refreshLiveData = () => Promise.allSettled([
+            loadExperiments({ quiet: true }),
+            loadServices({ quiet: true }),
+        ]);
+
+        const scheduleLiveRefresh = () => {
+            if (liveTimer) clearTimeout(liveTimer);
+            const delay = liveState.value === 'live' ? LIVE_IDLE_MS
+                                                     : LIVE_FALLBACK_MS;
+            liveTimer = setTimeout(async () => {
+                // A hidden tab is not being read; polling it wakes the
+                // manager for nothing. visibilitychange refetches on return.
+                if (document.visibilityState !== 'hidden') {
+                    await refreshLiveData();
+                }
+                scheduleLiveRefresh();
+            }, delay);
+        };
+
+        // Coming back to a tab that sat in the background is the other way a
+        // stale status gets read as a live one.
+        const onVisibilityChange = () => {
+            if (document.visibilityState !== 'visible') return;
+            if (socket && !socket.connected) socket.connect();
+            refreshLiveData();
+            loadClusterInfo({ quiet: true });
+            scheduleLiveRefresh();
+        };
         
         const deepEqual = (obj1, obj2) => {
             if (obj1 === obj2) return true;
@@ -463,7 +617,11 @@ createApp({
         
         const smartMerge = (current, incoming, keyField = 'name') => {
             if (!incoming || !Array.isArray(incoming)) return current;
-            if (incoming.length === 0 && current.length > 0) return current;
+            // An empty list used to be ignored here, because a dropped SSH
+            // tunnel was reported as [] and the panel emptied at random.
+            // That is fixed at the source now (api.list_running_services
+            // raises), so [] means what it says -- and ignoring it left the
+            // last service on screen forever once the cluster went quiet.
             
             const result = [];
             
@@ -487,13 +645,17 @@ createApp({
             }
 
             updateTimeouts[type] = setTimeout(() => {
-                if (type === 'experiments') {
-                    // Update states and check for changes (notifications only after notificationReady)
-                    checkExperimentChanges(data);
-                    const merged = smartMerge(experiments.value, data);
-                    if (!deepEqual(experiments.value, merged)) {
-                        experiments.value = merged;
+                if (type === 'experiments_changed') {
+                    // The server says the list moved; it no longer sends the
+                    // list. It used to push a fixed limit=50 array which was
+                    // assigned straight over whatever page was showing, so a
+                    // dashboard asking for five rendered fifty. Refetch the
+                    // window this client is actually on -- quiet, so the
+                    // table does not blank on every tick.
+                    if (data && typeof data.total === 'number') {
+                        experimentTotal.value = data.total;
                     }
+                    loadExperiments({ quiet: true });
                 } else if (type === 'services') {
                     const merged = smartMerge(services.value, data);
                     if (!deepEqual(services.value, merged)) {
@@ -507,27 +669,47 @@ createApp({
             console.log('[WebSocket] Connecting...');
             
             socket = io({
-                transports: ['websocket', 'polling'],
+                // Socket.IO's own default order, restored. Reversed, the
+                // client opened with a websocket upgrade -- which the
+                // werkzeug dev server cannot serve (it answers 500,
+                // "write() before start_response") -- and then gave up
+                // instead of falling back, so the dashboard had no live
+                // connection at all and statuses only moved on a reload.
+                // Long-polling connects against threading mode, and
+                // socket.io upgrades to websocket by itself wherever a
+                // server supports it.
+                transports: ['polling', 'websocket'],
                 reconnection: true,
                 reconnectionDelay: 1000,
                 reconnectionDelayMax: 5000,
-                reconnectionAttempts: maxReconnectAttempts
+                // socket.io's own default. Capped at five, a restart of the
+                // GUI -- or any outage longer than about fifteen seconds --
+                // left the page permanently without a live connection.
+                reconnectionAttempts: Infinity
             });
             
             socket.on('connect', () => {
                 console.log('[WebSocket] Connected');
                 reconnectAttempts = 0;
+                liveState.value = 'live';
+                scheduleLiveRefresh();      // drop back to the idle cadence
+                // Whatever moved while the push was down.
+                refreshLiveData();
                 // Request initial data
                 socket.emit('request_update', { type: 'all' });
             });
             
             socket.on('update', (data) => {
                 console.log('[WebSocket] Update received:', data.type);
-                if (data.type && data.data && Array.isArray(data.data)) {
+                // The array check used to gate every event, from when all
+                // of them carried a list. `experiments_changed` carries
+                // {total: n} instead, so the guard silently dropped it and
+                // no status ever moved without a reload.
+                if (data.type && data.data !== undefined && data.data !== null) {
                     debouncedUpdate(data.type, data.data);
                 }
                 // Mark WebSocket as synced after first experiments update
-                if (data.type === 'experiments' && !webSocketSynced) {
+                if (data.type === 'experiments_changed' && !webSocketSynced) {
                     webSocketSynced = true;
                     console.log('WebSocket synced, notifications can now be enabled');
                 }
@@ -535,14 +717,18 @@ createApp({
             
             socket.on('disconnect', (reason) => {
                 console.log('[WebSocket] Disconnected:', reason);
+                liveState.value = 'polling';
+                scheduleLiveRefresh();      // take over now, not in 30s
+                // socket.io reconnects by itself except when the server
+                // closed the connection deliberately -- a GUI restart.
+                if (reason === 'io server disconnect') socket.connect();
             });
             
             socket.on('connect_error', (error) => {
                 console.error('[WebSocket] Connection error:', error);
                 reconnectAttempts++;
-                if (reconnectAttempts >= maxReconnectAttempts) {
-                    console.error('[WebSocket] Max reconnection attempts reached');
-                }
+                liveState.value = 'polling';
+                scheduleLiveRefresh();
             });
             
             socket.on('error', (error) => {
@@ -563,6 +749,10 @@ createApp({
                     loadExperiments(),
                     loadServices()
                 ]);
+
+                // Self-healing cluster status: without this a failure on the
+                // line above was permanent until a page reload.
+                scheduleClusterRefresh();
                 
                 // Log any failures
                 results.forEach((result, index) => {
@@ -587,6 +777,20 @@ createApp({
                 isLoading.value = false;
                 console.log('UI ready, connecting WebSocket...');
                 connectWebSocket();
+
+                // The REST floor starts now, not when the socket fails: if
+                // the push never connects at all there is no failure event
+                // to react to, only silence.
+                scheduleLiveRefresh();
+                document.addEventListener('visibilitychange', onVisibilityChange);
+
+                // The experiments table is inline markup, not a DataTable,
+                // so it needs the handles attached by hand.
+                nextTick(() => {
+                    const t = document.querySelector(
+                        '.experiments-table-side table');
+                    if (t) enableColumnResize(t, 'experiments');
+                });
 
                 // Enable notifications only after WebSocket has synced (check every 500ms, max 10s)
                 let checkCount = 0;
@@ -617,6 +821,27 @@ createApp({
             methods,
             datasets,
             experiments,
+            experimentTotal,
+            experimentsTruncated,
+            experimentFillerRows,
+        experimentRangeStart,
+        experimentRangeEnd,
+        experimentLimit,
+            goToExperimentPage,
+            loadAllExperiments,
+            // Per-panel state, so a template can say 'could not reach the
+            // cluster' instead of rendering an empty table.
+            connectionError,
+            formatMetric,
+            excludedSamples,
+            // 'live' | 'polling' | 'connecting' -- the banner tells the user
+            // when statuses are arriving on a timer rather than a push.
+            liveState,
+        clusterRes,
+            methodsRes,
+            datasetsRes,
+            servicesRes,
+            experimentsRes,
             services,
             showModal,
             modalContent,

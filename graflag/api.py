@@ -13,6 +13,7 @@ from .config import GraflagConfig
 from .models import (
     ClusterInfo, MethodInfo, DatasetInfo, ExperimentInfo,
     ExperimentResults, EvaluationResults, RunProgress,
+    ServiceCleanupResult, ClearReport,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ class GraFlagAPI:
         experiments = api.list_experiments()
     """
 
-    def __init__(self, config_file: str = ".env", log_level: int = logging.INFO):
+    def __init__(self, config_file: Optional[str] = None, log_level: int = logging.INFO):
         logging.basicConfig(level=log_level)
         self.core = GraFlag(config_file)
         self.config = self.core.config
@@ -87,10 +88,15 @@ class GraFlagAPI:
             logger.error(f"Error listing datasets: {e}")
             return []
 
-    def list_experiments(self, limit: int = 50) -> List[ExperimentInfo]:
+    def count_experiments(self) -> int:
+        """Total experiments on the share, for reporting truncation."""
+        return self.core.count_experiments()
+
+    def list_experiments(self, limit: int = 50,
+                         offset: int = 0) -> List[ExperimentInfo]:
         """List recent experiments."""
         try:
-            return self.core.list_experiments(limit=limit)
+            return self.core.list_experiments(limit=limit, offset=offset)
         except Exception as e:
             logger.error(f"Error listing experiments: {e}")
             return []
@@ -120,6 +126,8 @@ class GraFlagAPI:
         gpu: bool = True,
         method_params: Optional[Dict[str, Any]] = None,
         on_progress: Optional[Callable[[RunProgress], None]] = None,
+        exp_name: Optional[str] = None,
+        keep_service: bool = False,
     ) -> str:
         """Run an experiment. Returns experiment name."""
         return self.core.run(
@@ -129,6 +137,8 @@ class GraFlagAPI:
             build=build,
             gpu=gpu,
             method_params=method_params or {},
+            exp_name=exp_name,
+            keep_service=keep_service,
         )
 
     # ========================================================================
@@ -161,12 +171,17 @@ class GraFlagAPI:
     # ========================================================================
 
     def list_running_services(self) -> List[Dict[str, str]]:
-        """List running Docker services."""
-        try:
-            return self.core.list_services()
-        except Exception as e:
-            logger.error(f"Error listing services: {e}")
-            return []
+        """List running Docker services.
+
+        Deliberately not error-safe, unlike its neighbours. Returning [] on
+        failure made a dropped SSH tunnel look exactly like a cluster with
+        nothing running: the Services panel emptied, the count read 0, and
+        nothing anywhere said the cluster had not been reached. All three
+        callers in the GUI handle the exception -- the route answers 500 so
+        the panel can say so, and the updater declines to broadcast a list
+        it does not have.
+        """
+        return self.core.list_services()
 
     def stop_experiment(self, experiment_name: str) -> bool:
         """Stop a running experiment."""
@@ -185,6 +200,31 @@ class GraFlagAPI:
         except Exception as e:
             logger.error(f"Error deleting experiment: {e}")
             return False
+
+    def cleanup_services(
+        self, experiment: Optional[str] = None, dry_run: bool = False
+    ) -> List[ServiceCleanupResult]:
+        """Remove Swarm services for finished experiments."""
+        try:
+            return self.core.cleanup_services(experiment=experiment, dry_run=dry_run)
+        except Exception as e:
+            logger.error(f"Error cleaning up services: {e}")
+            return []
+
+    def clear(self, apply: bool = False, share: bool = True,
+              images: bool = True, collect: bool = False) -> ClearReport:
+        """Report -- or remove -- storage and images nothing owns any more.
+
+        A failure comes back as an empty report carrying the message, not as
+        an exception: the GUI polls this beside the experiment list and a
+        raise here would take the page down over housekeeping.
+        """
+        try:
+            return self.core.clear(apply=apply, share=share,
+                                   images=images, collect=collect)
+        except Exception as e:
+            logger.error(f"Error clearing cluster storage: {e}")
+            return ClearReport(applied=False, errors=[str(e)])
 
     def get_experiment_logs(self, experiment_name: str, tail: int = 100) -> List[str]:
         """Get recent logs for an experiment."""

@@ -169,3 +169,26 @@ class RunProgress:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass
+class VerificationReport:
+    """What `graflag verify` found in one experiment (see graflag.verify)."""
+    experiment_name: str
+    #: One {"level": "ERROR" | "WARN" | "OK", "message": ...} per check, in
+    #: the order they ran.
+    findings: List[Dict[str, str]] = field(default_factory=list)
+    failed: int = 0
+    warned: int = 0
+    passed: int = 0
+    #: The probe summary the findings were drawn from: counts, the reported
+    #: and evaluated AUCs, the declared split. Never the scores themselves.
+    probe: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def ok(self) -> bool:
+        """True when no check failed. Warnings do not fail an experiment."""
+        return self.failed == 0
+
+    def to_dict(self) -> dict:
+        return asdict(self)

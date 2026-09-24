@@ -83,5 +83,30 @@ class Distribution(unittest.TestCase):
         self.assertEqual(setup_value("version"), declared)
 
 
+
+class TheMcpExtra(unittest.TestCase):
+    """`graflag mcp` needs the SDK; the rest of GraFlag must not."""
+
+    def requirement(self):
+        (req,) = setup_value("extras_require")["mcp"]
+        return req
+
+    def test_the_sdk_is_optional(self):
+        self.assertNotIn("mcp", " ".join(setup_value("install_requires")))
+        self.assertTrue(self.requirement().startswith("mcp"))
+
+    def test_it_is_held_below_2(self):
+        """mcp 2.0 removed mcp.server.fastmcp, which the server imports."""
+        self.assertIn("<2", self.requirement())
+
+    def test_only_where_the_sdk_installs(self):
+        self.assertIn("python_version >= '3.10'", self.requirement())
+        self.assertEqual(setup_value("python_requires"), ">=3.8")
+
+    def test_ci_installs_it_so_its_tests_run(self):
+        workflow = (ROOT / ".github/workflows/publish.yml").read_text()
+        self.assertIn('pip install -e ".[mcp]"', workflow)
+
+
 if __name__ == "__main__":
     unittest.main()

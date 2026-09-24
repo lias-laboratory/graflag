@@ -2,7 +2,8 @@ CLI Reference
 =============
 
 ``graflag`` is a thin client: every command acts on the Swarm manager over SSH,
-except ``devcluster``, which runs the development cluster on this machine. The
+except ``devcluster``, which runs the development cluster on this machine, and
+``mcp``, which serves the other commands to an AI agent. The
 command comes first, then its options::
 
     graflag COMMAND [OPTIONS]
@@ -104,6 +105,30 @@ Compute metrics and plots for a finished run::
 
 The results go to the experiment's ``eval/`` directory.
 
+.. _cli-verify:
+
+verify
+~~~~~~
+
+Check that a finished, evaluated run published a result worth believing::
+
+    graflag verify -e EXPERIMENT [--json]
+
+``completed`` means the method exited 0 and wrote a ``results.json`` that
+parses; it does not mean the numbers are the method's. ``verify`` checks the
+part that does not depend on what the method computes: scores and ground truth
+of the same length, both classes present, scores that vary, the scored split
+declared as the test split, and the AUC ``evaluate`` computed equal to the one
+the method reported for itself. Each finding is printed as ``[OK]``, ``[WARN]``
+or ``[ERROR]``; the command exits 1 if any check failed. Run ``evaluate``
+first -- without ``eval/evaluation.json`` there is nothing to compare against.
+
+- ``--json`` -- also print the summary the checks read (counts, AUCs, split;
+  never the scores)
+
+This is the last gate of :doc:`method integration <AGENT_SKILL>`. The skill's
+``scripts/verify_run.py`` is the same check under its old name.
+
 list
 ~~~~
 
@@ -198,6 +223,20 @@ Start the web dashboard::
 - ``--debug`` -- Flask debug mode
 
 The dashboard has no authentication. See :doc:`gui`.
+
+mcp
+~~~
+
+Serve GraFlag to an AI agent over the Model Context Protocol, on stdio::
+
+    graflag mcp [--config FILE]
+
+Needs the optional SDK: ``pip install "graflag[mcp]"`` (Python 3.10+). The
+command is meant to be started by an MCP client, not typed; for Claude Code::
+
+    claude mcp add graflag -- graflag mcp
+
+See :doc:`MCP`.
 
 devcluster
 ~~~~~~~~~~

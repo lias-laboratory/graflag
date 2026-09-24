@@ -34,25 +34,45 @@ def remote_path(*parts: str) -> str:
     return shlex.quote("/".join(cleaned))
 
 
+#: Options that make ssh fail instead of asking. A client with nobody at the
+#: keyboard -- the MCP server, whose stdin and stdout are the protocol -- must
+#: not wait on a password or passphrase prompt: the tool call would hang until
+#: the client gave up, with nothing saying why.
+NON_INTERACTIVE_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15"]
+
+
 class SSHManager:
     """Handle SSH operations to remote manager."""
 
-    def __init__(self, manager_ip: str, ssh_port: str = "22", ssh_key: str = None):
-        """Initialize SSH manager."""
+    def __init__(self, manager_ip: str, ssh_port: str = "22", ssh_key: str = None,
+                 batch_mode: bool = False):
+        """Initialize SSH manager.
+
+        Args:
+            batch_mode: Never prompt (see :data:`NON_INTERACTIVE_OPTS`). Off by
+                default, so a CLI user whose key needs a passphrase still gets
+                asked for it.
+        """
         self.manager_ip = manager_ip
         self.ssh_port = ssh_port
         self.ssh_key = ssh_key
+        self.batch_mode = batch_mode
+
+    def _option_args(self) -> List[str]:
+        """The -o options every ssh this manager starts carries."""
+        opts = ["-o", "StrictHostKeyChecking=no"]
+        if self.batch_mode:
+            opts.extend(NON_INTERACTIVE_OPTS)
+        return opts
 
     def _ssh_args(self) -> List[str]:
         """Build the ssh argv prefix shared by execute() and log following."""
         args = ["ssh"]
         if self.ssh_key:
             args.extend(["-i", str(Path(self.ssh_key).expanduser())])
-        args.extend([
-            "-p", str(self.ssh_port),
-            "-o", "StrictHostKeyChecking=no",
-            f"root@{self.manager_ip}",
-        ])
+        args.extend(["-p", str(self.ssh_port)])
+        args.extend(self._option_args())
+        args.append(f"root@{self.manager_ip}")
         return args
 
     def execute(self, command: str, capture_output: bool = True) -> subprocess.CompletedProcess:
@@ -68,8 +88,15 @@ class SSHManager:
         ssh_args = self._ssh_args() + [command]
         logger.debug(f"Executing SSH command: {command}")
 
+        # stdin is /dev/null because ssh forwards whatever it can read from its
+        # own stdin to the remote command, and reads eagerly. Nothing here
+        # sends data that way (heredocs carry it inside `command`), so all an
+        # inherited stdin could do is be consumed: the rest of a shell loop's
+        # input (`while read m; do graflag run -m "$m" ...; done < list`), or,
+        # under the MCP server, the client's next requests.
         return subprocess.run(
-            ssh_args, capture_output=capture_output, text=True
+            ssh_args, capture_output=capture_output, text=True,
+            stdin=subprocess.DEVNULL,
         )
 
     def path_exists(self, remote_shared_dir: str, path: str) -> bool:
@@ -151,7 +178,7 @@ class SSHManager:
         rsync_parts = ["rsync", "-avz", "--progress", "--force"]
         
         # SSH options
-        ssh_opts = ["-o", "StrictHostKeyChecking=no"]
+        ssh_opts = self._option_args()
         if self.ssh_key:
             key_path = Path(self.ssh_key).expanduser()
             if str(key_path).endswith('.pub'):
@@ -177,7 +204,8 @@ class SSHManager:
         
         logger.debug(f"Executing rsync command: {' '.join(rsync_parts)}")
         
-        result = subprocess.run(rsync_parts, capture_output=True, text=True)
+        result = subprocess.run(rsync_parts, capture_output=True, text=True,
+                                stdin=subprocess.DEVNULL)  # see execute()
         
         if result.returncode == 0:
             logger.info(f"[OK] Successfully copied {len(local_paths)} item(s) to {remote_dest}")
@@ -198,7 +226,7 @@ class SSHManager:
         rsync_parts = ["rsync", "-avz", "--progress", "--force"]
         
         # SSH options
-        ssh_opts = ["-o", "StrictHostKeyChecking=no"]
+        ssh_opts = self._option_args()
         if self.ssh_key:
             key_path = Path(self.ssh_key).expanduser()
             if str(key_path).endswith('.pub'):
@@ -218,7 +246,8 @@ class SSHManager:
         
         logger.debug(f"Executing rsync command: {' '.join(rsync_parts)}")
         
-        result = subprocess.run(rsync_parts, capture_output=True, text=True)
+        result = subprocess.run(rsync_parts, capture_output=True, text=True,
+                                stdin=subprocess.DEVNULL)  # see execute()
         
         if result.returncode == 0:
             logger.info(f"[OK] Successfully copied {len(remote_paths)} item(s) to {local_dest}")

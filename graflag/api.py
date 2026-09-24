@@ -102,13 +102,13 @@ class GraFlagAPI:
             return []
 
     def get_experiment_details(self, experiment_name: str) -> Optional[ExperimentInfo]:
-        """Get details for a specific experiment."""
+        """Get details for a specific experiment.
+
+        One probe of that experiment; this used to list 500 and search them,
+        which also missed any experiment older than the 500 newest.
+        """
         try:
-            experiments = self.core.list_experiments(limit=500)
-            for e in experiments:
-                if e.name == experiment_name:
-                    return e
-            return None
+            return self.core.get_experiment(experiment_name)
         except Exception as e:
             logger.error(f"Error getting experiment details: {e}")
             return None
@@ -129,7 +129,13 @@ class GraFlagAPI:
         exp_name: Optional[str] = None,
         keep_service: bool = False,
     ) -> str:
-        """Run an experiment. Returns experiment name."""
+        """Run an experiment. Returns experiment name.
+
+        Waits for the run without streaming its output (`follow=False`): the
+        dashboard calls this from a background thread, where the stream only
+        reached the server's console, and following it kept a Docker SDK call
+        in a loop for the whole run.
+        """
         return self.core.run(
             method_name=method,
             dataset=dataset,
@@ -139,6 +145,7 @@ class GraFlagAPI:
             method_params=method_params or {},
             exp_name=exp_name,
             keep_service=keep_service,
+            follow=False,
         )
 
     # ========================================================================
@@ -162,8 +169,8 @@ class GraFlagAPI:
             return None
 
     def evaluate_experiment(self, experiment_name: str) -> bool:
-        """Run evaluation on an experiment."""
-        self.core.evaluate(experiment_name)
+        """Run evaluation on an experiment (quietly, see :meth:`run`)."""
+        self.core.evaluate(experiment_name, follow=False)
         return True
 
     # ========================================================================

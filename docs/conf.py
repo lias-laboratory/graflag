@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 project = 'GraFlag'
 author = 'gbay7'
-version = '1.1'
-release = '1.1.0'
+version = '1.2'
+release = '1.2.0'
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -29,6 +29,9 @@ napoleon_numpy_docstring = True
 
 # Autodoc settings
 autodoc_member_order = 'bysource'
+# graflag.mcp_server needs the optional `mcp` extra (Python 3.10+); mocked so
+# the reference builds without it.
+autodoc_mock_imports = ['mcp', 'anyio', 'pydantic']
 autodoc_default_options = {
     'members': True,
     'undoc-members': True,

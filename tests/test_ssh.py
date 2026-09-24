@@ -267,5 +267,146 @@ class RsyncTrailingSlashIsPreserved(unittest.TestCase):
         self.assertFalse((dest / ".env").exists())
 
 
+class StdinIsNotInherited(unittest.TestCase):
+    """No ssh or rsync child may read this process's stdin.
+
+    ssh forwards whatever it can read from its own stdin to the remote command,
+    and reads eagerly. Under the MCP server stdin is the protocol, so an
+    inherited stdin let a remote command swallow the client's next requests;
+    under a shell loop it swallowed the rest of the loop's input. Each test runs
+    GraFlag in a child whose stdin holds bytes, behind a fake that records what
+    it could read.
+    """
+
+    PAYLOAD = b'{"jsonrpc": "2.0", "id": 7, "method": "tools/list"}\n'
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        bindir = Path(self.tmp) / "bin"
+        bindir.mkdir()
+        self.seen = Path(self.tmp) / "seen"
+        for tool in ("ssh", "rsync"):
+            fake = bindir / tool
+            fake.write_text(f'#!/bin/sh\ncat >> "{self.seen}"\nexit 0\n')
+            fake.chmod(0o755)
+        self.env = dict(os.environ, PATH=f"{bindir}:{os.environ.get('PATH', '')}",
+                        PYTHONPATH=str(Path(__file__).resolve().parents[1]))
+        (Path(self.tmp) / "src").mkdir()
+
+    def _run_with_stdin(self, code):
+        subprocess.run([sys.executable, "-c", code], input=self.PAYLOAD,
+                       env=self.env, check=True, timeout=30)
+        return self.seen.read_bytes() if self.seen.exists() else b""
+
+    def test_execute_does_not_read_stdin(self):
+        seen = self._run_with_stdin(
+            "from graflag.ssh import SSHManager\n"
+            "SSHManager('10.0.0.1').execute('true')\n")
+        self.assertEqual(seen, b"", "ssh read the caller's stdin")
+
+    def test_rsync_does_not_read_stdin(self):
+        seen = self._run_with_stdin(
+            "from graflag.ssh import SSHManager\n"
+            f"SSHManager('10.0.0.1').copy_files([{str(Path(self.tmp) / 'src')!r}],"
+            " '/shared/x/', from_remote=False)\n"
+            "SSHManager('10.0.0.1').copy_files(['/shared/x'],"
+            f" {str(Path(self.tmp) / 'dest')!r}, from_remote=True)\n")
+        self.assertEqual(seen, b"", "ssh or rsync read the caller's stdin")
+
+    def test_docker_tunnel_does_not_read_stdin(self):
+        from unittest import mock
+        from graflag.docker_ops import DockerManager
+
+        manager = DockerManager(SSHManager("10.0.0.1"), config=None)
+        with mock.patch("graflag.docker_ops.subprocess.Popen") as popen, \
+                mock.patch("graflag.docker_ops.time.sleep"):
+            popen.return_value.poll.return_value = 255      # ssh exited
+            popen.return_value.stderr.read.return_value = b"refused"
+            with self.assertRaises(RuntimeError):
+                manager._connect()
+        self.assertIs(popen.call_args.kwargs.get("stdin"), subprocess.DEVNULL)
+        manager._tunnel_proc = None
+
+
+class NonInteractiveSsh(unittest.TestCase):
+    """With nobody at a terminal, ssh must fail rather than prompt."""
+
+    def test_batch_mode_adds_the_options(self):
+        args = SSHManager("10.0.0.1", batch_mode=True)._ssh_args()
+        self.assertIn("BatchMode=yes", args)
+        self.assertIn("ConnectTimeout=15", args)
+        self.assertEqual(args[-1], "root@10.0.0.1")
+
+    def test_default_can_still_prompt(self):
+        """A CLI user whose key has a passphrase must still be asked for it."""
+        self.assertNotIn("BatchMode=yes", SSHManager("10.0.0.1")._ssh_args())
+
+    def test_the_tunnel_gets_them_too(self):
+        from unittest import mock
+        from graflag.docker_ops import DockerManager
+
+        manager = DockerManager(SSHManager("10.0.0.1", batch_mode=True), config=None)
+        with mock.patch("graflag.docker_ops.subprocess.Popen") as popen, \
+                mock.patch("graflag.docker_ops.time.sleep"):
+            popen.return_value.poll.return_value = 255
+            popen.return_value.stderr.read.return_value = b""
+            with self.assertRaises(RuntimeError):
+                manager._connect()
+        self.assertIn("BatchMode=yes", popen.call_args.args[0])
+        manager._tunnel_proc = None
+
+    def test_graflag_non_interactive_sets_batch_mode(self):
+        from graflag.core import GraFlag
+
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        config = Path(tmp) / "config.env"
+        config.write_text("MANAGER_IP=10.0.0.1\n")
+        self.assertTrue(GraFlag(str(config), interactive=False).ssh.batch_mode)
+        self.assertFalse(GraFlag(str(config)).ssh.batch_mode)
+
+
+FAKE_SSH_EXEC = """#!/bin/sh
+# Runs what the manager would run, here: effects, not strings, are asserted on.
+eval "last=\\${$#}"
+exec sh -c "$last"
+"""
+
+
+class MethodEnvPathIsQuoted(unittest.TestCase):
+    """load_method_env() put the method name into two remote commands bare."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        bindir = Path(self.tmp) / "bin"
+        bindir.mkdir()
+        (bindir / "ssh").write_text(FAKE_SSH_EXEC)
+        (bindir / "ssh").chmod(0o755)
+        self._old_path = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{bindir}:{self._old_path}"
+        self.addCleanup(os.environ.__setitem__, "PATH", self._old_path)
+        self.shared = Path(self.tmp) / "shared"
+        self.ssh = SSHManager("10.0.0.1")
+
+    def test_a_name_with_a_space_and_a_quote_is_read(self):
+        from graflag.utils import load_method_env
+
+        name = "odd name's"
+        method = self.shared / "methods" / name
+        method.mkdir(parents=True)
+        (method / ".env").write_text("METHOD_NAME=odd\n_GPU=0\n")
+        self.assertEqual(load_method_env(self.ssh, str(self.shared), name),
+                         {"METHOD_NAME": "odd", "_GPU": "0"})
+
+    def test_an_injected_command_does_not_run(self):
+        from graflag.utils import load_method_env
+
+        witness = Path(self.tmp) / "pwned"
+        load_method_env(self.ssh, str(self.shared), f"x; touch {witness}; #")
+        self.assertFalse(witness.exists(), "the method name ran as a command")
+
+
 if __name__ == "__main__":
     unittest.main()

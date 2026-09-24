@@ -19,7 +19,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install
-        run: pip install -e .
+        # With the MCP extra, so tests/test_mcp.py runs instead of skipping.
+        run: pip install -e ".[mcp]"
       - name: Unit tests (no cluster, no network)
         run: python -m unittest discover -s tests
 

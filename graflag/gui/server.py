@@ -17,6 +17,7 @@ from flask_socketio import SocketIO, emit
 from graflag.api import GraFlagAPI, GraFlagError
 from graflag.core import GraFlag
 from graflag.ssh import remote_path
+from graflag.utils import valid_name
 import json
 import time
 import re
@@ -100,13 +101,8 @@ def invalidate_experiments_cache():
 # Experiment / method / dataset names are interpolated into shell commands that
 # run on the swarm manager as root, so anything reaching those paths must be a
 # plain identifier. Rejects quotes, ';', '$', backticks, spaces and path
-# separators.
-_SAFE_NAME = re.compile(r'^[A-Za-z0-9._-]{1,200}$')
-
-
-def _valid_name(name: str) -> bool:
-    """True when `name` is safe to interpolate into a remote command."""
-    return bool(name) and bool(_SAFE_NAME.match(name)) and '..' not in name
+# separators. The rule lives in graflag.utils, shared with the MCP server.
+_valid_name = valid_name
 
 
 def _reject(name: str):

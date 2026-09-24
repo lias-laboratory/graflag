@@ -69,11 +69,15 @@ graflag run -m bond_dominant -d bond_inj_cora --build
 graflag run -m taddy -d uci --params MAX_EPOCH=100 LEARNING_RATE=0.001
 ```
 
-### 4. Evaluate
+### 4. Evaluate and verify
 
 ```bash
 graflag evaluate -e exp__bond_dominant__bond_inj_cora__20260309_120000
+graflag verify -e exp__bond_dominant__bond_inj_cora__20260309_120000
 ```
+
+`verify` checks that the published scores reproduce the AUC the method reported
+and exits 1 when they do not.
 
 ## Commands
 
@@ -86,10 +90,12 @@ graflag evaluate -e exp__bond_dominant__bond_inj_cora__20260309_120000
 | `graflag logs -e EXP [-f]` | View experiment logs |
 | `graflag stop -e EXP [--rm]` | Stop an experiment |
 | `graflag evaluate -e EXP` | Evaluate experiment results |
+| `graflag verify -e EXP [--json]` | Check the published result holds up (exit 1 on failure) |
 | `graflag cleanup [--dry-run]` | Remove Swarm services for finished experiments |
 | `graflag copy -s SRC --dest DST [-r]` | Copy files to/from remote |
 | `graflag sync [--lib] [--path PATH]` | Sync method or library |
 | `graflag gui [--port PORT]` | Start web dashboard (binds `0.0.0.0`, no auth -- see note below) |
+| `graflag mcp [--config FILE]` | Serve GraFlag to an AI agent over MCP (stdio) |
 | `graflag devcluster --hosts FILE` | Deploy virtual cluster |
 | `graflag devcluster --down` | Stop virtual cluster |
 
@@ -97,6 +103,24 @@ graflag evaluate -e exp__bond_dominant__bond_inj_cora__20260309_120000
 > has no authentication. Everything it exposes runs on the swarm manager as
 > `root`, including deleting experiment directories. Run it on a trusted
 > network or bind it explicitly with `graflag gui --host 127.0.0.1`.
+
+## AI Agents (MCP)
+
+`graflag mcp` exposes GraFlag to an MCP client -- Claude Code, Claude Desktop or
+any other -- as tools to list methods and datasets, run, wait for, stop,
+evaluate and verify experiments, and read their results and plots. It needs the
+optional SDK (Python 3.10+):
+
+```bash
+pip install "graflag[mcp]"
+claude mcp add graflag -- graflag mcp
+```
+
+Runs start in the background and `wait_for_experiment` waits for them, so no
+tool call has to outlast a benchmark. Nothing that deletes data, sets up the
+cluster or writes code to it is offered. See the
+[MCP page](https://lias-laboratory.github.io/graflag/MCP.html) of the
+documentation.
 
 ## Development Cluster
 

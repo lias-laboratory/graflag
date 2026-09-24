@@ -22,7 +22,7 @@ import docker
 from docker.types import ServiceMode, RestartPolicy, Resources, Mount, EndpointSpec
 
 from .utils import load_method_env
-from .ssh import remote_path
+from .ssh import remote_path, NON_INTERACTIVE_OPTS
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +130,10 @@ def _die_with_parent():
         pass
 
 
+#: Swarm task states after which a restart_policy=none task never runs again.
+TERMINAL_TASK_STATES = ('complete', 'failed', 'shutdown', 'rejected', 'orphaned')
+
+
 def _service_status(running: int, tasks: List[Dict]) -> str:
     """What a Swarm service is actually doing, from its tasks.
 
@@ -222,6 +226,8 @@ class DockerManager:
             '-o', 'StrictHostKeyChecking=no',
             '-o', 'ExitOnForwardFailure=yes',
         ]
+        if getattr(self.ssh, "batch_mode", False):
+            ssh_args.extend(NON_INTERACTIVE_OPTS)
         if self.ssh.ssh_key:
             ssh_args.extend(['-i', str(Path(self.ssh.ssh_key).expanduser())])
         ssh_args.extend(['-p', str(self.ssh.ssh_port)])
@@ -232,9 +238,12 @@ class DockerManager:
         # long-lived `ssh -N -L .../docker.sock`, and a SIGKILL-ed graflag
         # leaves it connected to the manager indefinitely. Nine such orphans
         # were alive on this workstation, the oldest 22 hours old.
+        # stdin closed for the reason SSHManager.execute gives: the tunnel
+        # lives as long as the client, and under the MCP server this
+        # process's stdin is the protocol.
         self._tunnel_proc = subprocess.Popen(
-            ssh_args, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-            preexec_fn=_die_with_parent,
+            ssh_args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE, preexec_fn=_die_with_parent,
         )
 
         # Wait for the tunnel to be usable. ssh binds the local port as soon
@@ -866,37 +875,51 @@ class DockerManager:
         """Get set of all service names."""
         return {svc.name for svc in self.client.services.list()}
 
+    # Every SDK call on the path of a run goes through _with_reconnect. Only
+    # the service listing did, so a run launched from the dashboard lost the
+    # tunnel right after its service was created, the background thread died
+    # on the next call, and the finished service was never removed. A retried
+    # removal can find the service already gone -- the first attempt went
+    # through and only its reply was lost -- which each caller below already
+    # treats as "nothing to remove".
+
     def stop_service(self, service_name: str):
         """Stop and remove a service."""
-        try:
-            service = self.client.services.get(service_name)
-            service.remove()
-            logger.info(f"[OK] Service {service_name} stopped and removed")
-        except docker.errors.NotFound:
-            raise ValueError(f"Service {service_name} not found")
-        except docker.errors.APIError as e:
-            raise RuntimeError(f"Failed to stop service {service_name}: {e}")
+        def once():
+            try:
+                service = self.client.services.get(service_name)
+                service.remove()
+                logger.info(f"[OK] Service {service_name} stopped and removed")
+            except docker.errors.NotFound:
+                raise ValueError(f"Service {service_name} not found")
+            except docker.errors.APIError as e:
+                raise RuntimeError(f"Failed to stop service {service_name}: {e}")
+        self._with_reconnect(once)
 
     def _remove_service_if_exists(self, service_name: str) -> bool:
         """Remove a service if it exists."""
-        try:
-            service = self.client.services.get(service_name)
-            service.remove()
-            logger.info(f"[INFO] Removed existing service: {service_name}")
-            return True
-        except docker.errors.NotFound:
-            return False
+        def once():
+            try:
+                service = self.client.services.get(service_name)
+                service.remove()
+                logger.info(f"[INFO] Removed existing service: {service_name}")
+                return True
+            except docker.errors.NotFound:
+                return False
+        return self._with_reconnect(once)
 
     def cleanup_finished_service(self, service_name: str):
         """Remove a finished service (safe if it doesn't exist)."""
-        try:
-            service = self.client.services.get(service_name)
-            service.remove()
-            logger.info(f"[INFO] Cleaned up finished service: {service_name}")
-        except docker.errors.NotFound:
-            pass
-        except docker.errors.APIError as e:
-            logger.warning(f"[WARN] Failed to clean up service {service_name}: {e}")
+        def once():
+            try:
+                service = self.client.services.get(service_name)
+                service.remove()
+                logger.info(f"[INFO] Cleaned up finished service: {service_name}")
+            except docker.errors.NotFound:
+                pass
+            except docker.errors.APIError as e:
+                logger.warning(f"[WARN] Failed to clean up service {service_name}: {e}")
+        self._with_reconnect(once)
 
     def remove_evaluation_service(self, experiment_name: str):
         """Remove evaluation service for an experiment."""
@@ -1019,11 +1042,50 @@ class DockerManager:
 
     def service_exists(self, service_name: str) -> bool:
         """Check if a Docker service exists."""
-        try:
-            self.client.services.get(service_name)
-            return True
-        except docker.errors.NotFound:
-            return False
+        def once():
+            try:
+                self.client.services.get(service_name)
+                return True
+            except docker.errors.NotFound:
+                return False
+        return self._with_reconnect(once)
+
+    def service_task_state(self, service_name: str) -> Optional[str]:
+        """The newest task's state (``running``, ``complete``, ...), lower case.
+
+        None while the service has no task yet. Raises ValueError when the
+        service does not exist.
+        """
+        def once():
+            try:
+                svc = self.client.services.get(service_name)
+            except docker.errors.NotFound:
+                raise ValueError(f"Service {service_name} not found")
+            tasks = svc.tasks()
+            if not tasks:
+                return None
+            latest = max(tasks, key=lambda t: t.get('CreatedAt') or '')
+            state = (latest.get('Status', {}) or {}).get('State', '')
+            return state.lower() or None
+        return self._with_reconnect(once)
+
+    def wait_for_service(self, service_name: str, poll: float = 3.0,
+                         timeout: Optional[float] = None) -> Optional[str]:
+        """Wait until the service's task ends, printing nothing.
+
+        The quiet counterpart of :meth:`follow_service_logs`, for callers with
+        nobody reading a terminal: the dashboard, and the MCP server, whose
+        stdout is its protocol. Returns the terminal task state, or None if
+        `timeout` seconds passed first.
+        """
+        deadline = None if timeout is None else time.monotonic() + timeout
+        while True:
+            state = self.service_task_state(service_name)
+            if state in TERMINAL_TASK_STATES:
+                return state
+            if deadline is not None and time.monotonic() >= deadline:
+                return None
+            time.sleep(poll)
 
     def is_service_failed(self, service_name: str) -> bool:
         """True when the service exists and no task reached a good end state.
@@ -1034,19 +1096,21 @@ class DockerManager:
         failure but is not success either. This is only consulted when
         status.json is absent or unreadable -- the runner's own status wins.
         """
-        try:
-            svc = self.client.services.get(service_name)
-            tasks = svc.tasks()
-            if not tasks:
-                return False
-            # Check if every task is in a terminal failure state
-            for task in tasks:
-                state = task.get('Status', {}).get('State', '').lower()
-                if state not in ('failed', 'rejected', 'shutdown', 'orphaned'):
+        def once():
+            try:
+                svc = self.client.services.get(service_name)
+                tasks = svc.tasks()
+                if not tasks:
                     return False
-            return True
-        except docker.errors.NotFound:
-            return False
+                # Check if every task is in a terminal failure state
+                for task in tasks:
+                    state = task.get('Status', {}).get('State', '').lower()
+                    if state not in ('failed', 'rejected', 'shutdown', 'orphaned'):
+                        return False
+                return True
+            except docker.errors.NotFound:
+                return False
+        return self._with_reconnect(once)
 
     # ========================================================================
     # Cluster Status
@@ -1174,7 +1238,13 @@ class DockerManager:
     def _save_service_details(self, exp_name, service_id):
         """Save service details to JSON after creation."""
         try:
-            service = self.client.services.get(exp_name)
+            # Fetched and listed as one unit: `service` belongs to the client
+            # that fetched it, so after a reconnect its tasks() would reuse
+            # the dead socket.
+            def once():
+                svc = self.client.services.get(exp_name)
+                return svc, svc.tasks()
+            service, tasks = self._with_reconnect(once)
             attrs = service.attrs
 
             details = {
@@ -1186,7 +1256,6 @@ class DockerManager:
             }
 
             # Get task info
-            tasks = service.tasks()
             if tasks:
                 task = tasks[0]
                 details["worker"] = {

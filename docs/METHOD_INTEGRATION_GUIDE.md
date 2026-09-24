@@ -619,13 +619,15 @@ graflag logs -e exp__your_method__your_dataset__TIMESTAMP -f
 graflag evaluate -e exp__your_method__your_dataset__TIMESTAMP
 
 # Check the published scores reproduce the method's own number
-python3 .claude/skills/method-integration/scripts/verify_run.py \
-    exp__your_method__your_dataset__TIMESTAMP
+graflag verify -e exp__your_method__your_dataset__TIMESTAMP
 ```
-`verify_run.py`, run from `graflag-shared/`, checks what `completed` does not:
-that scores and labels are the same length and both classes are present, that
-the scores vary, and that the evaluator's AUC matches every AUC the method
-recorded under `metadata.summary`. Read each `[WARN]` it prints.
+`graflag verify` checks what `completed` does not: that scores and labels are
+the same length and both classes are present, that the scores vary, that the
+scored split is declared as the test split, and that the evaluator's AUC
+matches every AUC the method recorded under `metadata.summary`. It exits 1 when
+a check fails; read each `[WARN]` it prints. Then record all four gates in the
+README's `## Verification` section -- the contract tests refuse a method that
+records nothing.
 
 ---
 
@@ -856,7 +858,8 @@ graflag evaluate -e exp__your_method__dataset__timestamp
 - [ ] Wrote `README.md`: what upstream does, what the integration changes, which split is scored
 - [ ] Synced, then ran with `graflag run -m ... -d ... --build`
 - [ ] Evaluated results with `graflag evaluate`
-- [ ] Ran `verify_run.py` on the experiment, and read every `[WARN]`
+- [ ] Ran `graflag verify -e EXP` on the evaluated experiment, and read every `[WARN]`
+- [ ] Recorded the four gates in the README's `## Verification` section
 
 ---
 
@@ -971,7 +974,7 @@ path to the same answer.
 
 - **Result Types Reference**: See [RESULTS_STANDARD](RESULTS_STANDARD.md)
 - **Agent Integration Guide**: See [AGENT_METHOD_INTEGRATION](AGENT_METHOD_INTEGRATION.md) for AI-assisted integration
-- **The [Method Integration Skill](AGENT_SKILL.md)**: `graflag-shared/.claude/skills/method-integration/`, with the four gates, `verify_run.py` and a catalogue of failures that reported success
+- **The [Method Integration Skill](AGENT_SKILL.md)**: `graflag-shared/.claude/skills/method-integration/`, with the four gates, the result check behind `graflag verify` and a catalogue of failures that reported success
 - **Example Methods**: `methods/generaldyg/`, `methods/taddy/`, `methods/bond_*/`
 - **graflag_runner Source**: `graflag-shared/libs/graflag_runner/`
 - **graflag_bond Source**: `graflag-shared/libs/graflag_bond/` (for PyGOD integration)

@@ -7,6 +7,7 @@ import json
 import shlex
 import subprocess
 import textwrap
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
@@ -19,7 +20,7 @@ from .utils import load_method_env, parse_env_line
 from .models import (
     ClusterInfo, MethodInfo, DatasetInfo, ExperimentInfo,
     ExperimentResults, EvaluationResults, ServiceCleanupResult,
-    ClearItem, ClearReport,
+    ClearItem, ClearReport, VerificationReport,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class GraFlag:
     (except follow_logs which streams in real time).
     """
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: Optional[str] = None, interactive: bool = True):
         """Initialize GraFlag with configuration.
 
         `config_file` defaults to None, meaning "resolve normally" (cwd .env
@@ -45,6 +46,10 @@ class GraFlag:
         to the literal ".env", which config resolution now reads as an
         explicit request for that exact file -- so `GraFlag()`, the documented
         Python API entry point, failed with "Configuration file not found".
+
+        `interactive=False` is for callers with nobody at a terminal, such as
+        the MCP server: ssh then fails instead of prompting for a password or
+        passphrase, and gives up on an unreachable manager after 15 seconds.
         """
         try:
             self.config = GraflagConfig(config_file)
@@ -54,7 +59,8 @@ class GraFlag:
         self.ssh = SSHManager(
             manager_ip=self.config.manager_ip,
             ssh_port=self.config.ssh_port,
-            ssh_key=self.config.ssh_key
+            ssh_key=self.config.ssh_key,
+            batch_mode=not interactive,
         )
         self.docker = DockerManager(self.ssh, self.config, hosts_file=self.config.hosts_file)
 
@@ -138,13 +144,20 @@ class GraFlag:
         self, method_name: str, dataset: str, tag: str = "latest",
         build: bool = False, gpu: bool = True, method_params: dict = None,
         exp_name: str = None, keep_service: bool = False,
-        force_rm: bool = False
+        force_rm: bool = False, follow: bool = True
     ) -> str:
         """Run experiment.
+
+        Blocks until the run has ended either way.
 
         Args:
             exp_name: Pre-computed experiment name (see
                 :meth:`make_experiment_name`). Generated when omitted.
+            follow: Stream the container's output to stdout while waiting, as
+                the CLI does. False waits by polling the experiment's status
+                instead and prints nothing -- for the dashboard and the MCP
+                server, where stdout is not a terminal (for the MCP server it
+                is the protocol).
             keep_service: Leave the finished Swarm service in place. Useful
                 when you want `docker service ps` to inspect the task.
             force_rm: With ``build``, remove the build's intermediate
@@ -207,8 +220,11 @@ class GraFlag:
         # Create service
         self.docker.create_service(exp_name, method_name, dataset, tag, gpu, method_params)
 
-        # Follow logs (streams to stdout)
-        self.docker.follow_service_logs(exp_name)
+        if follow:
+            # Stream the logs to stdout until the task ends.
+            self.docker.follow_service_logs(exp_name)
+        else:
+            self.wait_for_experiment(exp_name)
 
         # Remove the finished service. Without this every run leaves one behind
         # forever, since restart_policy=none services are never reaped.
@@ -242,6 +258,42 @@ class GraFlag:
             )
 
         return exp_name
+
+    def wait_for_experiment(self, experiment_name: str, poll: float = 5.0,
+                            timeout: Optional[float] = None) -> Optional[ExperimentInfo]:
+        """Wait until an experiment reaches a terminal status, printing nothing.
+
+        Polls the same probe `graflag list experiments` uses, so "finished"
+        means what the listing says it means, including the task that died
+        before the runner could write status.json. An experiment whose
+        directory holds no status and whose service is gone ("unknown") also
+        ends the wait: nothing is left that could change it.
+
+        Returns the last ExperimentInfo, or None when the experiment does not
+        exist. With `timeout`, returns the current state once it has passed,
+        terminal or not.
+        """
+        deadline = None if timeout is None else time.monotonic() + timeout
+        misses = 0
+        while True:
+            info = self._get_experiment_info(experiment_name)
+            if info is None:
+                # A failed ssh reads exactly like a missing directory. One
+                # dropped connection must not end the wait of a run that is
+                # still going, so only a repeated miss counts as "not there".
+                misses += 1
+                if misses >= self.WAIT_MISSES:
+                    return None
+                time.sleep(poll)
+                continue
+            misses = 0
+            if info.status in self.TERMINAL_STATUSES or (
+                info.status == "unknown" and not info.service_name
+            ):
+                return info
+            if deadline is not None and time.monotonic() >= deadline:
+                return info
+            time.sleep(poll)
 
     def _ensure_dataset(self, dataset: str):
         """Fetch any files listed in ``datasets/<dataset>/metadata.json`` that
@@ -329,8 +381,12 @@ class GraFlag:
         )
         logger.info(f"[OK] Saved metric plugin: {plugin_path}")
 
-    def evaluate(self, experiment_name: str):
+    def evaluate(self, experiment_name: str, follow: bool = True):
         """Evaluate an experiment: compute metrics and generate plots.
+
+        Args:
+            follow: Stream the evaluator's output to stdout, as the CLI does.
+                False waits for it silently (see :meth:`run`).
 
         Raises:
             GraFlagError: If evaluation fails.
@@ -345,7 +401,10 @@ class GraFlag:
 
         try:
             eval_service_name = self.docker.create_evaluation_service(experiment_name)
-            final_state = self.docker.follow_service_logs(eval_service_name)
+            if follow:
+                final_state = self.docker.follow_service_logs(eval_service_name)
+            else:
+                final_state = self.docker.wait_for_service(eval_service_name)
             self.docker.remove_evaluation_service(experiment_name)
         except Exception as e:
             raise GraFlagError(f"Evaluation failed: {e}")
@@ -367,6 +426,39 @@ class GraFlag:
 
         eval_dir = f"{self.config.remote_shared_dir}/experiments/{experiment_name}/eval"
         logger.info(f"[INFO] Evaluation results saved to: {eval_dir}")
+
+    def verify(self, experiment_name: str) -> VerificationReport:
+        """Check that a finished experiment published a result worth believing.
+
+        The last of the four integration gates, after :meth:`evaluate`: it
+        compares what the method says it measured with what it published.
+        See :mod:`graflag.verify` for the checks. Reads the experiment in one
+        remote call and never moves the scores to the client.
+
+        Raises:
+            GraFlagError: If the experiment does not exist or cannot be read.
+        """
+        from . import verify as checks
+
+        if not self.ssh.path_exists(self.config.remote_shared_dir,
+                                    f"experiments/{experiment_name}"):
+            raise GraFlagError(f"Experiment {experiment_name} not found")
+        try:
+            summary = checks.probe(self, experiment_name)
+        except (RuntimeError, ValueError) as e:
+            raise GraFlagError(f"Cannot verify {experiment_name}: {e}")
+
+        findings = [{"level": level, "message": message}
+                    for level, message in checks.check(summary)]
+        count = lambda level: sum(1 for f in findings if f["level"] == level)  # noqa: E731
+        return VerificationReport(
+            experiment_name=experiment_name,
+            findings=findings,
+            failed=count("ERROR"),
+            warned=count("WARN"),
+            passed=count("OK"),
+            probe=summary,
+        )
 
     # ========================================================================
     # Resource Discovery
@@ -786,6 +878,10 @@ class GraFlag:
     # Experiments in these states will never produce more output, so their
     # Swarm service is only holding task records.
     TERMINAL_STATUSES = ("completed", "failed", "stopped")
+
+    #: Consecutive failed probes after which wait_for_experiment() concludes
+    #: that the experiment is gone rather than that ssh blinked.
+    WAIT_MISSES = 3
 
     def cleanup_services(
         self, experiment: str = None, dry_run: bool = False
@@ -1629,6 +1725,14 @@ class GraFlag:
             evaluation_path=f"{full_exp_path}/eval" if has_evaluation else None,
             service_name=exp_name if service_exists else None,
         )
+
+    def get_experiment(self, experiment_name: str) -> Optional[ExperimentInfo]:
+        """One experiment's status, from a single remote probe.
+
+        None when the experiment does not exist (or the manager could not be
+        reached -- the probe cannot tell the two apart).
+        """
+        return self._get_experiment_info(experiment_name)
 
     def _get_experiment_info(self, exp_name: str, running_services: set = None) -> Optional[ExperimentInfo]:
         """Get information for a single experiment."""

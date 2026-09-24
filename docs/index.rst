@@ -28,8 +28,10 @@ one-shot Swarm service that writes its scores to shared NFS storage, and
 The distribution ships 33 methods -- 17 PyGOD detectors on one shared image
 and 16 dedicated integrations -- and 43 dataset descriptors whose files are
 downloaded on first use. Everything is driven from the client machine,
-through a CLI, a Python API or a web dashboard, and an agent skill lets AI
-coding agents integrate new methods under the same checks.
+through a CLI, a Python API, a web dashboard or, for AI agents, an MCP server;
+``graflag verify`` checks that a run's published scores reproduce the AUC the
+method reported, and an agent skill lets coding agents integrate new methods
+under the same checks.
 
 .. toctree::
    :maxdepth: 2
@@ -38,6 +40,7 @@ coding agents integrate new methods under the same checks.
    quickstart
    cli
    gui
+   MCP
    devcluster
    demo
 
@@ -66,4 +69,6 @@ coding agents integrate new methods under the same checks.
    api/config
    api/ssh
    api/docker_ops
+   api/verify
+   api/mcp_server
    api/api_module

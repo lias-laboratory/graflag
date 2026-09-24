@@ -6,7 +6,7 @@ HERE = Path(__file__).parent
 
 setup(
     name="graflag",
-    version="1.1.0",
+    version="1.2.0",
     description="Distributed benchmarking framework for Graph Anomaly Detection",
     long_description=(HERE / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
@@ -53,6 +53,13 @@ setup(
         "flask-socketio>=5.3.0",
         "python-socketio>=5.9.0",
     ],
+    # `graflag mcp`, the server that exposes GraFlag to AI agents. Optional:
+    # the SDK needs Python 3.10+, and the rest of GraFlag still runs on 3.8.
+    # Kept below 2: mcp 2.0 removed the FastMCP API the server is built on
+    # (and that other MCP servers in the same environment may still import).
+    extras_require={
+        "mcp": ["mcp>=1.8,<2; python_version >= '3.10'"],
+    },
     entry_points={
         "console_scripts": [
             "graflag=graflag.cli:main",

@@ -37,6 +37,7 @@ Examples:
   graflag logs -e exp__dummy__cora__20250924_161245 -f # Follow logs
   graflag stop -e exp__dummy__cora__20250924_161245 # Stop experiment
   graflag evaluate -e exp__generaldyg__btc_alpha__20251211_120000 # Evaluate
+  graflag verify -e exp__generaldyg__btc_alpha__20251211_120000   # Check the result holds up
   graflag cleanup                                  # Remove finished services
   graflag cleanup --dry-run                        # Show what would be removed
   graflag clear                                    # Report orphaned storage and images
@@ -51,6 +52,7 @@ Examples:
   graflag sync --lib --path ./my-lib/              # Sync a shared library
   graflag gui                                      # Start web dashboard
   graflag gui --port 8080 --debug                  # GUI on custom port
+  graflag mcp                                      # MCP server for AI agents (stdio)
   graflag devcluster --hosts hosts.yml             # Deploy virtual cluster
   graflag devcluster --hosts hosts.yml --pubkey ~/.ssh/id_rsa.pub
   graflag devcluster --down                        # Stop and remove cluster
@@ -60,7 +62,7 @@ Examples:
     parser.add_argument(
         "command",
         choices=["setup", "run", "status", "list", "copy", "logs", "stop", "evaluate",
-                 "cleanup", "clear", "sync", "gui", "devcluster"],
+                 "verify", "cleanup", "clear", "sync", "gui", "mcp", "devcluster"],
         help="Command to execute",
     )
     parser.add_argument(
@@ -131,6 +133,8 @@ Examples:
              "reclaims the disk. Stops the registry for the duration",
     )
     parser.add_argument("--tee", help="Save logs to file while displaying")
+    parser.add_argument("--json", action="store_true",
+                        help="For verify: also print the probe summary the checks read")
     # default=None on both, so _parse_run_args can tell a flag from its absence:
     # a replay keeps the recorded GPU choice unless the command line says otherwise.
     parser.add_argument("--gpu", "-g", action="store_true", default=None,
@@ -164,6 +168,19 @@ Examples:
         if args.command == "gui":
             from .gui.server import serve
             serve(args.config, args.host, args.port, args.debug)
+            return
+
+        # MCP: serve GraFlag's tools to an AI agent over stdio. Before anything
+        # else touches stdout, which from here on belongs to the protocol.
+        if args.command == "mcp":
+            try:
+                from .mcp_server import serve as serve_mcp
+            except ImportError as exc:
+                logger.error(
+                    "[ERROR] graflag mcp needs the MCP SDK, which needs Python "
+                    f"3.10+: pip install 'graflag[mcp]' ({exc})")
+                sys.exit(1)
+            serve_mcp(args.config)
             return
 
         # Devcluster: deploy or tear down virtual cluster
@@ -245,6 +262,16 @@ Examples:
                 parser.error("evaluate command requires --experiment")
             gf.evaluate(args.experiment)
 
+        elif args.command == "verify":
+            if not args.experiment:
+                parser.error("verify command requires --experiment")
+            report = gf.verify(args.experiment)
+            if args.json:
+                print(json.dumps(report.probe, indent=2, sort_keys=True))
+            _print_verification(report)
+            if report.failed:
+                sys.exit(1)
+
         elif args.command == "clear":
             # Neither scope flag means both; naming one narrows the sweep.
             both = not (args.share or args.images)
@@ -281,6 +308,13 @@ Examples:
 # ============================================================================
 # Output Formatting
 # ============================================================================
+
+def _print_verification(report):
+    """Print `graflag verify` findings, one per line, then the tally."""
+    from .verify import format_report
+    for line in format_report(report):
+        print(line)
+
 
 def _parse_run_args(args, parser):
     """Parse run arguments from CLI args.

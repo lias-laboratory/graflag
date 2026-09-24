@@ -1,9 +1,23 @@
 """Utility functions for GraFlag."""
 
+import re
 from typing import Dict
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+#: What a method, dataset, experiment or image tag name may contain. Names that
+#: arrive from outside the client -- the dashboard's HTTP requests, an MCP
+#: client's tool calls, which an LLM composes -- are checked against this
+#: before they reach anything that builds a remote command.
+_SAFE_NAME = re.compile(r'^[A-Za-z0-9._-]{1,200}$')
+
+
+def valid_name(name) -> bool:
+    """True when `name` is safe to interpolate into a remote command."""
+    return (isinstance(name, str) and bool(_SAFE_NAME.match(name))
+            and '..' not in name)
 
 
 def load_method_env(ssh_manager, remote_shared_dir: str, method_name: str) -> Dict[str, str]:
@@ -17,7 +31,13 @@ def load_method_env(ssh_manager, remote_shared_dir: str, method_name: str) -> Di
     Returns:
         Dictionary of environment variables from the method's .env file
     """
-    env_file_path = f"{remote_shared_dir}/methods/{method_name}/.env"
+    # Imported here, not at the top: graflag-shared's contract tests load this
+    # file on its own, by path, to compare parse_env_line with their copy.
+    from .ssh import remote_path
+
+    # Quoted: the method name is interpolated into a command the manager's
+    # shell parses, and it was the one path here that went in bare.
+    env_file_path = remote_path(remote_shared_dir, "methods", method_name, ".env")
     env_vars = {}
 
     # Check if .env file exists

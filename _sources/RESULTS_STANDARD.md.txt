@@ -283,8 +283,15 @@ writer.finalize()
 `EXP` environment variable) to compute the metrics and plots.
 
 A method does not record its own execution time or memory. `graflag_runner`
-measures `exec_time_ms`, `peak_memory_mb` and `peak_gpu_mb` over the whole
-process tree and merges them into `metadata` after the method exits. Values a
+measures `exec_time_ms` and `peak_memory_mb` over the whole process tree, and
+`peak_gpu_mb` as the memory in use on the container's GPU (`nvidia-smi`'s
+`memory.used`, for the device rather than per process: on a three-node GPU
+cluster's A16 slices `nvidia-smi --query-compute-apps` lists no process at all,
+inside the container or on the host, so there is nothing per process to sum). That
+is the run's own number because each GPU task reserves its node's one GPU, and
+a run without a GPU cannot see the device at all; on a node with several GPUs
+per task, or with a GPU shared outside Swarm, it would include their use too.
+All three are merged into `metadata` after the method exits. Values a
 method passes to `writer.add_resource_metrics()` are kept beside them as
 `method_reported_<key>`, but the reported numbers are the runner's.
 

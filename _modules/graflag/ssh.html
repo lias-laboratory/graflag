@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.ssh &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.ssh &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -100,10 +100,13 @@
 <span></span><span class="sd">&quot;&quot;&quot;SSH operations for GraFlag.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span><span class="p">,</span> <span class="n">PurePosixPath</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerUnreachable</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -140,7 +143,27 @@
 <span class="c1">#: keyboard -- the MCP server, whose stdin and stdout are the protocol -- must</span>
 <span class="c1">#: not wait on a password or passphrase prompt: the tool call would hang until</span>
 <span class="c1">#: the client gave up, with nothing saying why.</span>
+<span class="c1">#: The exit status ssh uses for its own errors, as opposed to the remote command&#39;s.</span>
+<span class="n">SSH_FAILED</span> <span class="o">=</span> <span class="mi">255</span>
+
 <span class="n">NON_INTERACTIVE_OPTS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;BatchMode=yes&quot;</span><span class="p">,</span> <span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;ConnectTimeout=15&quot;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="require_rsync">
+<a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.require_rsync">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">require_rsync</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raise a usable error when there is no local rsync.</span>
+
+<span class="sd">    Every copy and sync goes through rsync. Without it -- native Windows ships</span>
+<span class="sd">    OpenSSH but not rsync -- the first copy died in subprocess with a bare</span>
+<span class="sd">    FileNotFoundError that named neither the program nor a way out.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;rsync&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="s2">&quot;rsync was not found on this machine; graflag copy and graflag &quot;</span>
+            <span class="s2">&quot;sync need it. Install rsync, or on Windows run graflag inside &quot;</span>
+            <span class="s2">&quot;WSL, where it is one package away (apt install rsync).&quot;</span><span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="SSHManager">
@@ -149,22 +172,43 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle SSH operations to remote manager.&quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager_ip</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ssh_port</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;22&quot;</span><span class="p">,</span> <span class="n">ssh_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">batch_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                 <span class="n">batch_mode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;root&quot;</span><span class="p">,</span>
+                 <span class="n">proxy_jump</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize SSH manager.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            batch_mode: Never prompt (see :data:`NON_INTERACTIVE_OPTS`). Off by</span>
 <span class="sd">                default, so a CLI user whose key needs a passphrase still gets</span>
 <span class="sd">                asked for it.</span>
+<span class="sd">            user: The account on the manager (``SSH_USER``). ``root`` unless</span>
+<span class="sd">                configured; another account needs to be in the ``docker``</span>
+<span class="sd">                group and able to write ``SHARED_DIR``.</span>
+<span class="sd">            proxy_jump: A jump host for every connection (``SSH_PROXY_JUMP``,</span>
+<span class="sd">                ssh&#39;s ``-o ProxyJump=``), for a manager that is only</span>
+<span class="sd">                reachable through a bastion.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span> <span class="o">=</span> <span class="n">manager_ip</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span> <span class="o">=</span> <span class="n">ssh_port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span> <span class="o">=</span> <span class="n">ssh_key</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">batch_mode</span> <span class="o">=</span> <span class="n">batch_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">user</span> <span class="o">=</span> <span class="n">user</span> <span class="ow">or</span> <span class="s2">&quot;root&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proxy_jump</span> <span class="o">=</span> <span class="n">proxy_jump</span> <span class="ow">or</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">destination</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;``user@manager`` -- the one place every ssh and rsync target is built.</span>
+
+<span class="sd">        It was ``root@{manager_ip}`` spelled out at five call sites, so a</span>
+<span class="sd">        cluster whose manager takes another account, or sits behind a jump</span>
+<span class="sd">        host, needed a hand-written ~/.ssh/config block to be usable at all.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">user</span><span class="si">}</span><span class="s2">@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_option_args</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The -o options every ssh this manager starts carries.&quot;&quot;&quot;</span>
         <span class="n">opts</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_jump</span><span class="p">:</span>
+            <span class="n">opts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ProxyJump=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proxy_jump</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_mode</span><span class="p">:</span>
             <span class="n">opts</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">NON_INTERACTIVE_OPTS</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">opts</span>
@@ -176,7 +220,7 @@
             <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-i&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
         <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">)])</span>
         <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_option_args</span><span class="p">())</span>
-        <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">destination</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">args</span>
 
 <div class="viewcode-block" id="SSHManager.execute">
@@ -200,10 +244,24 @@
         <span class="c1"># inherited stdin could do is be consumed: the rest of a shell loop&#39;s</span>
         <span class="c1"># input (`while read m; do graflag run -m &quot;$m&quot; ...; done &lt; list`), or,</span>
         <span class="c1"># under the MCP server, the client&#39;s next requests.</span>
-        <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
             <span class="n">ssh_args</span><span class="p">,</span> <span class="n">capture_output</span><span class="o">=</span><span class="n">capture_output</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
-        <span class="p">)</span></div>
+        <span class="p">)</span>
+        <span class="c1"># 255 is ssh&#39;s own failure -- unresolvable name, refused key, jump</span>
+        <span class="c1"># host down, timeout -- and no remote command here exits with it.</span>
+        <span class="c1"># Returned as an ordinary failure, it read as an answer: `graflag list</span>
+        <span class="c1"># methods` printed &quot;No methods found&quot; for a manager it never reached,</span>
+        <span class="c1"># and path_exists() turned an outage into &quot;Method not found&quot;.</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="n">SSH_FAILED</span><span class="p">:</span>
+            <span class="n">detail</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="n">capture_output</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">raise</span> <span class="n">ManagerUnreachable</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot reach the manager as </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">destination</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot; via </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">proxy_jump</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_jump</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;: </span><span class="si">{</span><span class="n">detail</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">detail</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="o">+</span> <span class="s2">&quot;. Check MANAGER_IP, SSH_USER, SSH_KEY and SSH_PROXY_JUMP &quot;</span>
+                  <span class="s2">&quot;in the GraFlag config.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="SSHManager.path_exists">
@@ -230,6 +288,34 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create directory on remote manager.&quot;&quot;&quot;</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span><span class="w"> </span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span></div>
+
+
+<div class="viewcode-block" id="SSHManager.claim_dir">
+<a class="viewcode-back" href="../../api/ssh.html#graflag.ssh.SSHManager.claim_dir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">claim_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_shared_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a directory that must not exist yet, atomically.</span>
+
+<span class="sd">        Returns True if this call created it and False if it was already</span>
+<span class="sd">        there; raises on any other failure. ``mkdir`` without ``-p`` is the</span>
+<span class="sd">        atomic step: of two clients racing for the same name exactly one</span>
+<span class="sd">        succeeds, which a ``test -e`` followed by ``mkdir -p`` cannot promise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">full</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">PurePosixPath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;mkdir -p </span><span class="si">{</span><span class="n">parent</span><span class="si">}</span><span class="s2"> &amp;&amp; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;if mkdir </span><span class="si">{</span><span class="n">full</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null; then echo created; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;elif [ -d </span><span class="si">{</span><span class="n">full</span><span class="si">}</span><span class="s2"> ]; then echo exists; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;else mkdir </span><span class="si">{</span><span class="n">full</span><span class="si">}</span><span class="s2">; fi&quot;</span>
+        <span class="p">)</span>
+        <span class="n">reply</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">reply</span> <span class="ow">and</span> <span class="n">reply</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;created&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">reply</span> <span class="ow">and</span> <span class="n">reply</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;exists&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;could not create </span><span class="si">{</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> on the manager: &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="sa">f</span><span class="s1">&#39;exit </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">returncode</span><span class="si">}</span><span class="s1">&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="SSHManager.list_dir">
@@ -266,7 +352,9 @@
         <span class="c1"># Handle single string or list of paths</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">source_paths</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">source_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">source_paths</span><span class="p">]</span>
-        
+
+        <span class="n">require_rsync</span><span class="p">()</span>
+
         <span class="k">if</span> <span class="n">from_remote</span><span class="p">:</span>
             <span class="c1"># Copy from remote to local</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_copy_from_remote</span><span class="p">(</span><span class="n">source_paths</span><span class="p">,</span> <span class="n">dest_path</span><span class="p">,</span> <span class="n">recursive</span><span class="p">)</span>
@@ -309,7 +397,7 @@
         
         <span class="n">ssh_opts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">])</span>
         
-        <span class="n">rsync_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ssh </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ssh_opts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+        <span class="n">rsync_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="s2">&quot;ssh &quot;</span> <span class="o">+</span> <span class="n">shlex</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ssh_opts</span><span class="p">)])</span>
         
         <span class="c1"># Add all source paths. rsync&#39;s trailing slash is load-bearing:</span>
         <span class="c1"># &quot;src/&quot; copies the *contents* of src into dest, &quot;src&quot; copies src</span>
@@ -322,7 +410,7 @@
             <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">local_path_obj</span><span class="p">)</span> <span class="o">+</span> <span class="n">trailing</span><span class="p">)</span>
         
         <span class="c1"># Add destination</span>
-        <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">destination</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">remote_dest</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Executing rsync command: </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rsync_parts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
@@ -357,11 +445,11 @@
         
         <span class="n">ssh_opts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">])</span>
         
-        <span class="n">rsync_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;ssh </span><span class="si">{</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ssh_opts</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+        <span class="n">rsync_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="s2">&quot;ssh &quot;</span> <span class="o">+</span> <span class="n">shlex</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ssh_opts</span><span class="p">)])</span>
         
         <span class="c1"># Add all source paths (remote)</span>
         <span class="k">for</span> <span class="n">remote_path</span> <span class="ow">in</span> <span class="n">remote_paths</span><span class="p">:</span>
-            <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">remote_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">destination</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">remote_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         
         <span class="c1"># Add destination (local)</span>
         <span class="n">rsync_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">local_dest_obj</span><span class="p">))</span>

@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Graph Anomaly Detection Result Types &mdash; GraFlag 1.2.0 documentation</title>
+  <title>Graph Anomaly Detection Result Types &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=6efca38a"></script>
+      <script src="_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -444,8 +444,15 @@
 <p><code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">evaluate</span></code> reads <code class="docutils literal notranslate"><span class="pre">results.json</span></code> from the experiment directory (the
 <code class="docutils literal notranslate"><span class="pre">EXP</span></code> environment variable) to compute the metrics and plots.</p>
 <p>A method does not record its own execution time or memory. <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code>
-measures <code class="docutils literal notranslate"><span class="pre">exec_time_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">peak_memory_mb</span></code> and <code class="docutils literal notranslate"><span class="pre">peak_gpu_mb</span></code> over the whole
-process tree and merges them into <code class="docutils literal notranslate"><span class="pre">metadata</span></code> after the method exits. Values a
+measures <code class="docutils literal notranslate"><span class="pre">exec_time_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">peak_memory_mb</span></code> over the whole process tree, and
+<code class="docutils literal notranslate"><span class="pre">peak_gpu_mb</span></code> as the memory in use on the container’s GPU (<code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code>’s
+<code class="docutils literal notranslate"><span class="pre">memory.used</span></code>, for the device rather than per process: on a three-node GPU
+cluster’s A16 slices <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span> <span class="pre">--query-compute-apps</span></code> lists no process at all,
+inside the container or on the host, so there is nothing per process to sum). That
+is the run’s own number because each GPU task reserves its node’s one GPU, and
+a run without a GPU cannot see the device at all; on a node with several GPUs
+per task, or with a GPU shared outside Swarm, it would include their use too.
+All three are merged into <code class="docutils literal notranslate"><span class="pre">metadata</span></code> after the method exits. Values a
 method passes to <code class="docutils literal notranslate"><span class="pre">writer.add_resource_metrics()</span></code> are kept beside them as
 <code class="docutils literal notranslate"><span class="pre">method_reported_&lt;key&gt;</span></code>, but the reported numbers are the runner’s.</p>
 <section id="required-fields">

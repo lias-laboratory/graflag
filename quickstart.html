@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Start &mdash; GraFlag 1.2.0 documentation</title>
+  <title>Quick Start &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=6efca38a"></script>
+      <script src="_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -49,6 +49,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#shared-storage">Shared Storage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clusters-behind-an-http-proxy">Clusters Behind an HTTP Proxy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#running-an-experiment">Running an Experiment</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#monitoring">Monitoring</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#evaluating-results">Evaluating Results</a><ul>
@@ -119,8 +120,15 @@
 <section id="requirements">
 <h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>A client machine with Python 3.8 or newer and SSH access, as <code class="docutils literal notranslate"><span class="pre">root</span></code>, to the
-Swarm manager.</p></li>
+<li><p>A client machine with Python 3.8 or newer, OpenSSH and rsync, and SSH
+access to the Swarm manager (as <code class="docutils literal notranslate"><span class="pre">root</span></code> unless <code class="docutils literal notranslate"><span class="pre">SSH_USER</span></code> says
+otherwise). Linux and macOS work natively. On Windows, run the client
+inside WSL: native Windows has OpenSSH but no rsync, which <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">copy</span></code>
+and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">sync</span></code> need, and the test suite drives a fake <code class="docutils literal notranslate"><span class="pre">ssh</span></code> written
+as a POSIX shell script.</p></li>
+<li><p>The manager can sit behind a jump host: set <code class="docutils literal notranslate"><span class="pre">SSH_PROXY_JUMP</span></code> (below), or
+write a <code class="docutils literal notranslate"><span class="pre">Host</span></code> block for <code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code> in <code class="docutils literal notranslate"><span class="pre">~/.ssh/config</span></code>, which
+applies to every connection GraFlag opens.</p></li>
 <li><p>A cluster: a manager node and GPU worker nodes sharing an NFS export
 (<code class="docutils literal notranslate"><span class="pre">/shared</span></code> by default). Without one, the local <a class="reference internal" href="devcluster.html"><span class="doc">Development Cluster</span></a> provides
 the same setup in Docker containers.</p></li>
@@ -212,6 +220,16 @@ workers listed in <code class="docutils literal notranslate"><span class="pre">h
 <td><p><code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519</span></code></p></td>
 <td><p>Private key used to reach the manager</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SSH_USER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">root</span></code></p></td>
+<td><p>Account on the manager. Another account must be in the <code class="docutils literal notranslate"><span class="pre">docker</span></code>
+group and able to write <code class="docutils literal notranslate"><span class="pre">SHARED_DIR</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SSH_PROXY_JUMP</span></code></p></td>
+<td><p>(none)</p></td>
+<td><p>Jump host for every connection, as ssh’s <code class="docutils literal notranslate"><span class="pre">-J</span></code>/<code class="docutils literal notranslate"><span class="pre">ProxyJump</span></code> takes it
+(<code class="docutils literal notranslate"><span class="pre">user&#64;bastion</span></code>, or a <code class="docutils literal notranslate"><span class="pre">Host</span></code> alias)</p></td>
+</tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SHARED_DIR</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">/shared</span></code></p></td>
 <td><p>The NFS export, mounted at the same path on every node</p></td>
@@ -232,12 +250,44 @@ published release</p></td>
 </tr>
 </tbody>
 </table>
-<p>The wizard asks for the first five; set the last two by editing the file.
-<code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">setup</span> <span class="pre">--reconfigure</span></code> runs the wizard again.</p>
+<p>The wizard asks for <code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code>, <code class="docutils literal notranslate"><span class="pre">SSH_PORT</span></code>, <code class="docutils literal notranslate"><span class="pre">SSH_KEY</span></code>, <code class="docutils literal notranslate"><span class="pre">SHARED_DIR</span></code>
+and <code class="docutils literal notranslate"><span class="pre">HOSTS_FILE</span></code>; set the others by editing the file.
+<code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">setup</span> <span class="pre">--reconfigure</span></code> runs the wizard again. A manager GraFlag
+cannot reach is an error naming the account, the jump host and ssh’s own
+message, never an empty listing.</p>
 <p>GraFlag takes its configuration from, in order: the file named by <code class="docutils literal notranslate"><span class="pre">--config</span></code>;
 a <code class="docutils literal notranslate"><span class="pre">.env</span></code> in the working directory, but only if it defines <code class="docutils literal notranslate"><span class="pre">MANAGER_IP</span></code>, so
 an unrelated project’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> is never mistaken for one; and
 <code class="docutils literal notranslate"><span class="pre">~/.config/graflag/config.env</span></code>.</p>
+</section>
+<section id="clusters-behind-an-http-proxy">
+<h2>Clusters Behind an HTTP Proxy<a class="headerlink" href="#clusters-behind-an-http-proxy" title="Link to this heading"></a></h2>
+<p>GraFlag itself only needs SSH to the manager. Everything that reaches the
+internet runs on the nodes – image builds on the manager, base-image pulls on
+every node, dataset downloads on the manager – so on a network where only a
+proxy gets out, each of those needs the proxy, and the cluster’s own traffic
+must bypass it. On every node:</p>
+<ul>
+<li><p><strong>Image pulls</strong> (<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">pull</span></code>, Swarm tasks): a systemd drop-in for the
+daemon, e.g. <code class="docutils literal notranslate"><span class="pre">/etc/systemd/system/docker.service.d/proxy.conf</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Service</span><span class="p">]</span>
+<span class="n">Environment</span><span class="o">=</span><span class="s2">&quot;HTTP_PROXY=http://proxy:3128&quot;</span> <span class="s2">&quot;HTTPS_PROXY=http://proxy:3128&quot;</span>
+<span class="n">Environment</span><span class="o">=</span><span class="s2">&quot;NO_PROXY=localhost,127.0.0.1,MANAGER_IP,CLUSTER_SUBNET&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p><strong>Build steps</strong> (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code>, <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code> inside a <code class="docutils literal notranslate"><span class="pre">RUN</span></code>): the
+client’s <code class="docutils literal notranslate"><span class="pre">~/.docker/config.json</span></code> for <code class="docutils literal notranslate"><span class="pre">root</span></code> on the manager, whose
+<code class="docutils literal notranslate"><span class="pre">proxies.default</span></code> (<code class="docutils literal notranslate"><span class="pre">httpProxy</span></code>, <code class="docutils literal notranslate"><span class="pre">httpsProxy</span></code>, <code class="docutils literal notranslate"><span class="pre">noProxy</span></code>) Docker
+passes to every build as build arguments.</p></li>
+<li><p><strong>Dataset downloads</strong> (<code class="docutils literal notranslate"><span class="pre">graflag_data</span></code> over SSH): <code class="docutils literal notranslate"><span class="pre">http_proxy</span></code>,
+<code class="docutils literal notranslate"><span class="pre">https_proxy</span></code> and <code class="docutils literal notranslate"><span class="pre">no_proxy</span></code> in <code class="docutils literal notranslate"><span class="pre">/etc/environment</span></code>, which SSH sessions
+read.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">NO_PROXY</span></code> must cover the manager’s registry (<code class="docutils literal notranslate"><span class="pre">MANAGER_IP:5000</span></code>) and the
+cluster subnet, or workers try to pull images through the proxy. Method
+containers get no proxy: a method that downloads at run time fails there
+rather than silently using data GraFlag did not mount.</p>
 </section>
 <section id="running-an-experiment">
 <h2>Running an Experiment<a class="headerlink" href="#running-an-experiment" title="Link to this heading"></a></h2>

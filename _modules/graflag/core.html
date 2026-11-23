@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.core &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.core &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -103,16 +103,18 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">base64</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">binascii</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">textwrap</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraflagConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraFlagError</span><span class="p">,</span> <span class="n">ManagerUnreachable</span>  <span class="c1"># noqa: F401 (re-exported)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">SSHManager</span><span class="p">,</span> <span class="n">remote_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.docker_ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuildFailed</span><span class="p">,</span> <span class="n">DockerManager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_method_env</span><span class="p">,</span> <span class="n">parse_env_line</span>
@@ -124,12 +126,6 @@
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="GraFlagError">
-<a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlagError">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">GraFlagError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom exception for GraFlag errors.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
 
 
 
@@ -165,6 +161,8 @@
             <span class="n">ssh_port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">,</span>
             <span class="n">ssh_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">,</span>
             <span class="n">batch_mode</span><span class="o">=</span><span class="ow">not</span> <span class="n">interactive</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_user</span><span class="p">,</span>
+            <span class="n">proxy_jump</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">ssh_proxy_jump</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">docker</span> <span class="o">=</span> <span class="n">DockerManager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">hosts_file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">hosts_file</span><span class="p">)</span>
 
@@ -253,6 +251,40 @@
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;exp__</span><span class="si">{</span><span class="n">method_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s2">&quot;</span></div>
 
 
+    <span class="c1">#: How many fresh names run() tries before giving up on a collision.</span>
+    <span class="n">NAME_ATTEMPTS</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_claim_experiment_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                              <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">name_supplied</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create ``experiments/&lt;exp_name&gt;``, which must not exist yet.</span>
+
+<span class="sd">        Names resolve to the second, so two runs of one method on one</span>
+<span class="sd">        dataset started within the same second used to get the same name:</span>
+<span class="sd">        ``mkdir -p`` accepted the existing directory, both runs wrote the</span>
+<span class="sd">        same status.json, and the second failed on the duplicate service</span>
+<span class="sd">        name -- after the first had already been overwritten. A generated</span>
+<span class="sd">        name that is taken is regenerated a second later; a name the caller</span>
+<span class="sd">        chose is theirs, so a collision is an error rather than a rename.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">shared</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">NAME_ATTEMPTS</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">created</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">claim_dir</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">created</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">exp_name</span>
+            <span class="k">if</span> <span class="n">name_supplied</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Experiment </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2"> already exists in </span><span class="si">{</span><span class="n">shared</span><span class="si">}</span><span class="s2">/experiments; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;choose another name, or leave it out to get a fresh one&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2"> is taken; trying the next second&quot;</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+            <span class="n">exp_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_experiment_name</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;No free experiment name for </span><span class="si">{</span><span class="n">method_name</span><span class="si">}</span><span class="s2"> on </span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2"> after &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">NAME_ATTEMPTS</span><span class="si">}</span><span class="s2"> attempts&quot;</span><span class="p">)</span>
+
 <div class="viewcode-block" id="GraFlag.run">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
@@ -289,6 +321,7 @@
         <span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="n">method_params</span> <span class="o">=</span> <span class="n">method_params</span> <span class="ow">or</span> <span class="p">{}</span>
 
+        <span class="n">name_supplied</span> <span class="o">=</span> <span class="n">exp_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
         <span class="n">exp_name</span> <span class="o">=</span> <span class="n">exp_name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_experiment_name</span><span class="p">(</span><span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[RUN] Starting run: </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -309,9 +342,9 @@
         <span class="c1"># No-op for datasets without metadata.json or marked as derived.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_ensure_dataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
 
-        <span class="c1"># Create experiment directory</span>
+        <span class="n">exp_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_claim_experiment_dir</span><span class="p">(</span>
+            <span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">name_supplied</span><span class="p">)</span>
         <span class="n">exp_dir</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Experiment directory: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="c1"># Build image if requested</span>
@@ -319,7 +352,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_write_status</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="s2">&quot;building&quot;</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">build_log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">build_method_image</span><span class="p">(</span>
-                    <span class="n">method_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">force_rm</span><span class="o">=</span><span class="n">force_rm</span><span class="p">)</span>
+                    <span class="n">method_name</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">force_rm</span><span class="o">=</span><span class="n">force_rm</span><span class="p">,</span>
+                    <span class="n">live_log</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">/build.log&quot;</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">error</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Build failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="c1"># The failed build is the one whose log matters: docker&#39;s</span>
@@ -330,16 +364,32 @@
                     <span class="n">error</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">The build output is in </span><span class="si">{</span><span class="n">exp_dir</span><span class="si">}</span><span class="s2">/build.log.&quot;</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_write_status</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
                 <span class="k">raise</span> <span class="n">GraFlagError</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_write_build_log</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="n">build_log</span><span class="p">)</span>
 
-        <span class="c1"># Create service</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">create_service</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">gpu</span><span class="p">,</span> <span class="n">method_params</span><span class="p">)</span>
+        <span class="c1"># Create service. A failure here is recorded: nothing else would, since</span>
+        <span class="c1"># no runner starts, and the experiment would otherwise read as</span>
+        <span class="c1"># &quot;building&quot; (after a build) or &quot;unknown&quot; forever.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">create_service</span><span class="p">(</span><span class="n">exp_name</span><span class="p">,</span> <span class="n">method_name</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">gpu</span><span class="p">,</span> <span class="n">method_params</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">build</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write_build_log</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="n">build_log</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_status</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Could not create the service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="c1"># The complete log, push included, replaces the live one only now that</span>
+        <span class="c1"># the service exists: its &quot;=== PUSH:&quot; section is what tells the status</span>
+        <span class="c1"># probe the build is over, so writing it before create_service opened</span>
+        <span class="c1"># a window in which a finished build with no service yet read &quot;failed&quot;.</span>
+        <span class="k">if</span> <span class="n">build</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_write_build_log</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">,</span> <span class="n">build_log</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">follow</span><span class="p">:</span>
             <span class="c1"># Stream the logs to stdout until the task ends.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">follow_service_logs</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">wait_for_experiment</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+
+        <span class="c1"># Where the task ran, read while its service still exists.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">record_placement</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
 
         <span class="c1"># Remove the finished service. Without this every run leaves one behind</span>
         <span class="c1"># forever, since restart_policy=none services are never reaped.</span>
@@ -390,15 +440,38 @@
 <span class="sd">        Returns the last ExperimentInfo, or None when the experiment does not</span>
 <span class="sd">        exist. With `timeout`, returns the current state once it has passed,</span>
 <span class="sd">        terminal or not.</span>
+
+<span class="sd">        The run goes on on the cluster whether or not this client can see it,</span>
+<span class="sd">        so losing the manager does not end the wait: the probe is retried for</span>
+<span class="sd">        up to WAIT_UNREACHABLE_S of consecutive ManagerUnreachable, and only</span>
+<span class="sd">        then is the last one raised.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">deadline</span> <span class="o">=</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">timeout</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">+</span> <span class="n">timeout</span>
         <span class="n">misses</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">unreachable_since</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_experiment_info</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_experiment_info</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">ManagerUnreachable</span><span class="p">:</span>
+                <span class="c1"># A 9-hour CPU run on a three-node GPU cluster lost its waiting</span>
+                <span class="c1"># client to one dropped ssh connection (2026-11-17) and was</span>
+                <span class="c1"># reported as a failed run while it was still going.</span>
+                <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">unreachable_since</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">unreachable_since</span> <span class="o">=</span> <span class="n">now</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Lost the manager while waiting for &quot;</span>
+                                   <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">; retrying&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">now</span> <span class="o">-</span> <span class="n">unreachable_since</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">WAIT_UNREACHABLE_S</span> <span class="ow">or</span> <span class="p">(</span>
+                        <span class="n">deadline</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">now</span> <span class="o">&gt;=</span> <span class="n">deadline</span><span class="p">):</span>
+                    <span class="k">raise</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">unreachable_since</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># A failed ssh reads exactly like a missing directory. One</span>
-                <span class="c1"># dropped connection must not end the wait of a run that is</span>
-                <span class="c1"># still going, so only a repeated miss counts as &quot;not there&quot;.</span>
+                <span class="c1"># The probe ran and found no such directory (a failed ssh</span>
+                <span class="c1"># raises instead). Still, only a repeated miss counts as &quot;not</span>
+                <span class="c1"># there&quot;, so a probe that failed for another reason does not</span>
+                <span class="c1"># end the wait of a run that is still going.</span>
                 <span class="n">misses</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">if</span> <span class="n">misses</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">WAIT_MISSES</span><span class="p">:</span>
                     <span class="k">return</span> <span class="kc">None</span>
@@ -815,7 +888,10 @@
             <span class="sa">f</span><span class="s1">&#39;  echo &quot;EXP:$d&quot;; &#39;</span>
             <span class="sa">f</span><span class="s1">&#39;  echo &quot;RESULTS:$( [ -f &quot;$d/results.json&quot; ] &amp;&amp; echo 1 || echo 0 )&quot;; &#39;</span>
             <span class="sa">f</span><span class="s1">&#39;  echo &quot;EVAL:$( [ -f &quot;$d/eval/evaluation.json&quot; ] &amp;&amp; echo 1 || echo 0 )&quot;; &#39;</span>
-            <span class="sa">f</span><span class="s1">&#39;  echo &quot;BUILD_LOG:$( [ -f &quot;$d/build.log&quot; ] &amp;&amp; echo 1 || echo 0 )&quot;; &#39;</span>
+            <span class="c1"># Whether a build is over -- read only while status.json still says</span>
+            <span class="c1"># &quot;building&quot;, so the GUI&#39;s poll does not read every build log.</span>
+            <span class="sa">f</span><span class="s1">&#39;  echo &quot;BUILD_DONE:$( grep -qs </span><span class="se">\&#39;</span><span class="s1">&quot;building&quot;</span><span class="se">\&#39;</span><span class="s1"> &quot;$d/status.json&quot; &amp;&amp; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;grep -qs </span><span class="se">\&#39;</span><span class="s1">^=== PUSH: </span><span class="se">\&#39;</span><span class="s1"> &quot;$d/build.log&quot; &amp;&amp; echo 1 || echo 0 )&quot;; &#39;</span>
             <span class="sa">f</span><span class="s1">&#39;  echo &quot;STATUS_B64:$(base64 &lt; &quot;$d/status.json&quot; 2&gt;/dev/null | tr -d </span><span class="se">\&#39;\\</span><span class="s1">n</span><span class="se">\&#39;</span><span class="s1">)&quot;; &#39;</span>
             <span class="sa">f</span><span class="s1">&#39;done&#39;</span>
         <span class="p">)</span>
@@ -1018,6 +1094,8 @@
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Service </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2"> stopped&quot;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] No running service for </span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_record_stop</span><span class="p">(</span><span class="n">experiment_name</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">remove</span><span class="p">:</span>
             <span class="n">exp_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">experiment_name</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -1037,6 +1115,10 @@
     <span class="c1">#: Consecutive failed probes after which wait_for_experiment() concludes</span>
     <span class="c1">#: that the experiment is gone rather than that ssh blinked.</span>
     <span class="n">WAIT_MISSES</span> <span class="o">=</span> <span class="mi">3</span>
+
+    <span class="c1">#: How long, in seconds, wait_for_experiment() keeps retrying a manager it</span>
+    <span class="c1">#: cannot reach before raising ManagerUnreachable.</span>
+    <span class="n">WAIT_UNREACHABLE_S</span> <span class="o">=</span> <span class="mi">900</span>
 
 <div class="viewcode-block" id="GraFlag.cleanup_services">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.cleanup_services">[docs]</a>
@@ -1122,7 +1204,8 @@
 <div class="viewcode-block" id="GraFlag.clear">
 <a class="viewcode-back" href="../../api/graflag.html#graflag.core.GraFlag.clear">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">apply</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">share</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-              <span class="n">images</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">collect</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ClearReport</span><span class="p">:</span>
+              <span class="n">images</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">collect</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+              <span class="n">local_copies</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ClearReport</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove what is on the cluster but no longer belongs to anything.</span>
 
 <span class="sd">        ``graflag cleanup`` sweeps finished *services*; this sweeps the</span>
@@ -1161,6 +1244,11 @@
 <span class="sd">            share: Consider experiments, datasets and strays.</span>
 <span class="sd">            images: Consider local images and registry repositories.</span>
 <span class="sd">            collect: Garbage-collect registry blobs (implies ``images``).</span>
+<span class="sd">            local_copies: Also remove the manager&#39;s local copy of a method</span>
+<span class="sd">                image that the registry serves byte for byte (see</span>
+<span class="sd">                :meth:`_clear_local_copy_items`). Opt-in: the next ``--build``</span>
+<span class="sd">                of that method then starts from the build cache rather than</span>
+<span class="sd">                from the image.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            A ClearReport. Failures to remove an individual item are</span>
@@ -1168,13 +1256,17 @@
 <span class="sd">            housekeeping and must not fail the caller.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">report</span> <span class="o">=</span> <span class="n">ClearReport</span><span class="p">(</span><span class="n">applied</span><span class="o">=</span><span class="n">apply</span><span class="p">)</span>
-        <span class="n">facts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clear_survey</span><span class="p">(</span><span class="n">share</span><span class="o">=</span><span class="n">share</span><span class="p">,</span> <span class="n">images</span><span class="o">=</span><span class="n">images</span> <span class="ow">or</span> <span class="n">collect</span><span class="p">)</span>
+        <span class="n">facts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clear_survey</span><span class="p">(</span><span class="n">share</span><span class="o">=</span><span class="n">share</span><span class="p">,</span> <span class="n">images</span><span class="o">=</span><span class="n">images</span> <span class="ow">or</span> <span class="n">collect</span> <span class="ow">or</span> <span class="n">local_copies</span><span class="p">)</span>
 
         <span class="n">items</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">ClearItem</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">share</span><span class="p">:</span>
             <span class="n">items</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clear_share_items</span><span class="p">(</span><span class="n">facts</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">images</span> <span class="ow">or</span> <span class="n">collect</span><span class="p">:</span>
             <span class="n">items</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clear_image_items</span><span class="p">(</span><span class="n">facts</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">local_copies</span><span class="p">:</span>
+            <span class="n">already</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">items</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;image&quot;</span><span class="p">}</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clear_local_copy_items</span><span class="p">(</span><span class="n">facts</span><span class="p">)</span>
+                         <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">already</span><span class="p">)</span>
         <span class="n">report</span><span class="o">.</span><span class="n">items</span> <span class="o">=</span> <span class="n">items</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">apply</span><span class="p">:</span>
@@ -1183,6 +1275,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_clear_apply</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">facts</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">collect</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_clear_collect_registry</span><span class="p">(</span><span class="n">report</span><span class="p">,</span> <span class="n">facts</span><span class="p">)</span>
+        <span class="n">before</span> <span class="o">=</span> <span class="n">facts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;avail_bytes&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">after</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="s2">&quot;df -B1 --output=avail /var/lib/docker 2&gt;/dev/null | tail -1&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="n">GraFlagError</span><span class="p">):</span>
+            <span class="n">after</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">before</span> <span class="ow">and</span> <span class="n">after</span><span class="p">:</span>
+            <span class="n">report</span><span class="o">.</span><span class="n">disk_freed_bytes</span> <span class="o">=</span> <span class="n">after</span> <span class="o">-</span> <span class="n">before</span>
         <span class="k">return</span> <span class="n">report</span></div>
 
 
@@ -1221,6 +1322,12 @@
 <span class="s2">                case &quot;$e&quot; in</span>
 <span class="s2">                    datasets|experiments|images|libs|methods) continue ;;</span>
 <span class="s2">                esac</span>
+<span class="s2">                # The quickstart clones graflag-shared into the share, which</span>
+<span class="s2">                # puts its tests/ at the root: tracked by the checkout, so</span>
+<span class="s2">                # part of it, not a stray -- and `clear --apply` deleted it.</span>
+<span class="s2">                if git -C &quot;$SHARED&quot; ls-files --error-unmatch -- &quot;$e&quot; &gt;/dev/null 2&gt;&amp;1; then</span>
+<span class="s2">                    echo &quot;T $e&quot;; continue</span>
+<span class="s2">                fi</span>
 <span class="s2">                echo &quot;S $e&quot;</span>
 <span class="s2">            done</span>
 <span class="s2">            du -sbL experiments/* datasets/* 2&gt;/dev/null | sed &#39;s|^|SZ |&#39;</span>
@@ -1229,6 +1336,10 @@
 <span class="s2">                ids=$(docker image ls -q --no-trunc 2&gt;/dev/null | sort -u | tr &#39;</span><span class="se">\n</span><span class="s2">&#39; &#39; &#39;)</span>
 <span class="s2">                [ -n &quot;$ids&quot; ] &amp;&amp; docker image inspect $ids </span><span class="se">\</span>
 <span class="s2">                    --format &#39;IS </span><span class="se">{{{{</span><span class="s2">.Id</span><span class="se">}}}}</span><span class="s2"> </span><span class="se">{{{{</span><span class="s2">.Size</span><span class="se">}}}}</span><span class="s2">&#39; 2&gt;/dev/null</span>
+<span class="s2">                [ -n &quot;$ids&quot; ] &amp;&amp; docker image inspect $ids </span><span class="se">\</span>
+<span class="s2">                    --format &#39;ID </span><span class="se">{{{{</span><span class="s2">.Id</span><span class="se">}}}}</span><span class="s2"> </span><span class="se">{{{{</span><span class="s2">range .RepoDigests</span><span class="se">}}}}{{{{</span><span class="s2">.</span><span class="se">}}}}</span><span class="s2"> </span><span class="se">{{{{</span><span class="s2">end</span><span class="se">}}}}</span><span class="s2">&#39; 2&gt;/dev/null</span>
+<span class="s2">                docker ps -a --no-trunc --format &#39;U </span><span class="se">{{{{</span><span class="s2">.Image</span><span class="se">}}}}</span><span class="s2">&#39; 2&gt;/dev/null</span>
+<span class="s2">                ps -eo args 2&gt;/dev/null | grep -E &#39;^docker (build|push|buildx)&#39; | sed &#39;s|^|B |&#39;</span>
 <span class="s2">                c=$(docker ps --filter name=registry --format &#39;</span><span class="se">{{{{</span><span class="s2">.ID</span><span class="se">}}}}</span><span class="s2">&#39; 2&gt;/dev/null | head -1)</span>
 <span class="s2">                if [ -n &quot;$c&quot; ]; then</span>
 <span class="s2">                    echo &quot;RC $c&quot;</span>
@@ -1236,6 +1347,9 @@
 <span class="s2">                        2&gt;/dev/null | sed &#39;s|^|R |&#39;</span>
 <span class="s2">                    docker exec &quot;$c&quot; du -sb /var/lib/registry 2&gt;/dev/null </span><span class="se">\</span>
 <span class="s2">                        | awk &#39;</span><span class="se">{{</span><span class="s2">print &quot;RSZ&quot;, $1</span><span class="se">}}</span><span class="s2">&#39;</span>
+<span class="s2">                    docker exec &quot;$c&quot; sh -c &#39;cd /var/lib/registry/docker/registry/v2/repositories </span><span class="se">\</span>
+<span class="s2">                        &amp;&amp; for t in */_manifests/tags/*; do [ -f &quot;$t/current/link&quot; ] </span><span class="se">\</span>
+<span class="s2">                        &amp;&amp; echo &quot;RT $</span><span class="se">{{</span><span class="s2">t%%/*</span><span class="se">}}</span><span class="s2"> $</span><span class="se">{{</span><span class="s2">t##*/</span><span class="se">}}</span><span class="s2"> $(cat &quot;$t/current/link&quot;)&quot;; done&#39; 2&gt;/dev/null</span>
 <span class="s2">                fi</span>
 <span class="s2">                docker inspect &quot;$c&quot; </span><span class="se">\</span>
 <span class="s2">                    --format &#39;RV </span><span class="se">{{{{</span><span class="s2">range .Mounts</span><span class="se">}}}}{{{{</span><span class="s2">.Name</span><span class="se">}}}}{{{{</span><span class="s2">end</span><span class="se">}}}}</span><span class="s2">&#39; 2&gt;/dev/null</span>
@@ -1249,6 +1363,8 @@
             <span class="s2">&quot;strays&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;sizes&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;images&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;image_sizes&quot;</span><span class="p">:</span> <span class="p">{},</span>
             <span class="s2">&quot;registry_repos&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;registry_container&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;registry_volume&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
             <span class="s2">&quot;registry_bytes&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;avail_bytes&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;repo_digests&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;container_images&quot;</span><span class="p">:</span> <span class="nb">set</span><span class="p">(),</span> <span class="s2">&quot;busy&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;registry_tags&quot;</span><span class="p">:</span> <span class="p">{},</span>
         <span class="p">}</span>
         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
             <span class="n">tag</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
@@ -1285,6 +1401,17 @@
                     <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;image_sizes&quot;</span><span class="p">][</span><span class="n">image_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
                     <span class="k">pass</span>
+            <span class="k">elif</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;ID&quot;</span><span class="p">:</span>
+                <span class="n">image_id</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">digests</span> <span class="o">=</span> <span class="n">rest</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;repo_digests&quot;</span><span class="p">][</span><span class="n">image_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">digests</span><span class="o">.</span><span class="n">split</span><span class="p">())</span>
+            <span class="k">elif</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;U&quot;</span><span class="p">:</span>
+                <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;container_images&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>
+                <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;busy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;RT&quot;</span><span class="p">:</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="n">rest</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;registry_tags&quot;</span><span class="p">][(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
             <span class="k">elif</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
                 <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;registry_repos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;RC&quot;</span><span class="p">:</span>
@@ -1424,6 +1551,57 @@
                 <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ClearItem</span><span class="p">(</span>
                     <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;registry&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">repo</span><span class="p">,</span>
                     <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;built for a method that no longer exists&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">items</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clear_local_copy_items</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">facts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">ClearItem</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The manager&#39;s local copies of method images the registry also holds.</span>
+
+<span class="sd">        Every build leaves the image on the manager after pushing it, and</span>
+<span class="sd">        tasks -- the manager&#39;s included -- pull from the registry, so the</span>
+<span class="sd">        local copy is only ever read again by a rebuild&#39;s cache. At ~10-16 GB</span>
+<span class="sd">        an image, it was the manager&#39;s disk, not the registry&#39;s, that filled</span>
+<span class="sd">        during a full-catalogue campaign.</span>
+
+<span class="sd">        A copy is collected only when all of these hold:</span>
+
+<span class="sd">        - its repository is a method&#39;s image (never the evaluator, which</span>
+<span class="sd">          GraFlag looks for locally, and never a base image);</span>
+<span class="sd">        - the registry&#39;s tag for it points at **this image&#39;s digest**, so the</span>
+<span class="sd">          registry serves exactly what would be deleted -- a tag alone is not</span>
+<span class="sd">          enough, since a push that failed leaves the registry one build</span>
+<span class="sd">          behind;</span>
+<span class="sd">        - no container, running or stopped, was created from it;</span>
+<span class="sd">        - no ``docker build`` or ``docker push`` naming it is running.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s2">:5000&quot;</span>
+        <span class="n">owners</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_image_owner</span><span class="p">(</span><span class="n">o</span><span class="p">)</span> <span class="k">for</span> <span class="n">o</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;owners&quot;</span><span class="p">]}</span>
+        <span class="n">in_use</span> <span class="o">=</span> <span class="p">{</span><span class="n">ref</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;@&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;container_images&quot;</span><span class="p">]}</span>
+        <span class="n">busy</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">facts</span><span class="p">[</span><span class="s2">&quot;busy&quot;</span><span class="p">])</span>
+        <span class="n">items</span><span class="p">,</span> <span class="n">counted</span> <span class="o">=</span> <span class="p">[],</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">repo</span><span class="p">,</span> <span class="n">tag</span><span class="p">,</span> <span class="n">image_id</span> <span class="ow">in</span> <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">repo</span> <span class="o">==</span> <span class="s2">&quot;&lt;none&gt;&quot;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_owner</span><span class="p">(</span><span class="n">repo</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">repo</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">base</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">owners</span> <span class="ow">or</span> <span class="n">base</span> <span class="o">==</span> <span class="s2">&quot;graflag_evaluator&quot;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">digest</span> <span class="o">=</span> <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;registry_tags&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="n">tag</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">digest</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">registry</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">@</span><span class="si">{</span><span class="n">digest</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">not</span> <span class="ow">in</span> \
+                    <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;repo_digests&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">image_id</span><span class="p">,</span> <span class="nb">set</span><span class="p">()):</span>
+                <span class="k">continue</span>
+            <span class="n">refs</span> <span class="o">=</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">registry</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="k">if</span> <span class="n">refs</span> <span class="o">&amp;</span> <span class="n">in_use</span> <span class="ow">or</span> <span class="n">image_id</span> <span class="ow">in</span> <span class="n">in_use</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">rf</span><span class="s2">&quot;(^|[\s/=])</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="si">}</span><span class="s2">(:|\s|$)&quot;</span><span class="p">,</span> <span class="n">busy</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="c1"># One image is often tagged twice (`taddy` and `&lt;registry&gt;/taddy`);</span>
+            <span class="c1"># its bytes are freed once, when the last tag goes.</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">image_id</span> <span class="ow">in</span> <span class="n">counted</span> <span class="k">else</span> <span class="n">facts</span><span class="p">[</span><span class="s2">&quot;image_sizes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">image_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">counted</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">image_id</span><span class="p">)</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ClearItem</span><span class="p">(</span>
+                <span class="n">kind</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">repo</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;local copy; the registry serves the same digest&quot;</span><span class="p">,</span>
+                <span class="n">size_bytes</span><span class="o">=</span><span class="n">size</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">items</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_clear_guard</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -1810,12 +1988,34 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_write_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">status</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write status.json to an experiment directory on the remote.&quot;&quot;&quot;</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()}</span>
+        <span class="c1"># UTC, like the runner&#39;s entries: the build phase is written here, on</span>
+        <span class="c1"># the client&#39;s clock and zone, and the run phase in the container, so</span>
+        <span class="c1"># a naive local time made one status.json history mix two zones.</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span> <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()}</span>
         <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
             <span class="n">data</span><span class="p">[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">error</span>
         <span class="n">status_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="n">status_path</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="n">exp_dir</span><span class="p">,</span> <span class="s2">&quot;status.json&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">status_path</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;STATUSEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">status_data</span><span class="si">}</span><span class="se">\n</span><span class="s2">STATUSEOF&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_record_stop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">experiment_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write &quot;stopped&quot; for a run whose runner never wrote a status.</span>
+
+<span class="sd">        A run stopped while queued -- waiting for a GPU, or starting -- has no</span>
+<span class="sd">        runner status: status.json says &quot;building&quot; or does not exist, and with</span>
+<span class="sd">        its service gone that read as &quot;failed&quot; or &quot;unknown&quot;. Only that case is</span>
+<span class="sd">        written. A runner that started has its own record (&quot;running&quot; reads as</span>
+<span class="sd">        stopped once the service is gone), and the service is removed before</span>
+<span class="sd">        this runs, so no runner can start and race the write.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">status_path</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;experiments&quot;</span><span class="p">,</span>
+                                  <span class="n">experiment_name</span><span class="p">,</span> <span class="s2">&quot;status.json&quot;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;stopped&quot;</span><span class="p">,</span>
+                           <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                           <span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Stopped before the method started&quot;</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;if ! grep -qsE &#39;</span><span class="se">\&quot;</span><span class="s2">status</span><span class="se">\&quot;</span><span class="s2">: *</span><span class="se">\&quot;</span><span class="s2">(running|completed|failed)</span><span class="se">\&quot;</span><span class="s2">&#39; </span><span class="si">{</span><span class="n">status_path</span><span class="si">}</span><span class="s2">; &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;then cat &gt; </span><span class="si">{</span><span class="n">status_path</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;STATUSEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="se">\n</span><span class="s2">STATUSEOF</span><span class="se">\n</span><span class="s2">fi&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_decode_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoded</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Decode one base64&#39;d status.json payload, tolerating a bad file.&quot;&quot;&quot;</span>
@@ -1852,7 +2052,7 @@
         <span class="n">full_exp_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="n">has_results</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;RESULTS&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="n">has_evaluation</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;EVAL&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-        <span class="n">has_build_log</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;BUILD_LOG&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">build_done</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;BUILD_DONE&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
 
         <span class="n">status_data</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status_json&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="n">runner_status</span> <span class="o">=</span> <span class="n">status_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">)</span>
@@ -1869,21 +2069,27 @@
 
         <span class="n">service_failed</span> <span class="o">=</span> <span class="n">service_exists</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">docker</span><span class="o">.</span><span class="n">is_service_failed</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">runner_status</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;completed&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">runner_status</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;completed&quot;</span><span class="p">,</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span> <span class="s2">&quot;stopped&quot;</span><span class="p">):</span>
             <span class="n">status</span> <span class="o">=</span> <span class="n">runner_status</span>
         <span class="k">elif</span> <span class="n">service_failed</span><span class="p">:</span>
             <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span>
-        <span class="k">elif</span> <span class="n">runner_status</span> <span class="o">==</span> <span class="s2">&quot;building&quot;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">service_exists</span><span class="p">:</span>
-                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;building&quot;</span>
-            <span class="k">elif</span> <span class="n">has_build_log</span><span class="p">:</span>
-                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span>  <span class="c1"># build finished but service never created</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;building&quot;</span>
         <span class="k">elif</span> <span class="n">runner_status</span> <span class="o">==</span> <span class="s2">&quot;running&quot;</span><span class="p">:</span>
             <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;running&quot;</span> <span class="k">if</span> <span class="n">service_exists</span> <span class="k">else</span> <span class="s2">&quot;stopped&quot;</span>
         <span class="k">elif</span> <span class="n">service_exists</span><span class="p">:</span>
-            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;running&quot;</span>
+            <span class="c1"># The service exists and the runner has not said &quot;running&quot;: the</span>
+            <span class="c1"># task is waiting for a node -- for a GPU, on a busy cluster -- or</span>
+            <span class="c1"># its container is starting. A &quot;building&quot; status.json means the</span>
+            <span class="c1"># same here, since the service is created only after the push.</span>
+            <span class="c1"># This read &quot;building&quot; for as long as a GPU was busy, or &quot;running&quot;</span>
+            <span class="c1"># for a run without --build.</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;queued&quot;</span>
+        <span class="k">elif</span> <span class="n">runner_status</span> <span class="o">==</span> <span class="s2">&quot;building&quot;</span><span class="p">:</span>
+            <span class="c1"># build.log is written live from the build&#39;s first line, so its</span>
+            <span class="c1"># presence says nothing. The complete log, whose PUSH section</span>
+            <span class="c1"># appears only once the service exists, says the build is over:</span>
+            <span class="c1"># over, with no service and no failure recorded, means the</span>
+            <span class="c1"># service is gone or was never created.</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;failed&quot;</span> <span class="k">if</span> <span class="n">build_done</span> <span class="k">else</span> <span class="s2">&quot;building&quot;</span>
         <span class="k">elif</span> <span class="n">has_results</span> <span class="ow">or</span> <span class="n">has_evaluation</span><span class="p">:</span>
             <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;completed&quot;</span>
         <span class="k">else</span><span class="p">:</span>
@@ -1925,7 +2131,8 @@
             <span class="sa">f</span><span class="s1">&#39;echo &quot;EXISTS:$(test -d </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1"> &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="sa">f</span><span class="s1">&#39;echo &quot;RESULTS:$(test -f </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1">/results.json &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="sa">f</span><span class="s1">&#39;echo &quot;EVAL:$(test -f </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1">/eval/evaluation.json &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="sa">f</span><span class="s1">&#39;echo &quot;BUILD_LOG:$(test -f </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1">/build.log &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;echo &quot;BUILD_DONE:$(grep -qs </span><span class="se">\&#39;</span><span class="s1">&quot;building&quot;</span><span class="se">\&#39;</span><span class="s1"> </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1">/status.json &amp;&amp; &#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;grep -qs </span><span class="se">\&#39;</span><span class="s1">^=== PUSH: </span><span class="se">\&#39;</span><span class="s1"> </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1">/build.log &amp;&amp; echo 1 || echo 0)&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="sa">f</span><span class="s1">&#39;echo &quot;STATUS_B64:$(base64 &lt; </span><span class="si">{</span><span class="n">quoted_path</span><span class="si">}</span><span class="s1">/status.json 2&gt;/dev/null&#39;</span>
             <span class="sa">f</span><span class="s1">&#39; | tr -d </span><span class="se">\&#39;\\</span><span class="s1">n</span><span class="se">\&#39;</span><span class="s1">)&quot;&#39;</span>
         <span class="p">)</span>

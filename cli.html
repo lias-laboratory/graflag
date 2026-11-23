@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CLI Reference &mdash; GraFlag 1.2.0 documentation</title>
+  <title>CLI Reference &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=6efca38a"></script>
+      <script src="_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -193,7 +193,8 @@ Without it, the image already in the registry runs</p></li>
 even if the build fails. Without it a failed build leaves its last container,
 and every layer under it, on the manager</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code> – schedule without reserving a GPU; a method that declares
-<code class="docutils literal notranslate"><span class="pre">_GPU</span></code> gets <code class="docutils literal notranslate"><span class="pre">-1</span></code>, which means CPU</p></li>
+<code class="docutils literal notranslate"><span class="pre">_GPU</span></code> gets <code class="docutils literal notranslate"><span class="pre">-1</span></code>, which means CPU, and the container cannot see the
+node’s GPU (<code class="docutils literal notranslate"><span class="pre">NVIDIA_VISIBLE_DEVICES=void</span></code>), which another task may hold</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">-p,</span> <span class="pre">--params</span> <span class="pre">KEY=VALUE</span> <span class="pre">...</span></code> – override parameters, named without the
 leading underscore their <code class="docutils literal notranslate"><span class="pre">.env</span></code> uses</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">-t,</span> <span class="pre">--tag</span></code> – image tag (default: <code class="docutils literal notranslate"><span class="pre">latest</span></code>, or the recorded one with
@@ -288,8 +289,10 @@ diagnosed without it (no <code class="docutils literal notranslate"><span class=
 <h3>clear<a class="headerlink" href="#clear" title="Link to this heading"></a></h3>
 <p>Reclaim storage that nothing owns any more: experiments whose method is gone,
 datasets used only by those experiments, images and registry repositories no
-method owns, and stray files at the root of the share:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">clear</span> <span class="p">[</span><span class="o">--</span><span class="n">apply</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">share</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">images</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">gc</span><span class="p">]</span>
+method owns, and stray directories at the root of the share. A directory the
+share’s own git checkout tracks (a clone of graflag-shared has <code class="docutils literal notranslate"><span class="pre">tests/</span></code>) is
+part of the checkout, never a stray:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graflag</span> <span class="n">clear</span> <span class="p">[</span><span class="o">--</span><span class="n">apply</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">share</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">images</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">gc</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">local</span><span class="o">-</span><span class="n">copies</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>Without <code class="docutils literal notranslate"><span class="pre">--apply</span></code> it only reports; the report and the applied run list the
@@ -303,7 +306,16 @@ flag, or both, sweeps everything</p></li>
 Deleting a repository alone frees no disk. The registry is stopped for the
 duration, because collecting from a live registry makes later pushes skip
 layers that no longer exist</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--local-copies</span></code> – also remove the manager’s own copy of a method image
+when the registry serves the same digest and no container or running build
+uses it. Every build leaves one behind, and tasks pull from the registry, so
+on a full catalogue it is the manager’s disk that fills first. Off by
+default: the next <code class="docutils literal notranslate"><span class="pre">--build</span></code> of that method starts from the build cache
+instead of the image. The evaluator image is always kept</p></li>
 </ul>
+<p>An applied run reports the change in free space measured on the manager, not
+the sum of the removed images’ sizes, which counts base layers that images
+still on disk share.</p>
 </section>
 </section>
 <section id="files">

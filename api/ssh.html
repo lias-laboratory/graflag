@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.ssh &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.ssh &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -70,12 +70,15 @@
 <li class="toctree-l1"><a class="reference internal" href="config.html">graflag.config</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">graflag.ssh</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.remote_path"><code class="docutils literal notranslate"><span class="pre">remote_path()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.NON_INTERACTIVE_OPTS"><code class="docutils literal notranslate"><span class="pre">NON_INTERACTIVE_OPTS</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.SSH_FAILED"><code class="docutils literal notranslate"><span class="pre">SSH_FAILED</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.require_rsync"><code class="docutils literal notranslate"><span class="pre">require_rsync()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#graflag.ssh.SSHManager"><code class="docutils literal notranslate"><span class="pre">SSHManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.destination"><code class="docutils literal notranslate"><span class="pre">SSHManager.destination</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.execute"><code class="docutils literal notranslate"><span class="pre">SSHManager.execute()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.path_exists"><code class="docutils literal notranslate"><span class="pre">SSHManager.path_exists()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.read_file"><code class="docutils literal notranslate"><span class="pre">SSHManager.read_file()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.mkdir"><code class="docutils literal notranslate"><span class="pre">SSHManager.mkdir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.claim_dir"><code class="docutils literal notranslate"><span class="pre">SSHManager.claim_dir()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.list_dir"><code class="docutils literal notranslate"><span class="pre">SSHManager.list_dir()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.ssh.SSHManager.copy_files"><code class="docutils literal notranslate"><span class="pre">SSHManager.copy_files()</span></code></a></li>
 </ul>
@@ -129,19 +132,38 @@ intact (and quoted) rather than being silently rewritten.</p>
 </dd></dl>
 
 <dl class="py data">
-<dt class="sig sig-object py" id="graflag.ssh.NON_INTERACTIVE_OPTS">
-<span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">NON_INTERACTIVE_OPTS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['-o',</span> <span class="pre">'BatchMode=yes',</span> <span class="pre">'-o',</span> <span class="pre">'ConnectTimeout=15']</span></span><a class="headerlink" href="#graflag.ssh.NON_INTERACTIVE_OPTS" title="Link to this definition"></a></dt>
+<dt class="sig sig-object py" id="graflag.ssh.SSH_FAILED">
+<span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">SSH_FAILED</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">255</span></span><a class="headerlink" href="#graflag.ssh.SSH_FAILED" title="Link to this definition"></a></dt>
 <dd><p>Options that make ssh fail instead of asking. A client with nobody at the
 keyboard – the MCP server, whose stdin and stdout are the protocol – must
 not wait on a password or passphrase prompt: the tool call would hang until
-the client gave up, with nothing saying why.</p>
+the client gave up, with nothing saying why.
+The exit status ssh uses for its own errors, as opposed to the remote command’s.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="graflag.ssh.require_rsync">
+<span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">require_rsync</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/ssh.html#require_rsync"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.require_rsync" title="Link to this definition"></a></dt>
+<dd><p>Raise a usable error when there is no local rsync.</p>
+<p>Every copy and sync goes through rsync. Without it – native Windows ships
+OpenSSH but not rsync – the first copy died in subprocess with a bare
+FileNotFoundError that named neither the program nor a way out.</p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.ssh.SSHManager">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">SSHManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manager_ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'22'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.ssh.</span></span><span class="sig-name descname"><span class="pre">SSHManager</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">manager_ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'22'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ssh_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'root'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proxy_jump</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Handle SSH operations to remote manager.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="graflag.ssh.SSHManager.destination">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">destination</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#graflag.ssh.SSHManager.destination" title="Link to this definition"></a></dt>
+<dd><p><code class="docutils literal notranslate"><span class="pre">user&#64;manager</span></code> – the one place every ssh and rsync target is built.</p>
+<p>It was <code class="docutils literal notranslate"><span class="pre">root&#64;{manager_ip}</span></code> spelled out at five call sites, so a
+cluster whose manager takes another account, or sits behind a jump
+host, needed a hand-written ~/.ssh/config block to be usable at all.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.ssh.SSHManager.execute">
 <span class="sig-name descname"><span class="pre">execute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capture_output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CompletedProcess</span></span></span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager.execute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager.execute" title="Link to this definition"></a></dt>
@@ -170,6 +192,16 @@ parse the string.</p>
 <dt class="sig sig-object py" id="graflag.ssh.SSHManager.mkdir">
 <span class="sig-name descname"><span class="pre">mkdir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remote_shared_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager.mkdir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager.mkdir" title="Link to this definition"></a></dt>
 <dd><p>Create directory on remote manager.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.ssh.SSHManager.claim_dir">
+<span class="sig-name descname"><span class="pre">claim_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remote_shared_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="../_modules/graflag/ssh.html#SSHManager.claim_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.ssh.SSHManager.claim_dir" title="Link to this definition"></a></dt>
+<dd><p>Create a directory that must not exist yet, atomically.</p>
+<p>Returns True if this call created it and False if it was already
+there; raises on any other failure. <code class="docutils literal notranslate"><span class="pre">mkdir</span></code> without <code class="docutils literal notranslate"><span class="pre">-p</span></code> is the
+atomic step: of two clients racing for the same name exactly one
+succeeds, which a <code class="docutils literal notranslate"><span class="pre">test</span> <span class="pre">-e</span></code> followed by <code class="docutils literal notranslate"><span class="pre">mkdir</span> <span class="pre">-p</span></code> cannot promise.</p>
 </dd></dl>
 
 <dl class="py method">

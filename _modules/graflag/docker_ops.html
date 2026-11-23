@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.docker_ops &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.docker_ops &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -100,6 +100,7 @@
 <span></span><span class="sd">&quot;&quot;&quot;Docker operations for GraFlag using Docker SDK.&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">shlex</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
@@ -110,7 +111,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timezone</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
@@ -121,7 +122,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">docker.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ServiceMode</span><span class="p">,</span> <span class="n">RestartPolicy</span><span class="p">,</span> <span class="n">Resources</span><span class="p">,</span> <span class="n">Mount</span><span class="p">,</span> <span class="n">EndpointSpec</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_method_env</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_path</span><span class="p">,</span> <span class="n">NON_INTERACTIVE_OPTS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ssh</span><span class="w"> </span><span class="kn">import</span> <span class="n">remote_path</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 
@@ -208,6 +209,8 @@
     <span class="n">COMMAND</span> <span class="o">=</span> <span class="s1">&#39;COMMAND&#39;</span>
     <span class="n">MONITOR_INTERVAL</span> <span class="o">=</span> <span class="s1">&#39;MONITOR_INTERVAL&#39;</span>
     <span class="n">GRAFLAG_PARAMS</span> <span class="o">=</span> <span class="s1">&#39;GRAFLAG_PARAMS&#39;</span>
+    <span class="n">GRAFLAG_NODE</span> <span class="o">=</span> <span class="s1">&#39;GRAFLAG_NODE&#39;</span>
+    <span class="n">NVIDIA_VISIBLE_DEVICES</span> <span class="o">=</span> <span class="s1">&#39;NVIDIA_VISIBLE_DEVICES&#39;</span>
 
 <div class="viewcode-block" id="ReservedEnvVars.get_names">
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.ReservedEnvVars.get_names">[docs]</a>
@@ -239,6 +242,20 @@
         <span class="n">ctypes</span><span class="o">.</span><span class="n">CDLL</span><span class="p">(</span><span class="s2">&quot;libc.so.6&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">prctl</span><span class="p">(</span><span class="n">PR_SET_PDEATHSIG</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="k">pass</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_child_options</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Popen keyword arguments for a long-lived ssh child (tunnel, log follower).</span>
+
+<span class="sd">    `preexec_fn` exists only on POSIX. On Windows, Python rejects it with</span>
+<span class="sd">    ValueError before starting the child, so passing it unconditionally made</span>
+<span class="sd">    the Docker tunnel -- and with it every service operation -- fail there</span>
+<span class="sd">    before a single byte reached the manager. Elsewhere the child gets</span>
+<span class="sd">    `_die_with_parent`, which is itself a best-effort no-op off Linux.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;posix&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;preexec_fn&quot;</span><span class="p">:</span> <span class="n">_die_with_parent</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{}</span>
 
 
 <span class="c1">#: Swarm task states after which a restart_policy=none task never runs again.</span>
@@ -336,15 +353,15 @@
         <span class="n">ssh_args</span> <span class="o">=</span> <span class="p">[</span>
             <span class="s1">&#39;ssh&#39;</span><span class="p">,</span> <span class="s1">&#39;-N&#39;</span><span class="p">,</span>
             <span class="s1">&#39;-L&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s1">:/var/run/docker.sock&#39;</span><span class="p">,</span>
-            <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;StrictHostKeyChecking=no&#39;</span><span class="p">,</span>
             <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;ExitOnForwardFailure=yes&#39;</span><span class="p">,</span>
         <span class="p">]</span>
-        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="p">,</span> <span class="s2">&quot;batch_mode&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
-            <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">NON_INTERACTIVE_OPTS</span><span class="p">)</span>
+        <span class="c1"># StrictHostKeyChecking, ProxyJump and (non-interactive) BatchMode</span>
+        <span class="c1"># come from the same list every other ssh uses.</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">_option_args</span><span class="p">())</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
             <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
         <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">)])</span>
-        <span class="n">ssh_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">destination</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Starting SSH tunnel on port </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="c1"># Guarded for the same reason as the log follower: the tunnel is a</span>
@@ -356,7 +373,7 @@
         <span class="c1"># process&#39;s stdin is the protocol.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_tunnel_proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
             <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span>
-            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">,</span>
+            <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="o">**</span><span class="n">_child_options</span><span class="p">(),</span>
         <span class="p">)</span>
 
         <span class="c1"># Wait for the tunnel to be usable. ssh binds the local port as soon</span>
@@ -667,7 +684,8 @@
 <a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.build_method_image">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">build_method_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;latest&quot;</span><span class="p">,</span>
                            <span class="n">method_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                           <span class="n">force_rm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+                           <span class="n">force_rm</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                           <span class="n">live_log</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Build method Docker image and push to local registry.</span>
 
 <span class="sd">        Uses SSH because the build context resides on the remote host.</span>
@@ -687,6 +705,10 @@
 <span class="sd">                failed build keeps its last container, and that container</span>
 <span class="sd">                holds every layer the build had produced: 12.8 GB on the</span>
 <span class="sd">                manager after one failed ``git clone`` of the rare method.</span>
+<span class="sd">            live_log: A path on the manager to write the build&#39;s output to</span>
+<span class="sd">                *while it runs*, so a ten-minute build can be watched with</span>
+<span class="sd">                ``tail -f`` instead of appearing all at once when it ends.</span>
+<span class="sd">                The caller still writes the complete log afterwards.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Combined build and push log output.</span>
@@ -765,6 +787,18 @@
             <span class="sa">f</span><span class="s2">&quot;-t </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">local_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> -t </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
             <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">remote_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">)</span><span class="si">}</span><span class="s2">/&quot;</span>
         <span class="p">)</span>
+        <span class="k">if</span> <span class="n">live_log</span><span class="p">:</span>
+            <span class="c1"># Header first, then docker&#39;s output appended as it arrives. The</span>
+            <span class="c1"># exit status survives the pipe through a file, since POSIX sh has</span>
+            <span class="c1"># no pipefail; stderr is merged into the stream, so the failure</span>
+            <span class="c1"># message below falls back to the stream&#39;s tail.</span>
+            <span class="n">log</span> <span class="o">=</span> <span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">live_log</span><span class="p">)</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== BUILD: </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">build_cmd</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">log</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;LIVEEOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">header</span><span class="si">}</span><span class="se">\n</span><span class="s2">LIVEEOF</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;rc=$(mktemp) &amp;&amp; </span><span class="se">{{</span><span class="s2"> </span><span class="si">{</span><span class="n">build_cmd</span><span class="si">}</span><span class="s2"> 2&gt;&amp;1; echo $? &gt; </span><span class="se">\&quot;</span><span class="s2">$rc</span><span class="se">\&quot;</span><span class="s2">; </span><span class="se">}}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;| tee -a </span><span class="si">{</span><span class="n">log</span><span class="si">}</span><span class="s2">; s=$(cat </span><span class="se">\&quot;</span><span class="s2">$rc</span><span class="se">\&quot;</span><span class="s2">); rm -f </span><span class="se">\&quot;</span><span class="s2">$rc</span><span class="se">\&quot;</span><span class="s2">; exit </span><span class="se">\&quot;</span><span class="s2">$s</span><span class="se">\&quot;</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">build_cmd</span><span class="p">)</span>
         <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;=== BUILD: </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> ===</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
@@ -772,7 +806,9 @@
             <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">BuildFailed</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build image </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> \
+                <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="o">-</span><span class="mi">15</span><span class="p">:])</span>
+            <span class="k">raise</span> <span class="n">BuildFailed</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to build image </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                               <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">))</span>
 
         <span class="c1"># Push to registry</span>
@@ -783,10 +819,17 @@
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">:</span>
             <span class="n">build_log</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
 
+        <span class="c1"># A failed push is a failed build. Tasks pull the registry image,</span>
+        <span class="c1"># never the manager&#39;s local one, so after a push that did not happen</span>
+        <span class="c1"># the service ran whatever the registry already held -- the previous</span>
+        <span class="c1"># build -- under a log that said &quot;[OK] Image built successfully&quot;.</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to push to registry: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Image pushed to local registry&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">BuildFailed</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Built </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> but could not push it to </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2">; &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the cluster would run the registry&#39;s previous image: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Image pushed to local registry&quot;</span><span class="p">)</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[OK] Image </span><span class="si">{</span><span class="n">local_image</span><span class="si">}</span><span class="s2"> built successfully&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_log</span><span class="p">)</span></div>
@@ -856,9 +899,12 @@
         <span class="c1"># Push</span>
         <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docker push </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">registry_image</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Failed to push evaluator to registry: </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Evaluator image pushed to local registry&quot;</span><span class="p">)</span>
+            <span class="c1"># The evaluation service pulls this tag from the registry; see</span>
+            <span class="c1"># build_method_image for what a silent push failure costs.</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Built the evaluator but could not push </span><span class="si">{</span><span class="n">registry_image</span><span class="si">}</span><span class="s2">: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stderr</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[OK] Evaluator image pushed to local registry&quot;</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">registry_image</span></div>
 
@@ -1132,9 +1178,9 @@
         <span class="n">ssh_args</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ssh&#39;</span><span class="p">]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">:</span>
             <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_key</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())])</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">)])</span>
+        <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">_option_args</span><span class="p">())</span>
         <span class="n">ssh_args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
-            <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">ssh_port</span><span class="p">),</span>
-            <span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;StrictHostKeyChecking=no&#39;</span><span class="p">,</span>
             <span class="c1"># -tt forces a TTY, which is what makes the *remote* command die</span>
             <span class="c1"># with the connection. Without it sshd sends no SIGHUP, so killing</span>
             <span class="c1"># the local ssh client leaves `docker service logs -f` running on</span>
@@ -1144,7 +1190,7 @@
             <span class="c1">#</span>
             <span class="c1"># The cost is CRLF on the stream, stripped in _pump below.</span>
             <span class="s1">&#39;-tt&#39;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s1">&#39;root@</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">manager_ip</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">destination</span><span class="p">,</span>
             <span class="sa">f</span><span class="s1">&#39;docker service logs -f </span><span class="si">{</span><span class="n">shlex</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">service_name</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
         <span class="p">])</span>
 
@@ -1152,13 +1198,13 @@
         <span class="c1"># it. Previously this inherited stdout, so --tee wrote a file holding</span>
         <span class="c1"># only the build log -- or an empty one when --build was not used.</span>
         <span class="k">if</span> <span class="n">on_line</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">ssh_args</span><span class="p">,</span> <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">)</span>
+            <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">ssh_args</span><span class="p">,</span> <span class="o">**</span><span class="n">_child_options</span><span class="p">())</span>
             <span class="n">reader</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
                 <span class="n">ssh_args</span><span class="p">,</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
                 <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">,</span> <span class="n">bufsize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                <span class="n">preexec_fn</span><span class="o">=</span><span class="n">_die_with_parent</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">_child_options</span><span class="p">(),</span>
             <span class="p">)</span>
 
             <span class="k">def</span><span class="w"> </span><span class="nf">_pump</span><span class="p">():</span>
@@ -1357,6 +1403,20 @@
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;   Setting parameter: _GPU=-1 (running without a GPU)&quot;</span><span class="p">)</span>
             <span class="n">env_dict</span><span class="p">[</span><span class="s2">&quot;_GPU&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;-1&quot;</span>
 
+        <span class="c1"># And hide the device. The reservation is a scheduling promise, not</span>
+        <span class="c1"># isolation: the NVIDIA runtime is the default runtime on a GPU node</span>
+        <span class="c1"># and CUDA base images set NVIDIA_VISIBLE_DEVICES=all, so a service</span>
+        <span class="c1"># that reserved nothing still saw the node&#39;s GPU -- the one Swarm had</span>
+        <span class="c1"># given another task. On a three-node GPU cluster, strgnn run with</span>
+        <span class="c1"># --no-gpu put its labels on cuda:0 and its model on the CPU and</span>
+        <span class="c1"># died, and the CPU runs&#39; peak_gpu_mb recorded the GPU task&#39;s memory</span>
+        <span class="c1"># next to them. &quot;void&quot; makes the runtime behave like runc. A GPU task</span>
+        <span class="c1"># is unaffected: the runtime picks its device from the</span>
+        <span class="c1"># DOCKER_RESOURCE_NVIDIA-GPU variable Swarm sets for the reservation</span>
+        <span class="c1"># (`swarm-resource` in the runtime&#39;s config.toml), not from this.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">gpu_required</span><span class="p">:</span>
+            <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;NVIDIA_VISIBLE_DEVICES&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;void&#39;</span>
+
         <span class="c1"># Say which `_FOO` variables are parameters. The method side cannot</span>
         <span class="c1"># work that out from the environment alone -- a shell exports `_`,</span>
         <span class="c1"># zsh exports `_P9K_TTY`, conda exports `_CE_CONDA` -- so without</span>
@@ -1366,6 +1426,14 @@
         <span class="c1"># it is absent, so older images are unaffected.</span>
         <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;GRAFLAG_PARAMS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
             <span class="nb">sorted</span><span class="p">(</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">env_dict</span> <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)))</span>
+
+        <span class="c1"># Which node the task landed on. Swarm expands this template per task</span>
+        <span class="c1"># (templates are honoured in a service&#39;s env), and graflag_runner</span>
+        <span class="c1"># writes the result into status.json and results.json. Nothing else</span>
+        <span class="c1"># recorded it reliably: service_details.json is written when the</span>
+        <span class="c1"># service is created, and a task still queued for a GPU then has no</span>
+        <span class="c1"># node, so a run that waited said nowhere where it had run.</span>
+        <span class="n">env_dict</span><span class="p">[</span><span class="s1">&#39;GRAFLAG_NODE&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;{{.Node.Hostname}}&#39;</span>
 
         <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">env_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
 
@@ -1401,7 +1469,7 @@
             <span class="s2">&quot;gpu_required&quot;</span><span class="p">:</span> <span class="n">gpu_required</span><span class="p">,</span>
             <span class="s2">&quot;registry_image&quot;</span><span class="p">:</span> <span class="n">registry_image</span><span class="p">,</span>
             <span class="s2">&quot;manager_ip&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">manager_ip</span><span class="p">,</span>
-            <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+            <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
             <span class="s2">&quot;data_path&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/datasets/</span><span class="si">{</span><span class="n">dataset</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
             <span class="s2">&quot;exp_path&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="si">}</span><span class="s2">/experiments/</span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
             <span class="s2">&quot;env_contents&quot;</span><span class="p">:</span> <span class="n">env_contents</span><span class="p">,</span>
@@ -1413,6 +1481,57 @@
         <span class="n">config_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">service_config</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">config_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved service configuration to </span><span class="si">{</span><span class="n">config_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DockerManager.record_placement">
+<a class="viewcode-back" href="../../api/docker_ops.html#graflag.docker_ops.DockerManager.record_placement">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">record_placement</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rewrite service_details.json&#39;s ``worker`` with the task&#39;s final node.</span>
+
+<span class="sd">        Called by run() once the task has ended and before its service is</span>
+<span class="sd">        removed, which is the last moment the placement can be read. The</span>
+<span class="sd">        creation-time record keeps everything else it had.</span>
+
+<span class="sd">        Returns the worker block written, or None when there was nothing to</span>
+<span class="sd">        record. Never raises: a run that finished must not fail on this.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">once</span><span class="p">():</span>
+                <span class="n">svc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">services</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">exp_name</span><span class="p">)</span>
+                <span class="n">tasks</span> <span class="o">=</span> <span class="n">svc</span><span class="o">.</span><span class="n">tasks</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">tasks</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+                <span class="n">task</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tasks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CreatedAt&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+                <span class="n">node_id</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;NodeID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="n">hostname</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="k">if</span> <span class="n">node_id</span><span class="p">:</span>
+                    <span class="n">node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+                    <span class="n">hostname</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Description&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Hostname&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="p">{</span>
+                    <span class="s2">&quot;node_id&quot;</span><span class="p">:</span> <span class="n">node_id</span><span class="p">,</span>
+                    <span class="s2">&quot;node_hostname&quot;</span><span class="p">:</span> <span class="n">hostname</span><span class="p">,</span>
+                    <span class="s2">&quot;task_id&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ID&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                    <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Status&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;State&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                    <span class="s2">&quot;desired_state&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DesiredState&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                <span class="p">}</span>
+            <span class="n">worker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_with_reconnect</span><span class="p">(</span><span class="n">once</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">worker</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+
+            <span class="n">details_file</span> <span class="o">=</span> <span class="n">remote_path</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">remote_shared_dir</span><span class="p">,</span> <span class="s2">&quot;experiments&quot;</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="s2">&quot;service_details.json&quot;</span><span class="p">)</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat </span><span class="si">{</span><span class="n">details_file</span><span class="si">}</span><span class="s2"> 2&gt;/dev/null&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">stdout</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">details</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="k">if</span> <span class="n">raw</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="k">except</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">details</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">details</span><span class="p">[</span><span class="s2">&quot;worker&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">worker</span>
+            <span class="n">details_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ssh</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cat &gt; </span><span class="si">{</span><span class="n">details_file</span><span class="si">}</span><span class="s2"> &lt;&lt; &#39;EOF&#39;</span><span class="se">\n</span><span class="si">{</span><span class="n">details_json</span><span class="si">}</span><span class="se">\n</span><span class="s2">EOF&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">worker</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[WARN] Could not record where </span><span class="si">{</span><span class="n">exp_name</span><span class="si">}</span><span class="s2"> ran: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_save_service_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exp_name</span><span class="p">,</span> <span class="n">service_id</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save service details to JSON after creation.&quot;&quot;&quot;</span>
@@ -1429,7 +1548,7 @@
             <span class="n">details</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s2">&quot;service_id&quot;</span><span class="p">:</span> <span class="n">service_id</span><span class="p">,</span>
                 <span class="s2">&quot;service_name&quot;</span><span class="p">:</span> <span class="n">exp_name</span><span class="p">,</span>
-                <span class="s2">&quot;created_at&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                <span class="s2">&quot;created_at&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">timezone</span><span class="o">.</span><span class="n">utc</span><span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
                 <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Spec&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;TaskTemplate&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ContainerSpec&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Image&#39;</span><span class="p">),</span>
                 <span class="s2">&quot;created_at_docker&quot;</span><span class="p">:</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;CreatedAt&#39;</span><span class="p">),</span>
             <span class="p">}</span>

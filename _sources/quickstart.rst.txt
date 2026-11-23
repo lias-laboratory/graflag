@@ -4,8 +4,15 @@ Quick Start
 Requirements
 ------------
 
-- A client machine with Python 3.8 or newer and SSH access, as ``root``, to the
-  Swarm manager.
+- A client machine with Python 3.8 or newer, OpenSSH and rsync, and SSH
+  access to the Swarm manager (as ``root`` unless ``SSH_USER`` says
+  otherwise). Linux and macOS work natively. On Windows, run the client
+  inside WSL: native Windows has OpenSSH but no rsync, which ``graflag copy``
+  and ``graflag sync`` need, and the test suite drives a fake ``ssh`` written
+  as a POSIX shell script.
+- The manager can sit behind a jump host: set ``SSH_PROXY_JUMP`` (below), or
+  write a ``Host`` block for ``MANAGER_IP`` in ``~/.ssh/config``, which
+  applies to every connection GraFlag opens.
 - A cluster: a manager node and GPU worker nodes sharing an NFS export
   (``/shared`` by default). Without one, the local :doc:`devcluster` provides
   the same setup in Docker containers.
@@ -90,6 +97,14 @@ workers listed in ``hosts.yml`` and starts the image registry. The file holds:
    * - ``SSH_KEY``
      - ``~/.ssh/id_ed25519``
      - Private key used to reach the manager
+   * - ``SSH_USER``
+     - ``root``
+     - Account on the manager. Another account must be in the ``docker``
+       group and able to write ``SHARED_DIR``
+   * - ``SSH_PROXY_JUMP``
+     - (none)
+     - Jump host for every connection, as ssh's ``-J``/``ProxyJump`` takes it
+       (``user@bastion``, or a ``Host`` alias)
    * - ``SHARED_DIR``
      - ``/shared``
      - The NFS export, mounted at the same path on every node
@@ -105,13 +120,45 @@ workers listed in ``hosts.yml`` and starts the image registry. The file holds:
        ``local`` installs the copy in ``SHARED_DIR/libs``, ``pypi`` the
        published release
 
-The wizard asks for the first five; set the last two by editing the file.
-``graflag setup --reconfigure`` runs the wizard again.
+The wizard asks for ``MANAGER_IP``, ``SSH_PORT``, ``SSH_KEY``, ``SHARED_DIR``
+and ``HOSTS_FILE``; set the others by editing the file.
+``graflag setup --reconfigure`` runs the wizard again. A manager GraFlag
+cannot reach is an error naming the account, the jump host and ssh's own
+message, never an empty listing.
 
 GraFlag takes its configuration from, in order: the file named by ``--config``;
 a ``.env`` in the working directory, but only if it defines ``MANAGER_IP``, so
 an unrelated project's ``.env`` is never mistaken for one; and
 ``~/.config/graflag/config.env``.
+
+Clusters Behind an HTTP Proxy
+-----------------------------
+
+GraFlag itself only needs SSH to the manager. Everything that reaches the
+internet runs on the nodes -- image builds on the manager, base-image pulls on
+every node, dataset downloads on the manager -- so on a network where only a
+proxy gets out, each of those needs the proxy, and the cluster's own traffic
+must bypass it. On every node:
+
+- **Image pulls** (``docker pull``, Swarm tasks): a systemd drop-in for the
+  daemon, e.g. ``/etc/systemd/system/docker.service.d/proxy.conf``::
+
+      [Service]
+      Environment="HTTP_PROXY=http://proxy:3128" "HTTPS_PROXY=http://proxy:3128"
+      Environment="NO_PROXY=localhost,127.0.0.1,MANAGER_IP,CLUSTER_SUBNET"
+
+- **Build steps** (``pip install``, ``git clone`` inside a ``RUN``): the
+  client's ``~/.docker/config.json`` for ``root`` on the manager, whose
+  ``proxies.default`` (``httpProxy``, ``httpsProxy``, ``noProxy``) Docker
+  passes to every build as build arguments.
+- **Dataset downloads** (``graflag_data`` over SSH): ``http_proxy``,
+  ``https_proxy`` and ``no_proxy`` in ``/etc/environment``, which SSH sessions
+  read.
+
+``NO_PROXY`` must cover the manager's registry (``MANAGER_IP:5000``) and the
+cluster subnet, or workers try to pull images through the proxy. Method
+containers get no proxy: a method that downloads at run time fails there
+rather than silently using data GraFlag did not mount.
 
 Running an Experiment
 ---------------------

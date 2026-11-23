@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.models &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.models &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -157,6 +157,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.freed_bytes"><code class="docutils literal notranslate"><span class="pre">ClearReport.freed_bytes</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.errors"><code class="docutils literal notranslate"><span class="pre">ClearReport.errors</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.registry_collected"><code class="docutils literal notranslate"><span class="pre">ClearReport.registry_collected</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.disk_freed_bytes"><code class="docutils literal notranslate"><span class="pre">ClearReport.disk_freed_bytes</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.removed"><code class="docutils literal notranslate"><span class="pre">ClearReport.removed</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.models.ClearReport.to_dict"><code class="docutils literal notranslate"><span class="pre">ClearReport.to_dict()</span></code></a></li>
 </ul>
@@ -587,7 +588,7 @@ and an applied run print the same rows – the difference is <cite>removed</cite
 
 <dl class="py class">
 <dt class="sig sig-object py" id="graflag.models.ClearReport">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">ClearReport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">applied</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#graflag.models.ClearItem" title="graflag.models.ClearItem"><span class="pre">ClearItem</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freed_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry_collected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#ClearReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ClearReport" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">graflag.models.</span></span><span class="sig-name descname"><span class="pre">ClearReport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">applied</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">items</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#graflag.models.ClearItem" title="graflag.models.ClearItem"><span class="pre">ClearItem</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freed_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">errors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">registry_collected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disk_freed_bytes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/models.html#ClearReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.models.ClearReport" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>What <cite>graflag clear</cite> found, and what it did about it.</p>
 <dl class="py attribute">
@@ -604,9 +605,11 @@ and an applied run print the same rows – the difference is <cite>removed</cite
 <dl class="py attribute">
 <dt class="sig sig-object py" id="graflag.models.ClearReport.freed_bytes">
 <span class="sig-name descname"><span class="pre">freed_bytes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></span><a class="headerlink" href="#graflag.models.ClearReport.freed_bytes" title="Link to this definition"></a></dt>
-<dd><p>Bytes actually reclaimed. 0 on a dry run; on an applied run this is
-the sum over removed items, which for the registry counts only what a
-garbage collection actually freed, not the manifests deleted before it.</p>
+<dd><p>The sum of the removed items’ sizes. 0 on a dry run. For the
+registry it counts only what a garbage collection freed, not the
+manifests deleted before it; for images it is an upper bound, since an
+image’s size includes layers shared with images that remain – see
+disk_freed_bytes for what the disk gained.</p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -626,6 +629,16 @@ item must not abort the sweep or fail the caller.</p>
 <span class="sig-name descname"><span class="pre">registry_collected</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></span><a class="headerlink" href="#graflag.models.ClearReport.registry_collected" title="Link to this definition"></a></dt>
 <dd><p>True when registry blobs were collected, which needs the registry
 stopped – see <cite>core.clear</cite>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.models.ClearReport.disk_freed_bytes">
+<span class="sig-name descname"><span class="pre">disk_freed_bytes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#graflag.models.ClearReport.disk_freed_bytes" title="Link to this definition"></a></dt>
+<dd><p>Change in free space on the manager’s Docker disk across the apply,
+measured with df before and after, or None when it was not measured.
+freed_bytes adds up item sizes, and an image’s size includes base
+layers it shares with images that stay: removing six method images
+listed 16.7 GB and freed 8 GB. This is the number that was freed.</p>
 </dd></dl>
 
 <dl class="py property">

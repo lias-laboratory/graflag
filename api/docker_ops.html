@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.docker_ops &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.docker_ops &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
@@ -89,6 +89,8 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.COMMAND"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.COMMAND</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.MONITOR_INTERVAL"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.MONITOR_INTERVAL</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.GRAFLAG_PARAMS"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.GRAFLAG_PARAMS</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.GRAFLAG_NODE"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.GRAFLAG_NODE</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.NVIDIA_VISIBLE_DEVICES"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.NVIDIA_VISIBLE_DEVICES</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.ReservedEnvVars.get_names"><code class="docutils literal notranslate"><span class="pre">ReservedEnvVars.get_names()</span></code></a></li>
 </ul>
 </li>
@@ -117,6 +119,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.wait_for_service"><code class="docutils literal notranslate"><span class="pre">DockerManager.wait_for_service()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.is_service_failed"><code class="docutils literal notranslate"><span class="pre">DockerManager.is_service_failed()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.get_cluster_status"><code class="docutils literal notranslate"><span class="pre">DockerManager.get_cluster_status()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#graflag.docker_ops.DockerManager.record_placement"><code class="docutils literal notranslate"><span class="pre">DockerManager.record_placement()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -279,6 +282,16 @@ named by <code class="docutils literal notranslate"><span class="pre">IMAGE=</sp
 <span class="sig-name descname"><span class="pre">GRAFLAG_PARAMS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'GRAFLAG_PARAMS'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.GRAFLAG_PARAMS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.GRAFLAG_NODE">
+<span class="sig-name descname"><span class="pre">GRAFLAG_NODE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'GRAFLAG_NODE'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.GRAFLAG_NODE" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.NVIDIA_VISIBLE_DEVICES">
+<span class="sig-name descname"><span class="pre">NVIDIA_VISIBLE_DEVICES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'NVIDIA_VISIBLE_DEVICES'</span></span><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.NVIDIA_VISIBLE_DEVICES" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.docker_ops.ReservedEnvVars.get_names">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">get_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/graflag/docker_ops.html#ReservedEnvVars.get_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.ReservedEnvVars.get_names" title="Link to this definition"></a></dt>
@@ -344,7 +357,7 @@ AttributeError would surface as noise during garbage collection.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.build_method_image">
-<span class="sig-name descname"><span class="pre">build_method_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.build_method_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.build_method_image" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">build_method_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'latest'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method_env</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">live_log</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.build_method_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.build_method_image" title="Link to this definition"></a></dt>
 <dd><p>Build method Docker image and push to local registry.</p>
 <p>Uses SSH because the build context resides on the remote host.</p>
 <p>Every <code class="docutils literal notranslate"><span class="pre">BUILD_ARG_KEYS</span></code> entry the method’s <code class="docutils literal notranslate"><span class="pre">.env</span></code> defines is passed
@@ -363,6 +376,10 @@ intermediate containers even when it fails. Without it a
 failed build keeps its last container, and that container
 holds every layer the build had produced: 12.8 GB on the
 manager after one failed <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code> of the rare method.</p></li>
+<li><p><strong>live_log</strong> – A path on the manager to write the build’s output to
+<em>while it runs</em>, so a ten-minute build can be watched with
+<code class="docutils literal notranslate"><span class="pre">tail</span> <span class="pre">-f</span></code> instead of appearing all at once when it ends.
+The caller still writes the complete log afterwards.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -494,6 +511,17 @@ status.json is absent or unreadable – the runner’s own status wins.</p>
 <dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.get_cluster_status">
 <span class="sig-name descname"><span class="pre">get_cluster_status</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.get_cluster_status"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.get_cluster_status" title="Link to this definition"></a></dt>
 <dd><p>Get Docker Swarm cluster status.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="graflag.docker_ops.DockerManager.record_placement">
+<span class="sig-name descname"><span class="pre">record_placement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">exp_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/graflag/docker_ops.html#DockerManager.record_placement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#graflag.docker_ops.DockerManager.record_placement" title="Link to this definition"></a></dt>
+<dd><p>Rewrite service_details.json’s <code class="docutils literal notranslate"><span class="pre">worker</span></code> with the task’s final node.</p>
+<p>Called by run() once the task has ended and before its service is
+removed, which is the last moment the placement can be read. The
+creation-time record keeps everything else it had.</p>
+<p>Returns the worker block written, or None when there was nothing to
+record. Never raises: a run that finished must not fail on this.</p>
 </dd></dl>
 
 </dd></dl>

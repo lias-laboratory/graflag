@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GraFlag Architecture &mdash; GraFlag 1.2.0 documentation</title>
+  <title>GraFlag Architecture &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=6efca38a"></script>
+      <script src="_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -334,7 +334,7 @@
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">--build</span></code>: Build (or rebuild) the Docker image before deploying; <code class="docutils literal notranslate"><span class="pre">--force-rm</span></code> also removes the build’s containers when it fails.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--params</span> <span class="pre">KEY=VALUE</span></code>: Override method parameters at runtime.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code>: Deploy without a GPU reservation, and set the method’s <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> to <code class="docutils literal notranslate"><span class="pre">-1</span></code> (CPU).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--no-gpu</span></code>: Deploy without a GPU reservation, set the method’s <code class="docutils literal notranslate"><span class="pre">_GPU</span></code> to <code class="docutils literal notranslate"><span class="pre">-1</span></code> (CPU), and hide the node’s GPU from the container (<code class="docutils literal notranslate"><span class="pre">NVIDIA_VISIBLE_DEVICES=void</span></code>). Without that, the default NVIDIA runtime exposed the GPU Swarm had reserved for another task, so a CPU run could use it and its <code class="docutils literal notranslate"><span class="pre">peak_gpu_mb</span></code> measured the other task.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--keep-service</span></code>: Leave the finished service in place instead of removing it.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--from-config</span> <span class="pre">CONFIG_FILE</span></code>: Replay an experiment from a saved <code class="docutils literal notranslate"><span class="pre">service_config.json</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--tag</span> <span class="pre">TAG</span></code>: Image tag (default <code class="docutils literal notranslate"><span class="pre">latest</span></code>).</p></li>
@@ -440,6 +440,16 @@
 <td><p><code class="docutils literal notranslate"><span class="pre">SSH_KEY</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519</span></code></p></td>
 <td><p>Path to SSH private key</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ssh_user</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SSH_USER</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">root</span></code></p></td>
+<td><p>Account on the manager; every ssh and rsync target is <code class="docutils literal notranslate"><span class="pre">SSHManager.destination</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ssh_proxy_jump</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SSH_PROXY_JUMP</span></code></p></td>
+<td><p>(none)</p></td>
+<td><p>Jump host for every connection (<code class="docutils literal notranslate"><span class="pre">-o</span> <span class="pre">ProxyJump=</span></code>)</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">remote_shared_dir</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">SHARED_DIR</span></code></p></td>
@@ -1003,17 +1013,20 @@ line by line while <code class="docutils literal notranslate"><span class="pre">
 plain <code class="docutils literal notranslate"><span class="pre">cat</span></code> captured only the opening <code class="docutils literal notranslate"><span class="pre">{</span></code>, so every runner-written status was
 silently discarded and finished experiments reported <code class="docutils literal notranslate"><span class="pre">running</span></code> indefinitely.</p>
 <ol class="arabic simple">
-<li><p>Terminal states (<code class="docutils literal notranslate"><span class="pre">completed</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>) from <code class="docutils literal notranslate"><span class="pre">status.json</span></code> are definitive.</p></li>
+<li><p>Terminal states (<code class="docutils literal notranslate"><span class="pre">completed</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code>, <code class="docutils literal notranslate"><span class="pre">stopped</span></code>) from <code class="docutils literal notranslate"><span class="pre">status.json</span></code> are definitive.</p></li>
 <li><p>Otherwise, if the Docker task has failed, the status is <code class="docutils literal notranslate"><span class="pre">failed</span></code>.</p></li>
-<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">building</span></code>: <code class="docutils literal notranslate"><span class="pre">running</span></code> once the service exists; <code class="docutils literal notranslate"><span class="pre">failed</span></code> if the service never appeared and <code class="docutils literal notranslate"><span class="pre">build.log</span></code> is present; <code class="docutils literal notranslate"><span class="pre">building</span></code> otherwise.</p></li>
-<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">running</span></code> but no Docker service exists, the status is <code class="docutils literal notranslate"><span class="pre">stopped</span></code>.</p></li>
-<li><p>If there is no usable <code class="docutils literal notranslate"><span class="pre">status.json</span></code> but the Docker service is present, the status is <code class="docutils literal notranslate"><span class="pre">running</span></code>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">running</span></code>: <code class="docutils literal notranslate"><span class="pre">running</span></code> while the service exists, <code class="docutils literal notranslate"><span class="pre">stopped</span></code> once it is gone.</p></li>
+<li><p>If the service exists and the runner has not written <code class="docutils literal notranslate"><span class="pre">running</span></code>, the status is <code class="docutils literal notranslate"><span class="pre">queued</span></code>: the task is waiting for a node (for a GPU, on a busy cluster) or its container is starting. A <code class="docutils literal notranslate"><span class="pre">building</span></code> status.json reads the same way here, because the service is created only after the image has been pushed.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">status.json</span></code> says <code class="docutils literal notranslate"><span class="pre">building</span></code> and there is no service: <code class="docutils literal notranslate"><span class="pre">building</span></code> while the build runs, <code class="docutils literal notranslate"><span class="pre">failed</span></code> once <code class="docutils literal notranslate"><span class="pre">build.log</span></code> holds its <code class="docutils literal notranslate"><span class="pre">===</span> <span class="pre">PUSH:</span></code> section – the build is over and the service is gone or was never created. <code class="docutils literal notranslate"><span class="pre">build.log</span></code> is written live from the build’s first line, so its existence alone says nothing.</p></li>
 <li><p>Experiments without a status that have <code class="docutils literal notranslate"><span class="pre">results.json</span></code> or an evaluation are <code class="docutils literal notranslate"><span class="pre">completed</span></code>.</p></li>
 <li><p>All other cases are <code class="docutils literal notranslate"><span class="pre">unknown</span></code>.</p></li>
 </ol>
+<p>Of these, only <code class="docutils literal notranslate"><span class="pre">completed</span></code>, <code class="docutils literal notranslate"><span class="pre">failed</span></code> and <code class="docutils literal notranslate"><span class="pre">stopped</span></code> are terminal: <code class="docutils literal notranslate"><span class="pre">run()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">wait_for_experiment</span></code> stop waiting there, and <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">cleanup</span></code> touches
+nothing else.</p>
 <p><code class="docutils literal notranslate"><span class="pre">status.json</span></code> is written at multiple points:</p>
 <ul class="simple">
-<li><p>By <code class="docutils literal notranslate"><span class="pre">core.py</span></code> when the build starts (<code class="docutils literal notranslate"><span class="pre">building</span></code>) and if the build fails.</p></li>
+<li><p>By <code class="docutils literal notranslate"><span class="pre">core.py</span></code> when the build starts (<code class="docutils literal notranslate"><span class="pre">building</span></code>), if the build fails or the service cannot be created (<code class="docutils literal notranslate"><span class="pre">failed</span></code>), and by <code class="docutils literal notranslate"><span class="pre">graflag</span> <span class="pre">stop</span></code> for a run whose method never started (<code class="docutils literal notranslate"><span class="pre">stopped</span></code>); a runner’s own status is never overwritten.</p></li>
 <li><p>By <code class="docutils literal notranslate"><span class="pre">graflag_runner</span></code> when execution starts (<code class="docutils literal notranslate"><span class="pre">running</span></code>), and when it finishes (<code class="docutils literal notranslate"><span class="pre">completed</span></code> or <code class="docutils literal notranslate"><span class="pre">failed</span></code>), including execution time, resource summary, and exit code.</p></li>
 </ul>
 </section>

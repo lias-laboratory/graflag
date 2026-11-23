@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>graflag.verify &mdash; GraFlag 1.2.0 documentation</title>
+  <title>graflag.verify &mdash; GraFlag 1.3.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../_static/documentation_options.js?v=1f29e9d3"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -216,6 +216,49 @@
     <span class="k">return</span> <span class="n">report</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_rank_auc</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ROC AUC by average ranks (ties count half), or None for one class.</span>
+
+<span class="sd">    The same statistic as sklearn&#39;s roc_auc_score; written out because the</span>
+<span class="sd">    probe runs on the manager&#39;s own Python, which need not have numpy.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_pos</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">labels</span> <span class="k">if</span> <span class="n">t</span><span class="p">)</span>
+    <span class="n">n_neg</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">-</span> <span class="n">n_pos</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">n_pos</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">n_neg</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">scores</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">ranks</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">):</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">while</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">order</span><span class="p">)</span> <span class="ow">and</span> <span class="n">scores</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span> <span class="o">==</span> <span class="n">scores</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">i</span><span class="p">]]:</span>
+            <span class="n">j</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">ranks</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">j</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="mf">1.0</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">pos_rank_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">ranks</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span> <span class="k">if</span> <span class="n">t</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">pos_rank_sum</span> <span class="o">-</span> <span class="n">n_pos</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n_pos</span> <span class="o">*</span> <span class="n">n_neg</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_batch_mean_auc</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mean AUC over consecutive batches of the published scores.</span>
+
+<span class="sd">    For a method whose own number is that statistic (GADY, after upstream&#39;s</span>
+<span class="sd">    eval_edge_prediction): batches in published order, a batch holding one</span>
+<span class="sd">    class skipped, as upstream skips it. None when no batch has both classes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">scores</span><span class="p">,</span> <span class="n">truth</span> <span class="o">=</span> <span class="n">_flatten</span><span class="p">(</span><span class="n">scores</span><span class="p">),</span> <span class="n">_flatten</span><span class="p">(</span><span class="n">truth</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">truth</span><span class="p">)</span> <span class="ow">or</span> <span class="n">batch_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">aucs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">scores</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">):</span>
+        <span class="n">auc</span> <span class="o">=</span> <span class="n">_rank_auc</span><span class="p">(</span><span class="n">scores</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">],</span>
+                        <span class="p">[</span><span class="nb">bool</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">truth</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">]])</span>
+        <span class="k">if</span> <span class="n">auc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">aucs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">auc</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">aucs</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">aucs</span><span class="p">)</span> <span class="k">if</span> <span class="n">aucs</span> <span class="k">else</span> <span class="kc">None</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_collect_aucs</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Every `*auc*` number anywhere in the method&#39;s summary, by path.&quot;&quot;&quot;</span>
     <span class="n">found</span> <span class="o">=</span> <span class="p">{}</span>
@@ -274,6 +317,12 @@
     <span class="n">out</span><span class="p">[</span><span class="s2">&quot;declared_samples&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;scored_samples&quot;</span><span class="p">)</span>
     <span class="n">out</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">_summarise_pairs</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scores&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[],</span>
                                 <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ground_truth&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]))</span>
+    <span class="n">batch_size</span> <span class="o">=</span> <span class="n">_find_key</span><span class="p">(</span><span class="n">summary</span><span class="p">,</span> <span class="s2">&quot;auc_batch_size&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;auc_batch_size&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">batch_size</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">&quot;batch_mean_auc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_batch_mean_auc</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scores&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[],</span>
+                                                <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ground_truth&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[],</span>
+                                                <span class="n">batch_size</span><span class="p">)</span>
 
     <span class="n">evaluation</span> <span class="o">=</span> <span class="n">_load</span><span class="p">(</span><span class="s2">&quot;eval/evaluation.json&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">evaluation</span> <span class="ow">and</span> <span class="s2">&quot;__unreadable__&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">evaluation</span><span class="p">:</span>
@@ -301,20 +350,28 @@
     <span class="k">return</span> <span class="kc">None</span>
 
 
-<span class="n">REMOTE_HELPERS</span> <span class="o">=</span> <span class="p">(</span><span class="n">_flatten</span><span class="p">,</span> <span class="n">_is_finite</span><span class="p">,</span> <span class="n">_summarise_pairs</span><span class="p">,</span> <span class="n">_collect_aucs</span><span class="p">,</span>
-                  <span class="n">_find_key</span><span class="p">,</span> <span class="n">_probe</span><span class="p">)</span>
+<span class="n">REMOTE_HELPERS</span> <span class="o">=</span> <span class="p">(</span><span class="n">_flatten</span><span class="p">,</span> <span class="n">_is_finite</span><span class="p">,</span> <span class="n">_summarise_pairs</span><span class="p">,</span> <span class="n">_rank_auc</span><span class="p">,</span>
+                  <span class="n">_batch_mean_auc</span><span class="p">,</span> <span class="n">_collect_aucs</span><span class="p">,</span> <span class="n">_find_key</span><span class="p">,</span> <span class="n">_probe</span><span class="p">)</span>
+
+<span class="c1"># Read once, at import. inspect.getsource() reads this file as it is on disk</span>
+<span class="c1"># when called, at the line numbers the loaded functions had, so a process that</span>
+<span class="c1"># outlives an edit to the file sends the manager lines that are not the code it</span>
+<span class="c1"># runs. It happened: a validation campaign that had imported this module hours</span>
+<span class="c1"># earlier (2026-11-17) sent a probe without _probe&#39;s definition, and the</span>
+<span class="c1"># manager answered `NameError: name &#39;_probe&#39; is not defined`. `graflag gui` and</span>
+<span class="c1"># `graflag mcp` on an editable install are as long-lived.</span>
+<span class="n">_REMOTE_BODY</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsource</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">REMOTE_HELPERS</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="remote_script">
 <a class="viewcode-back" href="../../api/verify.html#graflag.verify.remote_script">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">remote_script</span><span class="p">(</span><span class="n">exp_dir</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The probe, as a self-contained program to run on the manager.&quot;&quot;&quot;</span>
-    <span class="n">body</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsource</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">REMOTE_HELPERS</span><span class="p">)</span>
     <span class="k">return</span> <span class="p">(</span>
         <span class="s2">&quot;python3 - &lt;&lt;&#39;GRAFLAG_PROBE_EOF&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="sa">f</span><span class="s2">&quot;SENTINEL_UNKNOWN = </span><span class="si">{</span><span class="n">SENTINEL_UNKNOWN</span><span class="si">!r}</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="sa">f</span><span class="s2">&quot;SENTINEL_INACTIVE = </span><span class="si">{</span><span class="n">SENTINEL_INACTIVE</span><span class="si">!r}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">body</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">_REMOTE_BODY</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
         <span class="sa">f</span><span class="s2">&quot;_probe(</span><span class="si">{</span><span class="n">exp_dir</span><span class="si">!r}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="s2">&quot;GRAFLAG_PROBE_EOF</span><span class="se">\n</span><span class="s2">&quot;</span>
     <span class="p">)</span></div>
@@ -415,9 +472,22 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">agreeing</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">reported</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
                     <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">evaluated</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">AUC_TOLERANCE</span><span class="p">}</span>
+        <span class="c1"># A method that declares its AUC a mean over batches is checked</span>
+        <span class="c1"># against that statistic, recomputed here from the published scores:</span>
+        <span class="c1"># it differs from the evaluator&#39;s single AUC by construction, so the</span>
+        <span class="c1"># comparison above cannot settle it either way.</span>
+        <span class="n">batch_auc</span> <span class="o">=</span> <span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;batch_mean_auc&quot;</span><span class="p">)</span>
+        <span class="n">batch_agreeing</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">batch_auc</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">reported</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">batch_auc</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">AUC_TOLERANCE</span><span class="p">}</span>
         <span class="k">if</span> <span class="n">agreeing</span><span class="p">:</span>
             <span class="n">add</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;evaluator AUC </span><span class="si">{</span><span class="n">evaluated</span><span class="si">}</span><span class="s2"> matches the method&#39;s &quot;</span>
                       <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">agreeing</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">batch_agreeing</span><span class="p">:</span>
+            <span class="n">add</span><span class="p">(</span><span class="s2">&quot;OK&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;the method&#39;s </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">batch_agreeing</span><span class="p">))</span><span class="si">}</span><span class="s2"> is a mean &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;over batches of </span><span class="si">{</span><span class="n">probe</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;auc_batch_size&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">, and &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;recomputing it from the published scores gives &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">batch_auc</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">; the evaluator&#39;s single AUC over all &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;of them is </span><span class="si">{</span><span class="n">evaluated</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">listed</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">reported</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
             <span class="n">add</span><span class="p">(</span><span class="s2">&quot;ERROR&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;the evaluator scores </span><span class="si">{</span><span class="n">evaluated</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> and the method &quot;</span>

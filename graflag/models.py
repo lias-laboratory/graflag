@@ -63,7 +63,7 @@ class ExperimentInfo:
     method: str
     dataset: str
     timestamp: str
-    status: str  # "building", "running", "completed", "failed", "stopped", "unknown"
+    status: str  # "building", "queued", "running", "completed", "failed", "stopped", "unknown"
     has_results: bool = False
     has_evaluation: bool = False
     results_path: Optional[str] = None
@@ -140,9 +140,11 @@ class ClearReport:
     #: False for a dry run -- nothing was removed.
     applied: bool
     items: List[ClearItem] = field(default_factory=list)
-    #: Bytes actually reclaimed. 0 on a dry run; on an applied run this is
-    #: the sum over removed items, which for the registry counts only what a
-    #: garbage collection actually freed, not the manifests deleted before it.
+    #: The sum of the removed items' sizes. 0 on a dry run. For the
+    #: registry it counts only what a garbage collection freed, not the
+    #: manifests deleted before it; for images it is an upper bound, since an
+    #: image's size includes layers shared with images that remain -- see
+    #: disk_freed_bytes for what the disk gained.
     freed_bytes: int = 0
     #: Non-fatal problems. Clearing is housekeeping: a failure to remove one
     #: item must not abort the sweep or fail the caller.
@@ -150,6 +152,12 @@ class ClearReport:
     #: True when registry blobs were collected, which needs the registry
     #: stopped -- see `core.clear`.
     registry_collected: bool = False
+    #: Change in free space on the manager's Docker disk across the apply,
+    #: measured with df before and after, or None when it was not measured.
+    #: freed_bytes adds up item sizes, and an image's size includes base
+    #: layers it shares with images that stay: removing six method images
+    #: listed 16.7 GB and freed 8 GB. This is the number that was freed.
+    disk_freed_bytes: Optional[int] = None
 
     @property
     def removed(self) -> List[ClearItem]:

@@ -12,6 +12,7 @@ background thread and left the finished service behind. The last classes here
 pin the reconnect onto every call a run makes.
 """
 
+import itertools
 import json
 import shutil
 import subprocess
@@ -19,6 +20,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 import docker
@@ -28,11 +30,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from graflag.api import GraFlagAPI  # noqa: E402
 from graflag.core import GraFlag  # noqa: E402
+from graflag.errors import ManagerUnreachable  # noqa: E402
 from graflag.docker_ops import DockerManager  # noqa: E402
 from graflag.models import ExperimentInfo  # noqa: E402
 from graflag.ssh import SSHManager  # noqa: E402
 
 EXP = "exp__m__d__20260924_120000"
+
+
+def core_time(monotonic):
+    """Give graflag.core a clock of the test's own, and a sleep that returns.
+
+    Only the name `time` inside graflag.core is replaced. Patching
+    "graflag.core.time.monotonic" would patch the time module itself, and with
+    it the clock every thread's lock and condition timeouts read. core uses
+    only sleep() and monotonic().
+    """
+    return mock.patch("graflag.core.time",
+                      SimpleNamespace(sleep=mock.Mock(), monotonic=monotonic))
 
 
 class QuietFixture(unittest.TestCase):
@@ -159,6 +174,90 @@ class WaitForExperiment(QuietFixture):
     def test_timeout_returns_the_current_state(self):
         result = self.wait(self.info("running"), timeout=0)
         self.assertEqual(result.status, "running")
+
+
+class WaitThroughALostManager(QuietFixture):
+    """A dropped ssh raises ManagerUnreachable; the run it watches goes on.
+
+    On a three-node GPU cluster (2026-11-17) one broken ssh connection ended the
+    wait on two CPU runs nine hours in, and the campaign recorded both as
+    failed while their services were still running. The wait used to retry a
+    probe that returned None, but ssh's own failures stopped returning None
+    when they began to raise, so the retry no longer covered them.
+    """
+
+    info = WaitForExperiment.info
+
+    def setUp(self):
+        super().setUp()
+        quiet = mock.patch("graflag.core.logger")
+        self.logger = quiet.start()
+        self.addCleanup(quiet.stop)
+
+    def wait(self, *probes, **kwargs):
+        return self.wait_clocked(iter(probes), step=1, **kwargs)[0]
+
+    def lost(self):
+        return ManagerUnreachable("Cannot reach the manager as root@10.0.0.1")
+
+    #: A wait that has not ended after this many probes never will. The cap
+    #: is what keeps a regression a failing test: uncapped, a wait that
+    #: retries forever grew the mocks' call records until the machine
+    #: running the suite ran out of memory, twice.
+    MAX_PROBES = 1000
+
+    def wait_clocked(self, probes, step, **kwargs):
+        calls = []
+
+        def probe(name):
+            calls.append(name)
+            if len(calls) > self.MAX_PROBES:
+                raise AssertionError(
+                    f"still waiting after {self.MAX_PROBES} probes")
+            item = next(probes)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        clock = itertools.count(0, step)
+        with mock.patch.object(self.gf, "_get_experiment_info", side_effect=probe), \
+                core_time(monotonic=lambda: next(clock)):
+            try:
+                return self.gf.wait_for_experiment(EXP, **kwargs), calls
+            except ManagerUnreachable as exc:
+                return exc, calls
+
+    def test_a_dropped_connection_does_not_end_the_wait(self):
+        result = self.wait(self.info("running"), self.lost(), self.lost(),
+                           self.info("completed"))
+        self.assertEqual(result.status, "completed")
+
+    def test_an_unreachable_probe_is_not_a_missing_directory(self):
+        result = self.wait(None, None, self.lost(), self.lost(), self.lost(),
+                           self.info("completed"))
+        self.assertEqual(result.status, "completed")
+
+    def test_it_says_so_once_per_outage(self):
+        self.wait(self.lost(), self.lost(), self.info("running"), self.lost(),
+                  self.info("completed"))
+        self.assertEqual(self.logger.warning.call_count, 2)
+
+    def test_a_manager_that_stays_lost_is_raised_in_the_end(self):
+        forever = iter(lambda: self.lost(), None)
+        result, calls = self.wait_clocked(forever, step=60)
+        self.assertIsInstance(result, ManagerUnreachable)
+        # about WAIT_UNREACHABLE_S of retries, not one probe and not forever
+        self.assertGreater(len(calls), 5)
+        self.assertLess(len(calls), GraFlag.WAIT_UNREACHABLE_S // 60 + 5)
+
+    def test_a_timeout_still_bounds_the_wait(self):
+        forever = iter(lambda: self.lost(), None)
+        result, calls = self.wait_clocked(forever, step=10, timeout=60)
+        self.assertIsInstance(result, ManagerUnreachable)
+        self.assertLess(len(calls), 10)
+
+    def test_the_grace_period_is_minutes(self):
+        self.assertGreaterEqual(GraFlag.WAIT_UNREACHABLE_S, 300)
 
 
 class TheApiWaitsQuietly(unittest.TestCase):

@@ -137,7 +137,7 @@ Entry point for all user-facing commands. Uses `argparse` with the following com
 Key flags for `run`:
 - `--build`: Build (or rebuild) the Docker image before deploying; `--force-rm` also removes the build's containers when it fails.
 - `--params KEY=VALUE`: Override method parameters at runtime.
-- `--no-gpu`: Deploy without a GPU reservation, and set the method's `_GPU` to `-1` (CPU).
+- `--no-gpu`: Deploy without a GPU reservation, set the method's `_GPU` to `-1` (CPU), and hide the node's GPU from the container (`NVIDIA_VISIBLE_DEVICES=void`). Without that, the default NVIDIA runtime exposed the GPU Swarm had reserved for another task, so a CPU run could use it and its `peak_gpu_mb` measured the other task.
 - `--keep-service`: Leave the finished service in place instead of removing it.
 - `--from-config CONFIG_FILE`: Replay an experiment from a saved `service_config.json`.
 - `--tag TAG`: Image tag (default `latest`).
@@ -201,6 +201,8 @@ All dataclasses implement `to_dict()` for JSON serialization.
 | `manager_ip`       | `MANAGER_IP`  | (required)           | IP address of the Swarm manager node |
 | `ssh_port`         | `SSH_PORT`    | `22`                 | SSH port on the manager              |
 | `ssh_key`          | `SSH_KEY`     | `~/.ssh/id_ed25519`  | Path to SSH private key              |
+| `ssh_user`         | `SSH_USER`    | `root`               | Account on the manager; every ssh and rsync target is `SSHManager.destination` |
+| `ssh_proxy_jump`   | `SSH_PROXY_JUMP` | (none)            | Jump host for every connection (`-o ProxyJump=`) |
 | `remote_shared_dir`| `SHARED_DIR`  | `/shared`            | Path to shared storage on remote     |
 | `nfs_port`         | `NFS_PORT`    | `2049`               | NFS port for mounting                |
 | `hosts_file`       | `HOSTS_FILE`  | `hosts.yml`          | Path to hosts.yml with worker IPs    |
@@ -681,16 +683,20 @@ line by line while `graflag_runner` writes the file indented -- reading it with 
 plain `cat` captured only the opening `{`, so every runner-written status was
 silently discarded and finished experiments reported `running` indefinitely.
 
-1. Terminal states (`completed`, `failed`) from `status.json` are definitive.
+1. Terminal states (`completed`, `failed`, `stopped`) from `status.json` are definitive.
 2. Otherwise, if the Docker task has failed, the status is `failed`.
-3. If `status.json` says `building`: `running` once the service exists; `failed` if the service never appeared and `build.log` is present; `building` otherwise.
-4. If `status.json` says `running` but no Docker service exists, the status is `stopped`.
-5. If there is no usable `status.json` but the Docker service is present, the status is `running`.
+3. If `status.json` says `running`: `running` while the service exists, `stopped` once it is gone.
+4. If the service exists and the runner has not written `running`, the status is `queued`: the task is waiting for a node (for a GPU, on a busy cluster) or its container is starting. A `building` status.json reads the same way here, because the service is created only after the image has been pushed.
+5. If `status.json` says `building` and there is no service: `building` while the build runs, `failed` once `build.log` holds its `=== PUSH:` section -- the build is over and the service is gone or was never created. `build.log` is written live from the build's first line, so its existence alone says nothing.
 6. Experiments without a status that have `results.json` or an evaluation are `completed`.
 7. All other cases are `unknown`.
 
+Of these, only `completed`, `failed` and `stopped` are terminal: `run()` and
+`wait_for_experiment` stop waiting there, and `graflag cleanup` touches
+nothing else.
+
 `status.json` is written at multiple points:
-- By `core.py` when the build starts (`building`) and if the build fails.
+- By `core.py` when the build starts (`building`), if the build fails or the service cannot be created (`failed`), and by `graflag stop` for a run whose method never started (`stopped`); a runner's own status is never overwritten.
 - By `graflag_runner` when execution starts (`running`), and when it finishes (`completed` or `failed`), including execution time, resource summary, and exit code.
 
 ---

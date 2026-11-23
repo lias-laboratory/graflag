@@ -12,7 +12,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from graflag.docker_ops import DockerManager  # noqa: E402
+from graflag.docker_ops import DockerManager, ReservedEnvVars  # noqa: E402
 
 
 def record_env_contents(method_env, user_params):
@@ -139,6 +139,20 @@ class NoGpuReachesTheMethod(unittest.TestCase):
 
     def test_method_without_a_gpu_index_is_unaffected(self):
         self.assertNotIn("_GPU", self._env(False, {}, declared=None))
+
+    def test_a_service_without_a_gpu_cannot_see_one(self):
+        """Without a reservation the default NVIDIA runtime still exposed the
+        node's GPU, so a --no-gpu run could use the device Swarm had given
+        another task, and its peak_gpu_mb measured that task."""
+        self.assertEqual(self._env(False, {})["NVIDIA_VISIBLE_DEVICES"], "void")
+        self.assertEqual(self._env(False, {}, declared=None)["NVIDIA_VISIBLE_DEVICES"],
+                         "void")
+
+    def test_a_gpu_service_gets_its_device_from_the_reservation(self):
+        self.assertNotIn("NVIDIA_VISIBLE_DEVICES", self._env(True, {}))
+
+    def test_it_cannot_be_overridden_as_a_parameter(self):
+        self.assertIn("NVIDIA_VISIBLE_DEVICES", ReservedEnvVars.get_names())
 
 
 class GpuReservation(unittest.TestCase):

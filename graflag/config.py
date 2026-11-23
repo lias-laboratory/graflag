@@ -172,6 +172,16 @@ class GraflagConfig:
         return self.get("SSH_KEY")
 
     @property
+    def ssh_user(self) -> str:
+        """The manager account GraFlag connects as (``SSH_USER``, default root)."""
+        return self.get("SSH_USER") or "root"
+
+    @property
+    def ssh_proxy_jump(self) -> Optional[str]:
+        """A jump host for every connection (``SSH_PROXY_JUMP``), or None."""
+        return self.get("SSH_PROXY_JUMP") or None
+
+    @property
     def nfs_port(self) -> str:
         return self.get("NFS_PORT", "2049")
 

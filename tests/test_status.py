@@ -22,6 +22,11 @@ from graflag.core import GraFlag  # noqa: E402
 
 EXP_NAME = "exp__taddy__uci__20260101_000000"
 
+# What core.py leaves once a build and push have succeeded; the live log
+# written during the build has no PUSH section yet.
+LIVE_BUILD_LOG = "SOURCE_REF=abc\n=== BUILD: taddy:latest ===\n#5 [2/9] RUN pip install\n"
+FINISHED_BUILD_LOG = LIVE_BUILD_LOG + "\n=== PUSH: 10.0.0.1:5000/taddy:latest ===\nlatest: digest: sha256:00\n"
+
 
 class StatusFixture(unittest.TestCase):
     """A real experiment directory, probed through the real remote command."""
@@ -85,8 +90,97 @@ class RunnerStatusIsRead(StatusFixture):
     def test_orchestrator_written_status_still_parses(self):
         """core.py writes single-line JSON; both formats must work."""
         self.write_orchestrator_status(status="building", timestamp="2026-01-01")
-        (self.exp_dir / "build.log").write_text("step 1")
+        (self.exp_dir / "build.log").write_text(FINISHED_BUILD_LOG)
         self.assertEqual(self.info(running=[]).status, "failed")
+
+
+class AQueuedRunIsQueued(StatusFixture):
+    """Between the push and the runner's first write, a run is waiting.
+
+    On a busy cluster that is the swarm holding the task until a GPU frees
+    up, which took 26 minutes for ad_gcl on a three-node GPU cluster -- and the
+    listing said "building" throughout, though the image had been pushed. A
+    run without --build said "running" while it waited.
+    """
+
+    def test_a_built_run_waiting_for_a_node_is_queued(self):
+        self.write_orchestrator_status(status="building", timestamp="2026-01-01")
+        (self.exp_dir / "build.log").write_text(FINISHED_BUILD_LOG)
+        self.assertEqual(self.info(running=[EXP_NAME]).status, "queued")
+
+    def test_a_run_without_build_waiting_for_a_node_is_queued(self):
+        self.assertEqual(self.info(running=[EXP_NAME]).status, "queued")
+
+    def test_once_the_runner_starts_it_is_running(self):
+        self.write_runner_status(status="running")
+        self.assertEqual(self.info(running=[EXP_NAME]).status, "running")
+
+    def test_queued_is_not_terminal(self):
+        self.assertNotIn("queued", GraFlag.TERMINAL_STATUSES)
+
+
+class ABuildInProgressIsBuilding(StatusFixture):
+    """build.log is written live, so its existence no longer means "built".
+
+    It read as "build finished, service never created", so every build in
+    progress was listed as failed from its first second.
+    """
+
+    def test_a_live_build_log_is_building(self):
+        self.write_orchestrator_status(status="building", timestamp="2026-01-01")
+        (self.exp_dir / "build.log").write_text(LIVE_BUILD_LOG)
+        self.assertEqual(self.info(running=[]).status, "building")
+
+    def test_no_build_log_yet_is_building(self):
+        self.write_orchestrator_status(status="building", timestamp="2026-01-01")
+        self.assertEqual(self.info(running=[]).status, "building")
+
+    def test_a_finished_build_with_no_service_is_failed(self):
+        self.write_orchestrator_status(status="building", timestamp="2026-01-01")
+        (self.exp_dir / "build.log").write_text(FINISHED_BUILD_LOG)
+        self.assertEqual(self.info(running=[]).status, "failed")
+
+    def test_the_listing_agrees(self):
+        self.write_orchestrator_status(status="building", timestamp="2026-01-01")
+        (self.exp_dir / "build.log").write_text(LIVE_BUILD_LOG)
+        self.gf.docker.get_service_names.return_value = set()
+        [info] = self.gf.list_experiments()
+        self.assertEqual(info.status, "building")
+        (self.exp_dir / "build.log").write_text(FINISHED_BUILD_LOG)
+        self.gf.docker.get_service_names.return_value = {EXP_NAME}
+        [info] = self.gf.list_experiments()
+        self.assertEqual(info.status, "queued")
+
+
+class StoppingAQueuedRun(StatusFixture):
+    """stop() on a run that never started records it as stopped."""
+
+    def stop(self):
+        self.gf.docker.stop_service.return_value = None
+        self.gf.stop(EXP_NAME)
+
+    def test_a_queued_build_is_stopped_not_failed(self):
+        self.write_orchestrator_status(status="building", timestamp="2026-01-01")
+        (self.exp_dir / "build.log").write_text(FINISHED_BUILD_LOG)
+        self.stop()
+        self.assertEqual(self.info(running=[]).status, "stopped")
+
+    def test_a_queued_run_without_build_is_stopped_not_unknown(self):
+        self.stop()
+        self.assertEqual(self.info(running=[]).status, "stopped")
+
+    def test_a_runner_status_is_never_overwritten(self):
+        for status in ("running", "completed", "failed"):
+            with self.subTest(status=status):
+                self.write_runner_status(status=status, exit_code=0)
+                self.stop()
+                saved = json.loads((self.exp_dir / "status.json").read_text())
+                self.assertEqual(saved["status"], status)
+
+    def test_nothing_is_written_when_there_was_no_service(self):
+        self.gf.docker.stop_service.side_effect = ValueError("no such service")
+        self.gf.stop(EXP_NAME)
+        self.assertFalse((self.exp_dir / "status.json").exists())
 
 
 class StatusContentIsNotInterpreted(StatusFixture):
@@ -113,8 +207,9 @@ class StatusContentIsNotInterpreted(StatusFixture):
 
 
 class DegradedStatusFiles(StatusFixture):
-    def test_absent_status_falls_back_to_service_state(self):
-        self.assertEqual(self.info(running=[EXP_NAME]).status, "running")
+    def test_absent_status_with_a_service_is_queued(self):
+        """No runner status yet: the runner writes "running" as it starts."""
+        self.assertEqual(self.info(running=[EXP_NAME]).status, "queued")
 
     def test_absent_status_with_results_is_completed(self):
         (self.exp_dir / "results.json").write_text('{"scores": []}')
@@ -122,7 +217,7 @@ class DegradedStatusFiles(StatusFixture):
 
     def test_malformed_status_falls_back_rather_than_crashing(self):
         (self.exp_dir / "status.json").write_text("{not json")
-        self.assertEqual(self.info(running=[EXP_NAME]).status, "running")
+        self.assertEqual(self.info(running=[EXP_NAME]).status, "queued")
 
     def test_missing_experiment_returns_none(self):
         self.assertIsNone(

@@ -44,6 +44,7 @@ Examples:
   graflag clear --apply                            # Remove it
   graflag clear --apply --gc                       # Also reclaim registry blobs
   graflag clear --images                           # Only images and registry repos
+  graflag clear --apply --local-copies             # Also drop the manager's copies of pushed images
   graflag run -m taddy -d uci --keep-service       # Keep the service after the run
   graflag run -m taddy -d uci --build --force-rm   # A failed build leaves no container
   graflag copy -s ./data --dest datasets -r        # Copy to remote (-d is --dataset)
@@ -131,6 +132,11 @@ Examples:
         "--gc", action="store_true",
         help="For clear: also garbage-collect registry blobs, which is what "
              "reclaims the disk. Stops the registry for the duration",
+    )
+    parser.add_argument(
+        "--local-copies", action="store_true",
+        help="For clear: also remove the manager's local copy of a method image "
+             "when the registry serves the same digest and nothing uses it",
     )
     parser.add_argument("--tee", help="Save logs to file while displaying")
     parser.add_argument("--json", action="store_true",
@@ -280,6 +286,7 @@ Examples:
                 share=both or args.share,
                 images=both or args.images,
                 collect=args.gc,
+                local_copies=args.local_copies,
             ))
 
         elif args.command == "cleanup":
@@ -505,7 +512,14 @@ def _print_clear(report):
                       f"{_human_bytes(item.size_bytes):>7}  {item.reason}")
 
     if report.applied:
-        print(f"\n[OK] Freed {_human_bytes(report.freed_bytes)}")
+        if report.disk_freed_bytes is not None:
+            print(f"\n[OK] Free space on the manager's Docker disk changed by "
+                  f"{'+' if report.disk_freed_bytes >= 0 else '-'}"
+                  f"{_human_bytes(abs(report.disk_freed_bytes))} "
+                  f"(removed items list {_human_bytes(report.freed_bytes)}; "
+                  f"layers shared with images that stay are not freed)")
+        else:
+            print(f"\n[OK] Removed items totalling {_human_bytes(report.freed_bytes)}")
         registry = [i for i in report.items if i.kind == "registry" and i.removed]
         if registry and not report.registry_collected:
             print("[INFO] Registry manifests removed; their layers stay on disk "

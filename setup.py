@@ -6,7 +6,7 @@ HERE = Path(__file__).parent
 
 setup(
     name="graflag",
-    version="1.2.0",
+    version="1.3.0",
     description="Distributed benchmarking framework for Graph Anomaly Detection",
     long_description=(HERE / "README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",

@@ -144,6 +144,86 @@ class ThePublishedScoresAreTheMeasuredOnes(unittest.TestCase):
                             for m in levels(findings, "WARN")))
 
 
+class ABatchMeanAucIsRecomputed(unittest.TestCase):
+    """A method whose own AUC is a mean over batches is checked against that.
+
+    GADY reports upstream's metric, the mean of per-batch AUCs over batches of
+    200 edges; the evaluator computes one AUC over every published score. The
+    two differ by construction (0.9810 against 0.9788 on a real run), so the
+    plain cross-check failed a run whose scores were exactly the ones the
+    method measured.
+    """
+
+    def test_rank_auc_is_sklearns(self):
+        import random
+        try:
+            from sklearn.metrics import roc_auc_score
+        except ImportError:
+            self.skipTest("sklearn is not installed")
+        rng = random.Random(0)
+        scores = [round(rng.random(), 1) for _ in range(300)]       # many ties
+        labels = [rng.random() < 0.2 for _ in range(300)]
+        self.assertAlmostEqual(checks._rank_auc(scores, labels),
+                               roc_auc_score(labels, scores), places=12)
+
+    def test_one_class_has_no_auc(self):
+        self.assertIsNone(checks._rank_auc([0.1, 0.2], [False, False]))
+
+    def test_batches_are_consecutive_and_one_class_batches_skipped(self):
+        scores = [0.1, 0.9, 0.2, 0.8,   0.5, 0.6, 0.3, 0.7]
+        truth = [0, 1, 1, 0,             0, 0, 1, 0]
+        # Batches of 4: the first ranks 3 of its 4 positive/negative pairs
+        # correctly (0.75), the second puts its one positive last (0.0).
+        self.assertAlmostEqual(checks._batch_mean_auc(scores, truth, 4), 0.375)
+        # Batches of 2: 1.0, 0.0, one class only (skipped), 0.0.
+        self.assertAlmostEqual(checks._batch_mean_auc(scores, truth, 2), 1 / 3)
+
+    def test_a_matching_batch_mean_passes(self):
+        findings = checks.check(probe(
+            reported_aucs={"training_info.best_auc": 0.9810},
+            eval_metrics={"auc_roc": 0.9788},
+            auc_batch_size=200, batch_mean_auc=0.98101))
+        self.assertEqual(levels(findings, "ERROR"), [])
+        self.assertTrue(any("mean over batches of 200" in m for m in levels(findings, "OK")))
+
+    def test_a_batch_mean_that_disagrees_still_fails(self):
+        findings = checks.check(probe(
+            reported_aucs={"training_info.best_auc": 0.9810},
+            eval_metrics={"auc_roc": 0.9788},
+            auc_batch_size=200, batch_mean_auc=0.9650))
+        self.assertTrue(any("not the ones the method measured" in m
+                            for m in levels(findings, "ERROR")))
+
+    def test_without_a_declared_batch_size_nothing_changes(self):
+        findings = checks.check(probe(
+            reported_aucs={"training_info.best_auc": 0.9810},
+            eval_metrics={"auc_roc": 0.9788}))
+        self.assertTrue(levels(findings, "ERROR"))
+
+    def test_the_remote_probe_computes_it(self):
+        import json
+        import subprocess
+        import tempfile
+        scores = [0.1, 0.9, 0.2, 0.8, 0.3, 0.7]
+        truth = [0, 1, 1, 0, 1, 0]
+        with tempfile.TemporaryDirectory() as tmp:
+            exp = pathlib.Path(tmp)
+            (exp / "status.json").write_text('{"status": "completed"}')
+            (exp / "results.json").write_text(json.dumps({
+                "result_type": "EDGE_STREAM_ANOMALY_SCORES",
+                "scores": scores, "ground_truth": truth,
+                "metadata": {"summary": {"auc_batch_size": 2,
+                                         "training_info": {"best_auc": 0.0}}},
+            }))
+            done = subprocess.run(["sh", "-c", checks.remote_script(str(exp))],
+                                  capture_output=True, text=True, timeout=60)
+            self.assertEqual(done.returncode, 0, done.stderr)
+            out = json.loads(done.stdout.strip().splitlines()[-1])
+        self.assertEqual(out["auc_batch_size"], 2)
+        self.assertAlmostEqual(out["batch_mean_auc"],
+                               checks._batch_mean_auc(scores, truth, 2))
+
+
 class TheSplitHasToBeDeclared(unittest.TestCase):
     def test_a_missing_scored_split_warns(self):
         findings = checks.check(probe(scored_split=None))
@@ -285,6 +365,39 @@ class TheCommandLine(unittest.TestCase):
             self.assertEqual(checks.main(["exp__m__d__1"]), 1)
             gf.return_value.verify.return_value = self.report(failed=False)
             self.assertEqual(checks.main(["exp__m__d__1", "--json"]), 0)
+
+
+
+class TheProbeIsTheCodeThatWasLoaded(unittest.TestCase):
+    """An edit to verify.py on disk must not change what a running client sends.
+
+    A validation campaign that had imported graflag.verify hours before the
+    file was edited sent the manager a probe without _probe's definition
+    (`NameError: name '_probe' is not defined`, 2026-11-17). `graflag gui` and
+    `graflag mcp` are as long-lived. The probe's source is now read at import,
+    so a running client sends the code it loaded.
+    """
+
+    def test_an_edit_on_disk_after_import_changes_nothing(self):
+        import importlib.util
+        import shutil
+        import tempfile
+
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        copy = tmp / "verify_loaded_copy.py"
+        shutil.copy(checks.__file__, copy)
+        spec = importlib.util.spec_from_file_location("verify_loaded_copy", copy)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        before = module.remote_script("/shared/experiments/exp__m__d__t")
+
+        # what an editor does to the file: lines added above every helper
+        copy.write_text("# edited\n" * 7 + copy.read_text())
+        after = module.remote_script("/shared/experiments/exp__m__d__t")
+        self.assertEqual(after, before)
+        compile(after.split("\n", 1)[1].rsplit("GRAFLAG_PROBE_EOF", 1)[0],
+                "probe", "exec")
 
 
 if __name__ == "__main__":

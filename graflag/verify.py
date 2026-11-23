@@ -117,6 +117,49 @@ def _summarise_pairs(scores, truth):
     return report
 
 
+def _rank_auc(scores, labels):
+    """ROC AUC by average ranks (ties count half), or None for one class.
+
+    The same statistic as sklearn's roc_auc_score; written out because the
+    probe runs on the manager's own Python, which need not have numpy.
+    """
+    n_pos = sum(1 for t in labels if t)
+    n_neg = len(labels) - n_pos
+    if not n_pos or not n_neg:
+        return None
+    order = sorted(range(len(scores)), key=lambda i: scores[i])
+    ranks = [0.0] * len(scores)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and scores[order[j + 1]] == scores[order[i]]:
+            j += 1
+        for k in range(i, j + 1):
+            ranks[order[k]] = (i + j) / 2.0 + 1.0
+        i = j + 1
+    pos_rank_sum = sum(r for r, t in zip(ranks, labels) if t)
+    return (pos_rank_sum - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg)
+
+
+def _batch_mean_auc(scores, truth, batch_size):
+    """Mean AUC over consecutive batches of the published scores.
+
+    For a method whose own number is that statistic (GADY, after upstream's
+    eval_edge_prediction): batches in published order, a batch holding one
+    class skipped, as upstream skips it. None when no batch has both classes.
+    """
+    scores, truth = _flatten(scores), _flatten(truth)
+    if len(scores) != len(truth) or batch_size <= 0:
+        return None
+    aucs = []
+    for start in range(0, len(scores), batch_size):
+        auc = _rank_auc(scores[start:start + batch_size],
+                        [bool(t) for t in truth[start:start + batch_size]])
+        if auc is not None:
+            aucs.append(auc)
+    return sum(aucs) / len(aucs) if aucs else None
+
+
 def _collect_aucs(node, prefix=""):
     """Every `*auc*` number anywhere in the method's summary, by path."""
     found = {}
@@ -175,6 +218,12 @@ def _probe(exp_dir):
     out["declared_samples"] = _find_key(summary, "scored_samples")
     out.update(_summarise_pairs(results.get("scores") or [],
                                 results.get("ground_truth") or []))
+    batch_size = _find_key(summary, "auc_batch_size")
+    if isinstance(batch_size, int) and not isinstance(batch_size, bool):
+        out["auc_batch_size"] = batch_size
+        out["batch_mean_auc"] = _batch_mean_auc(results.get("scores") or [],
+                                                results.get("ground_truth") or [],
+                                                batch_size)
 
     evaluation = _load("eval/evaluation.json")
     if evaluation and "__unreadable__" not in evaluation:
@@ -202,18 +251,26 @@ def _find_key(node, wanted):
     return None
 
 
-REMOTE_HELPERS = (_flatten, _is_finite, _summarise_pairs, _collect_aucs,
-                  _find_key, _probe)
+REMOTE_HELPERS = (_flatten, _is_finite, _summarise_pairs, _rank_auc,
+                  _batch_mean_auc, _collect_aucs, _find_key, _probe)
+
+# Read once, at import. inspect.getsource() reads this file as it is on disk
+# when called, at the line numbers the loaded functions had, so a process that
+# outlives an edit to the file sends the manager lines that are not the code it
+# runs. It happened: a validation campaign that had imported this module hours
+# earlier (2026-11-17) sent a probe without _probe's definition, and the
+# manager answered `NameError: name '_probe' is not defined`. `graflag gui` and
+# `graflag mcp` on an editable install are as long-lived.
+_REMOTE_BODY = "\n\n".join(inspect.getsource(fn) for fn in REMOTE_HELPERS)
 
 
 def remote_script(exp_dir):
     """The probe, as a self-contained program to run on the manager."""
-    body = "\n\n".join(inspect.getsource(fn) for fn in REMOTE_HELPERS)
     return (
         "python3 - <<'GRAFLAG_PROBE_EOF'\n"
         f"SENTINEL_UNKNOWN = {SENTINEL_UNKNOWN!r}\n"
         f"SENTINEL_INACTIVE = {SENTINEL_INACTIVE!r}\n\n"
-        f"{body}\n\n"
+        f"{_REMOTE_BODY}\n\n"
         f"_probe({exp_dir!r})\n"
         "GRAFLAG_PROBE_EOF\n"
     )
@@ -311,9 +368,22 @@ def check(probe):
     else:
         agreeing = {k: v for k, v in reported.items()
                     if abs(v - evaluated) <= AUC_TOLERANCE}
+        # A method that declares its AUC a mean over batches is checked
+        # against that statistic, recomputed here from the published scores:
+        # it differs from the evaluator's single AUC by construction, so the
+        # comparison above cannot settle it either way.
+        batch_auc = probe.get("batch_mean_auc")
+        batch_agreeing = {} if batch_auc is None else {
+            k: v for k, v in reported.items() if abs(v - batch_auc) <= AUC_TOLERANCE}
         if agreeing:
             add("OK", f"evaluator AUC {evaluated} matches the method's "
                       f"{', '.join(sorted(agreeing))}")
+        elif batch_agreeing:
+            add("OK", f"the method's {', '.join(sorted(batch_agreeing))} is a mean "
+                      f"over batches of {probe.get('auc_batch_size')}, and "
+                      f"recomputing it from the published scores gives "
+                      f"{batch_auc:.4f}; the evaluator's single AUC over all "
+                      f"of them is {evaluated}")
         else:
             listed = ", ".join(f"{k}={v:.4f}" for k, v in sorted(reported.items()))
             add("ERROR", f"the evaluator scores {evaluated:.4f} and the method "

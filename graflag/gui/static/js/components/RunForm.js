@@ -232,10 +232,14 @@ export default {
                                             if (expRes.ok) {
                                                 const expData = await expRes.json();
                                                 console.log('[DEBUG] Experiment status:', expData.status);
-                                                if (expData.status !== 'running') {
+                                                // Only a terminal state ends the watch: a run that is
+                                                // building or queued for a GPU prints nothing for
+                                                // minutes, and "not running" read as completed.
+                                                if (['completed', 'failed', 'stopped'].includes(expData.status)) {
                                                     clearInterval(this.logPollingInterval);
                                                     this.logPollingInterval = null;
-                                                    this.status += '<div style="background:#DBEAFE; color:#1E40AF; padding:0.75rem; border-radius:6px; margin-top:0.5rem;"> Experiment completed</div>';
+                                                    const ok = expData.status === 'completed';
+                                                    this.status += `<div style="background:${ok ? '#DBEAFE' : '#FEE2E2'}; color:${ok ? '#1E40AF' : '#991B1B'}; padding:0.75rem; border-radius:6px; margin-top:0.5rem;"> Experiment ${expData.status}</div>`;
                                                     this.$emit('submit');
                                                 }
                                             }

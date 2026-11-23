@@ -177,6 +177,41 @@ class PathHelpersQuote(RemoteCommandTestCase):
         self.assertIn("'/shared/a b'", Path(self.capture).read_text())
 
 
+class SshFailureIsNotAnAnswer(RemoteCommandTestCase):
+    """ssh's own exit status 255 raises instead of reading as an empty reply.
+
+    `graflag list methods` printed "No methods found" for a manager behind a
+    jump host that did not resolve.
+    """
+
+    def fake(self, body):
+        (Path(self.tmp) / "bin" / "ssh").write_text("#!/bin/sh\n" + body)
+
+    def test_ssh_failure_raises_with_its_message(self):
+        from graflag.errors import GraFlagError, ManagerUnreachable
+        self.fake('echo "ssh: Could not resolve hostname nosuch: Name" >&2; exit 255\n')
+        with self.assertRaises(ManagerUnreachable) as ctx:
+            self.ssh.execute("true")
+        self.assertIsInstance(ctx.exception, GraFlagError)
+        self.assertIn("Could not resolve hostname", str(ctx.exception))
+        self.assertIn("root@10.0.0.1", str(ctx.exception))
+
+    def test_a_remote_failure_is_still_returned(self):
+        self.fake("exit 1\n")
+        self.assertEqual(self.ssh.execute("false").returncode, 1)
+
+    def test_listing_an_unreachable_manager_is_an_error_not_empty(self):
+        from types import SimpleNamespace
+        from graflag.core import GraFlag
+        from graflag.errors import ManagerUnreachable
+        self.fake('echo "ssh: connect to host 10.0.0.1 port 22: Connection timed out" >&2; exit 255\n')
+        gf = GraFlag.__new__(GraFlag)
+        gf.config = SimpleNamespace(remote_shared_dir="/shared")
+        gf.ssh = self.ssh
+        with self.assertRaises(ManagerUnreachable):
+            gf.list_methods()
+
+
 class RsyncTrailingSlashIsPreserved(unittest.TestCase):
     """sync() asks for the contents of a directory, not the directory.
 
@@ -365,6 +400,95 @@ class NonInteractiveSsh(unittest.TestCase):
         config.write_text("MANAGER_IP=10.0.0.1\n")
         self.assertTrue(GraFlag(str(config), interactive=False).ssh.batch_mode)
         self.assertFalse(GraFlag(str(config)).ssh.batch_mode)
+
+
+class UserAndJumpHost(unittest.TestCase):
+    """SSH_USER and SSH_PROXY_JUMP reach every connection GraFlag opens.
+
+    Every ssh and rsync target used to be the literal ``root@{manager_ip}``,
+    so a manager behind a bastion, or one that takes another account, needed
+    a hand-written ~/.ssh/config block before GraFlag could reach it.
+    """
+
+    def manager(self, **kw):
+        return SSHManager("10.0.0.1", user="amin", proxy_jump="bastion", **kw)
+
+    def test_execute(self):
+        args = self.manager()._ssh_args()
+        self.assertEqual(args[-1], "amin@10.0.0.1")
+        self.assertIn("ProxyJump=bastion", args)
+
+    def test_defaults_are_root_and_direct(self):
+        args = SSHManager("10.0.0.1")._ssh_args()
+        self.assertEqual(args[-1], "root@10.0.0.1")
+        self.assertFalse(any(a.startswith("ProxyJump") for a in args))
+
+    def test_rsync_both_directions(self):
+        from unittest import mock
+        from graflag import ssh as ssh_mod
+        mgr = self.manager()
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        src = Path(tmp) / "f.txt"
+        src.write_text("x")
+        ok = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch.object(ssh_mod.shutil, "which", return_value="/usr/bin/rsync"), \
+             mock.patch.object(ssh_mod.subprocess, "run", return_value=ok) as run:
+            mgr.copy_files([str(src)], "/shared/datasets")
+            mgr.copy_files(["/shared/experiments/x"], str(Path(tmp) / "out"), from_remote=True)
+        calls = [c.args[0] for c in run.call_args_list]
+        # copy to the manager first creates the destination's parent over ssh
+        self.assertTrue(all(argv[0] == "rsync" or argv[-2] == "amin@10.0.0.1"
+                            for argv in calls), calls)
+        to_remote, from_remote = (argv for argv in calls if argv[0] == "rsync")
+        self.assertEqual(to_remote[-1], "amin@10.0.0.1:/shared/datasets")
+        self.assertEqual(from_remote[-2], "amin@10.0.0.1:/shared/experiments/x")
+        for argv in (to_remote, from_remote):
+            shell = argv[argv.index("-e") + 1]
+            self.assertIn("ProxyJump=bastion", shell)
+
+    def test_the_tunnel(self):
+        from unittest import mock
+        from graflag.docker_ops import DockerManager
+
+        manager = DockerManager(self.manager(batch_mode=True), config=None)
+        with mock.patch("graflag.docker_ops.subprocess.Popen") as popen, \
+                mock.patch("graflag.docker_ops.time.sleep"):
+            popen.return_value.poll.return_value = 255
+            popen.return_value.stderr.read.return_value = b""
+            with self.assertRaises(RuntimeError):
+                manager._connect()
+        argv = popen.call_args.args[0]
+        manager._tunnel_proc = None
+        self.assertEqual(argv[-1], "amin@10.0.0.1")
+        self.assertIn("ProxyJump=bastion", argv)
+        self.assertIn("BatchMode=yes", argv)
+
+    def test_no_call_site_spells_root_itself(self):
+        """The log follower and anything added later go through .destination.
+
+        setup_workers is exempt: it runs *on* the manager, as the manager's
+        root, to reach the workers -- not from the client.
+        """
+        import inspect
+        from graflag import docker_ops, ssh as ssh_mod
+        for module in (ssh_mod, docker_ops):
+            source = inspect.getsource(module)
+            source = source.replace(inspect.getsource(docker_ops.DockerManager.setup_workers), "")
+            hits = [line.strip() for line in source.splitlines()
+                    if "root@{" in line and not line.strip().startswith(("#", "It was"))]
+            with self.subTest(module=module.__name__):
+                self.assertEqual(hits, [])
+
+    def test_config_keys_reach_the_manager(self):
+        from graflag.core import GraFlag
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        config = Path(tmp) / "config.env"
+        config.write_text("MANAGER_IP=10.0.0.1\nSSH_USER=amin\nSSH_PROXY_JUMP=bastion\n")
+        gf = GraFlag(str(config), interactive=False)
+        self.assertEqual(gf.ssh.destination, "amin@10.0.0.1")
+        self.assertEqual(gf.ssh.proxy_jump, "bastion")
 
 
 FAKE_SSH_EXEC = """#!/bin/sh

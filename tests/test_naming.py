@@ -13,7 +13,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from graflag.core import GraFlag  # noqa: E402
+from graflag.core import GraFlag, GraFlagError  # noqa: E402
 
 
 class ExperimentNaming(unittest.TestCase):
@@ -43,7 +43,7 @@ class ExperimentNaming(unittest.TestCase):
             returned = gf.run("TADDY", "UCI", exp_name=supplied)
 
         self.assertEqual(returned, supplied)
-        gf.ssh.mkdir.assert_called_once_with("/shared", f"experiments/{supplied}")
+        gf.ssh.claim_dir.assert_called_once_with("/shared", f"experiments/{supplied}")
 
     def test_run_generates_a_name_when_none_supplied(self):
         gf = GraFlag.__new__(GraFlag)
@@ -56,6 +56,79 @@ class ExperimentNaming(unittest.TestCase):
             returned = gf.run("TADDY", "UCI")
 
         self.assertTrue(returned.startswith("exp__taddy__uci__"), returned)
+
+
+class ExperimentNamesDoNotCollide(unittest.TestCase):
+    """Two runs started in one second must not share a directory.
+
+    Names resolve to the second and run() used ``mkdir -p``, so the second
+    run adopted the first one's directory, overwrote its status.json, and
+    then failed on the duplicate service name.
+    """
+
+    def setUp(self):
+        import subprocess
+        import tempfile
+        from types import SimpleNamespace
+        from graflag.ssh import SSHManager
+
+        self.share = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, self.share, ignore_errors=True)
+
+        class LocalShare:
+            path_exists = staticmethod(lambda shared, rel: True)
+            claim_dir = SSHManager.claim_dir
+
+            def execute(self, command, **kwargs):
+                done = subprocess.run(["sh", "-c", command], capture_output=True, text=True)
+                return SimpleNamespace(returncode=done.returncode,
+                                       stdout=done.stdout, stderr=done.stderr)
+
+        self.gf = GraFlag.__new__(GraFlag)
+        self.gf.config = SimpleNamespace(remote_shared_dir=self.share)
+        self.gf.ssh = LocalShare()
+        self.gf.docker = mock.Mock()
+        self.ensure = mock.patch.object(self.gf, "_ensure_dataset")
+        self.ensure.start()
+        self.addCleanup(self.ensure.stop)
+
+    def test_claim_dir_is_atomic_and_reports_an_existing_directory(self):
+        self.assertTrue(self.gf.ssh.claim_dir(self.share, "experiments/x"))
+        self.assertFalse(self.gf.ssh.claim_dir(self.share, "experiments/x"))
+
+    def test_claim_dir_raises_when_it_cannot_create(self):
+        Path(self.share, "experiments").write_text("a file, not a directory")
+        with self.assertRaises(RuntimeError):
+            self.gf.ssh.claim_dir(self.share, "experiments/x")
+
+    def test_a_generated_name_that_is_taken_is_regenerated(self):
+        names = iter(["exp__m__d__20260101_000000", "exp__m__d__20260101_000000",
+                      "exp__m__d__20260101_000001"])
+        Path(self.share, "experiments").mkdir()
+        # Stop each run once its service is created; what follows is not
+        # what is under test.
+        self.gf.docker.create_service.side_effect = RuntimeError("launched")
+        with mock.patch.object(GraFlag, "make_experiment_name",
+                               side_effect=lambda m, d: next(names)), \
+                mock.patch("graflag.core.time.sleep"):
+            for _ in range(2):
+                with self.assertRaises(Exception):
+                    self.gf.run("m", "d")
+        created = [c.args[0] for c in self.gf.docker.create_service.call_args_list]
+        self.assertEqual(created, ["exp__m__d__20260101_000000",
+                                   "exp__m__d__20260101_000001"])
+        for name in created:
+            self.assertTrue(Path(self.share, "experiments", name).is_dir())
+
+    def test_a_supplied_name_that_is_taken_is_an_error(self):
+        name = "exp__m__d__20260101_000000"
+        Path(self.share, "experiments", name).mkdir(parents=True)
+        (Path(self.share, "experiments", name) / "status.json").write_text("{}")
+        with self.assertRaises(GraFlagError) as ctx:
+            self.gf.run("m", "d", exp_name=name)
+        self.assertIn("already exists", str(ctx.exception))
+        self.gf.docker.create_service.assert_not_called()
+        self.assertEqual((Path(self.share, "experiments", name) / "status.json").read_text(), "{}")
 
 
 class SyncTargetsTheDirectoryRunReads(unittest.TestCase):

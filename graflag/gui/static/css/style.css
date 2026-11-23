@@ -463,6 +463,7 @@ select:focus, input:focus {
 }
 
 .badge-building { background: #FEF3C7; color: #92400E; }
+.badge-queued { background: #E0E7FF; color: #3730A3; }
 .badge-running { background: #D1FAE5; color: #065F46; }
 .badge-completed { background: #DBEAFE; color: #1E40AF; }
 .badge-failed { background: #FEE2E2; color: #991B1B; }

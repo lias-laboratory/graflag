@@ -1,6 +1,7 @@
 """Docker operations for GraFlag using Docker SDK."""
 
 import json
+import os
 import subprocess
 import shlex
 import signal
@@ -11,7 +12,7 @@ import yaml
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 import re
@@ -22,7 +23,7 @@ import docker
 from docker.types import ServiceMode, RestartPolicy, Resources, Mount, EndpointSpec
 
 from .utils import load_method_env
-from .ssh import remote_path, NON_INTERACTIVE_OPTS
+from .ssh import remote_path
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,8 @@ class ReservedEnvVars(Enum):
     COMMAND = 'COMMAND'
     MONITOR_INTERVAL = 'MONITOR_INTERVAL'
     GRAFLAG_PARAMS = 'GRAFLAG_PARAMS'
+    GRAFLAG_NODE = 'GRAFLAG_NODE'
+    NVIDIA_VISIBLE_DEVICES = 'NVIDIA_VISIBLE_DEVICES'
 
     @classmethod
     def get_names(cls):
@@ -128,6 +131,20 @@ def _die_with_parent():
         ctypes.CDLL("libc.so.6").prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
     except Exception:
         pass
+
+
+def _child_options() -> dict:
+    """Popen keyword arguments for a long-lived ssh child (tunnel, log follower).
+
+    `preexec_fn` exists only on POSIX. On Windows, Python rejects it with
+    ValueError before starting the child, so passing it unconditionally made
+    the Docker tunnel -- and with it every service operation -- fail there
+    before a single byte reached the manager. Elsewhere the child gets
+    `_die_with_parent`, which is itself a best-effort no-op off Linux.
+    """
+    if os.name == "posix":
+        return {"preexec_fn": _die_with_parent}
+    return {}
 
 
 #: Swarm task states after which a restart_policy=none task never runs again.
@@ -223,15 +240,15 @@ class DockerManager:
         ssh_args = [
             'ssh', '-N',
             '-L', f'{self._tunnel_port}:/var/run/docker.sock',
-            '-o', 'StrictHostKeyChecking=no',
             '-o', 'ExitOnForwardFailure=yes',
         ]
-        if getattr(self.ssh, "batch_mode", False):
-            ssh_args.extend(NON_INTERACTIVE_OPTS)
+        # StrictHostKeyChecking, ProxyJump and (non-interactive) BatchMode
+        # come from the same list every other ssh uses.
+        ssh_args.extend(self.ssh._option_args())
         if self.ssh.ssh_key:
             ssh_args.extend(['-i', str(Path(self.ssh.ssh_key).expanduser())])
         ssh_args.extend(['-p', str(self.ssh.ssh_port)])
-        ssh_args.append(f'root@{self.ssh.manager_ip}')
+        ssh_args.append(self.ssh.destination)
 
         logger.debug(f"Starting SSH tunnel on port {self._tunnel_port}")
         # Guarded for the same reason as the log follower: the tunnel is a
@@ -243,7 +260,7 @@ class DockerManager:
         # process's stdin is the protocol.
         self._tunnel_proc = subprocess.Popen(
             ssh_args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE, preexec_fn=_die_with_parent,
+            stderr=subprocess.PIPE, **_child_options(),
         )
 
         # Wait for the tunnel to be usable. ssh binds the local port as soon
@@ -534,7 +551,8 @@ class DockerManager:
 
     def build_method_image(self, method_name: str, tag: str = "latest",
                            method_env: Optional[Dict[str, str]] = None,
-                           force_rm: bool = False) -> str:
+                           force_rm: bool = False,
+                           live_log: Optional[str] = None) -> str:
         """Build method Docker image and push to local registry.
 
         Uses SSH because the build context resides on the remote host.
@@ -554,6 +572,10 @@ class DockerManager:
                 failed build keeps its last container, and that container
                 holds every layer the build had produced: 12.8 GB on the
                 manager after one failed ``git clone`` of the rare method.
+            live_log: A path on the manager to write the build's output to
+                *while it runs*, so a ten-minute build can be watched with
+                ``tail -f`` instead of appearing all at once when it ends.
+                The caller still writes the complete log afterwards.
 
         Returns:
             Combined build and push log output.
@@ -632,6 +654,18 @@ class DockerManager:
             f"-t {shlex.quote(local_image)} -t {shlex.quote(registry_image)} "
             f"{remote_path(self.config.remote_shared_dir)}/"
         )
+        if live_log:
+            # Header first, then docker's output appended as it arrives. The
+            # exit status survives the pipe through a file, since POSIX sh has
+            # no pipefail; stderr is merged into the stream, so the failure
+            # message below falls back to the stream's tail.
+            log = shlex.quote(live_log)
+            header = "\n".join(build_log) + f"\n=== BUILD: {local_image} ===\n"
+            build_cmd = (
+                f"cat > {log} << 'LIVEEOF'\n{header}\nLIVEEOF\n"
+                f"rc=$(mktemp) && {{ {build_cmd} 2>&1; echo $? > \"$rc\"; }} "
+                f"| tee -a {log}; s=$(cat \"$rc\"); rm -f \"$rc\"; exit \"$s\""
+            )
         result = self.ssh.execute(build_cmd)
         build_log.append(f"=== BUILD: {local_image} ===\n")
         build_log.append(result.stdout or "")
@@ -639,7 +673,9 @@ class DockerManager:
             build_log.append(result.stderr)
 
         if result.returncode != 0:
-            raise BuildFailed(f"Failed to build image {local_image}: {result.stderr}",
+            reason = (result.stderr or "").strip() or \
+                "\n".join((result.stdout or "").strip().splitlines()[-15:])
+            raise BuildFailed(f"Failed to build image {local_image}: {reason}",
                               "\n".join(build_log))
 
         # Push to registry
@@ -650,10 +686,17 @@ class DockerManager:
         if result.stderr:
             build_log.append(result.stderr)
 
+        # A failed push is a failed build. Tasks pull the registry image,
+        # never the manager's local one, so after a push that did not happen
+        # the service ran whatever the registry already held -- the previous
+        # build -- under a log that said "[OK] Image built successfully".
         if result.returncode != 0:
-            logger.warning(f"[WARN] Failed to push to registry: {result.stderr}")
-        else:
-            logger.info("[OK] Image pushed to local registry")
+            raise BuildFailed(
+                f"Built {local_image} but could not push it to {registry_image}; "
+                f"the cluster would run the registry's previous image: "
+                f"{(result.stderr or '').strip()}",
+                "\n".join(build_log))
+        logger.info("[OK] Image pushed to local registry")
 
         logger.info(f"[OK] Image {local_image} built successfully")
         return "\n".join(build_log)
@@ -720,9 +763,12 @@ class DockerManager:
         # Push
         result = self.ssh.execute(f"docker push {shlex.quote(registry_image)}")
         if result.returncode != 0:
-            logger.warning(f"[WARN] Failed to push evaluator to registry: {result.stderr}")
-        else:
-            logger.info("[OK] Evaluator image pushed to local registry")
+            # The evaluation service pulls this tag from the registry; see
+            # build_method_image for what a silent push failure costs.
+            raise RuntimeError(
+                f"Built the evaluator but could not push {registry_image}: "
+                f"{(result.stderr or '').strip()}")
+        logger.info("[OK] Evaluator image pushed to local registry")
 
         return registry_image
 
@@ -969,9 +1015,9 @@ class DockerManager:
         ssh_args = ['ssh']
         if self.ssh.ssh_key:
             ssh_args.extend(['-i', str(Path(self.ssh.ssh_key).expanduser())])
+        ssh_args.extend(['-p', str(self.ssh.ssh_port)])
+        ssh_args.extend(self.ssh._option_args())
         ssh_args.extend([
-            '-p', str(self.ssh.ssh_port),
-            '-o', 'StrictHostKeyChecking=no',
             # -tt forces a TTY, which is what makes the *remote* command die
             # with the connection. Without it sshd sends no SIGHUP, so killing
             # the local ssh client leaves `docker service logs -f` running on
@@ -981,7 +1027,7 @@ class DockerManager:
             #
             # The cost is CRLF on the stream, stripped in _pump below.
             '-tt',
-            f'root@{self.ssh.manager_ip}',
+            self.ssh.destination,
             f'docker service logs -f {shlex.quote(service_name)}',
         ])
 
@@ -989,13 +1035,13 @@ class DockerManager:
         # it. Previously this inherited stdout, so --tee wrote a file holding
         # only the build log -- or an empty one when --build was not used.
         if on_line is None:
-            proc = subprocess.Popen(ssh_args, preexec_fn=_die_with_parent)
+            proc = subprocess.Popen(ssh_args, **_child_options())
             reader = None
         else:
             proc = subprocess.Popen(
                 ssh_args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, errors='replace', bufsize=1,
-                preexec_fn=_die_with_parent,
+                **_child_options(),
             )
 
             def _pump():
@@ -1178,6 +1224,20 @@ class DockerManager:
             logger.info("   Setting parameter: _GPU=-1 (running without a GPU)")
             env_dict["_GPU"] = "-1"
 
+        # And hide the device. The reservation is a scheduling promise, not
+        # isolation: the NVIDIA runtime is the default runtime on a GPU node
+        # and CUDA base images set NVIDIA_VISIBLE_DEVICES=all, so a service
+        # that reserved nothing still saw the node's GPU -- the one Swarm had
+        # given another task. On a three-node GPU cluster, strgnn run with
+        # --no-gpu put its labels on cuda:0 and its model on the CPU and
+        # died, and the CPU runs' peak_gpu_mb recorded the GPU task's memory
+        # next to them. "void" makes the runtime behave like runc. A GPU task
+        # is unaffected: the runtime picks its device from the
+        # DOCKER_RESOURCE_NVIDIA-GPU variable Swarm sets for the reservation
+        # (`swarm-resource` in the runtime's config.toml), not from this.
+        if not gpu_required:
+            env_dict['NVIDIA_VISIBLE_DEVICES'] = 'void'
+
         # Say which `_FOO` variables are parameters. The method side cannot
         # work that out from the environment alone -- a shell exports `_`,
         # zsh exports `_P9K_TTY`, conda exports `_CE_CONDA` -- so without
@@ -1187,6 +1247,14 @@ class DockerManager:
         # it is absent, so older images are unaffected.
         env_dict['GRAFLAG_PARAMS'] = ','.join(
             sorted(k for k in env_dict if k.startswith('_')))
+
+        # Which node the task landed on. Swarm expands this template per task
+        # (templates are honoured in a service's env), and graflag_runner
+        # writes the result into status.json and results.json. Nothing else
+        # recorded it reliably: service_details.json is written when the
+        # service is created, and a task still queued for a GPU then has no
+        # node, so a run that waited said nowhere where it had run.
+        env_dict['GRAFLAG_NODE'] = '{{.Node.Hostname}}'
 
         return [f"{k}={v}" for k, v in env_dict.items()]
 
@@ -1222,7 +1290,7 @@ class DockerManager:
             "gpu_required": gpu_required,
             "registry_image": registry_image,
             "manager_ip": self.config.manager_ip,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "data_path": f"{self.config.remote_shared_dir}/datasets/{dataset}/",
             "exp_path": f"{self.config.remote_shared_dir}/experiments/{exp_name}/",
             "env_contents": env_contents,
@@ -1234,6 +1302,54 @@ class DockerManager:
         config_json = json.dumps(service_config, indent=2)
         self.ssh.execute(f"cat > {config_file} << 'EOF'\n{config_json}\nEOF")
         logger.info(f"[INFO] Saved service configuration to {config_file}")
+
+    def record_placement(self, exp_name: str) -> Optional[Dict[str, str]]:
+        """Rewrite service_details.json's ``worker`` with the task's final node.
+
+        Called by run() once the task has ended and before its service is
+        removed, which is the last moment the placement can be read. The
+        creation-time record keeps everything else it had.
+
+        Returns the worker block written, or None when there was nothing to
+        record. Never raises: a run that finished must not fail on this.
+        """
+        try:
+            def once():
+                svc = self.client.services.get(exp_name)
+                tasks = svc.tasks()
+                if not tasks:
+                    return None
+                task = max(tasks, key=lambda t: t.get('CreatedAt', ''))
+                node_id = task.get('NodeID', '')
+                hostname = ''
+                if node_id:
+                    node = self.client.nodes.get(node_id)
+                    hostname = node.attrs.get('Description', {}).get('Hostname', '')
+                return {
+                    "node_id": node_id,
+                    "node_hostname": hostname,
+                    "task_id": task.get('ID', ''),
+                    "state": task.get('Status', {}).get('State', ''),
+                    "desired_state": task.get('DesiredState', ''),
+                }
+            worker = self._with_reconnect(once)
+            if not worker:
+                return None
+
+            details_file = remote_path(
+                self.config.remote_shared_dir, "experiments", exp_name, "service_details.json")
+            raw = self.ssh.execute(f"cat {details_file} 2>/dev/null").stdout or ""
+            try:
+                details = json.loads(raw) if raw.strip() else {}
+            except json.JSONDecodeError:
+                details = {}
+            details["worker"] = worker
+            details_json = json.dumps(details, indent=2)
+            self.ssh.execute(f"cat > {details_file} << 'EOF'\n{details_json}\nEOF")
+            return worker
+        except Exception as e:
+            logger.warning(f"[WARN] Could not record where {exp_name} ran: {e}")
+            return None
 
     def _save_service_details(self, exp_name, service_id):
         """Save service details to JSON after creation."""
@@ -1250,7 +1366,7 @@ class DockerManager:
             details = {
                 "service_id": service_id,
                 "service_name": exp_name,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "image": attrs.get('Spec', {}).get('TaskTemplate', {}).get('ContainerSpec', {}).get('Image'),
                 "created_at_docker": attrs.get('CreatedAt'),
             }

@@ -223,6 +223,46 @@ class WhatTheSurveyReports(unittest.TestCase):
         self.assertIn("D uci", self.out)
 
 
+class ACheckoutIsNotAStray(unittest.TestCase):
+    """The share is a graflag-shared clone (quickstart), so its root holds tests/.
+
+    That directory is tracked by the checkout; the survey reported it as a
+    stray and `clear --apply` would have deleted the repository's test suite.
+    """
+
+    def setUp(self):
+        import os, shutil, subprocess, tempfile
+        if shutil.which("git") is None:
+            self.skipTest("git is not installed")
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        for d in ("methods/taddy", "tests", "leftover_clone"):
+            os.makedirs(os.path.join(self.tmp, d))
+        for f in ("tests/test_methods.py", "leftover_clone/x.py", "methods/taddy/.env"):
+            open(os.path.join(self.tmp, f), "w").close()
+        subprocess.run(["git", "init", "-q", self.tmp], check=True)
+        subprocess.run(["git", "-C", self.tmp, "add", "tests", "methods"], check=True)
+
+        gf = make(SURVEY)
+        gf.clear(apply=False)
+        script = gf.ssh.commands[0].replace("SHARED=/shared", f"SHARED={self.tmp}")
+        bindir = os.path.join(self.tmp, ".bin")
+        os.makedirs(bindir)
+        with open(os.path.join(bindir, "docker"), "w") as fh:
+            fh.write("#!/bin/sh\nexit 1\n")
+        os.chmod(os.path.join(bindir, "docker"), 0o755)
+        env = dict(os.environ, PATH=f"{bindir}:{os.environ['PATH']}")
+        self.out = subprocess.run(["sh", "-c", script], capture_output=True,
+                                  text=True, env=env).stdout.splitlines()
+
+    def test_a_tracked_directory_is_kept(self):
+        self.assertNotIn("S tests", self.out)
+        self.assertIn("T tests", self.out)
+
+    def test_an_untracked_one_is_still_a_stray(self):
+        self.assertIn("S leftover_clone", self.out)
+
+
 class WhatIsCollected(unittest.TestCase):
     """The other half: the orphan really is found."""
 
@@ -259,6 +299,100 @@ class WhatIsCollected(unittest.TestCase):
     def test_sizes_come_from_the_survey(self):
         experiment = next(i for i in self.report.items if i.kind == "experiment")
         self.assertEqual(experiment.size_bytes, 4096)
+
+
+#: The manager after three builds: taddy pushed and idle, slade pushed and
+#: running, gady pushed but rebuilt since (the registry is one build behind).
+LOCAL_COPIES = "\n".join([
+    "M taddy", "M slade", "M gady", "M bond_cola", "O bond_cola IMAGE=bond_base",
+    "I taddy latest sha256:t1",
+    "I 10.0.0.1:5000/taddy latest sha256:t1",
+    "I slade latest sha256:s1",
+    "I 10.0.0.1:5000/slade latest sha256:s1",
+    "I gady latest sha256:g2",
+    "I bond_base latest sha256:b1",
+    "I graflag-evaluator abc sha256:e1",
+    "I 10.0.0.1:5000/graflag-evaluator abc sha256:e1",
+    "I nvidia/cuda 13.0.2-runtime-ubuntu24.04 sha256:n1",
+    "IS sha256:t1 9000", "IS sha256:s1 8000", "IS sha256:g2 7000",
+    "ID sha256:t1 10.0.0.1:5000/taddy@sha256:t1 taddy@sha256:t1",
+    "ID sha256:s1 10.0.0.1:5000/slade@sha256:s1",
+    "ID sha256:g2 gady@sha256:g2",
+    "ID sha256:b1 10.0.0.1:5000/bond_base@sha256:b1",
+    "ID sha256:e1 10.0.0.1:5000/graflag-evaluator@sha256:e1",
+    "U 10.0.0.1:5000/slade:latest@sha256:s1",
+    "U registry:2",
+    "B docker build --network=host -t bond_base:latest -f images/bond_base/Dockerfile /shared/",
+    "RC regcontainer",
+    "R taddy", "R slade", "R gady", "R graflag-evaluator",
+    "RT taddy latest sha256:t1",
+    "RT slade latest sha256:s1",
+    "RT gady latest sha256:g1",
+    "RT bond_base latest sha256:b1",
+    "RT graflag-evaluator abc sha256:e1",
+])
+
+
+class LocalCopies(unittest.TestCase):
+    """--local-copies drops what the registry serves byte for byte, and only that."""
+
+    def names(self, **kw):
+        report = make(LOCAL_COPIES).clear(apply=False, share=False, images=False,
+                                          local_copies=True, **kw)
+        return {i.name: i for i in report.items}
+
+    def test_an_idle_pushed_image_goes_under_both_tags(self):
+        self.assertTrue({"taddy:latest", "10.0.0.1:5000/taddy:latest"} <= set(self.names()))
+
+    def test_its_size_is_counted_once(self):
+        items = self.names()
+        sizes = [items[n].size_bytes for n in ("taddy:latest", "10.0.0.1:5000/taddy:latest")]
+        self.assertEqual(sorted(sizes), [0, 9000])
+
+    def test_an_image_a_container_uses_stays(self):
+        self.assertFalse({"slade:latest", "10.0.0.1:5000/slade:latest"} & set(self.names()))
+
+    def test_a_rebuild_the_registry_does_not_have_stays(self):
+        """Same tag, different digest: the push has not happened, or failed."""
+        self.assertNotIn("gady:latest", self.names())
+
+    def test_an_image_being_built_stays(self):
+        self.assertNotIn("bond_base:latest", self.names())
+
+    def test_the_evaluator_and_base_images_stay(self):
+        names = set(self.names())
+        self.assertFalse({"graflag-evaluator:abc", "10.0.0.1:5000/graflag-evaluator:abc",
+                          "nvidia/cuda:13.0.2-runtime-ubuntu24.04"} & names)
+
+    def test_off_by_default(self):
+        report = make(LOCAL_COPIES).clear(apply=False)
+        self.assertFalse(any("local copy" in i.reason for i in report.items))
+
+    def test_applying_removes_exactly_those(self):
+        gf = make(LOCAL_COPIES)
+        gf.clear(apply=True, share=False, images=False, local_copies=True)
+        removed = [line.split("docker image rm -f ", 1)[1].split(" >")[0]
+                   for c in gf.ssh.commands for line in c.splitlines()
+                   if "docker image rm -f " in line]
+        self.assertEqual(sorted(removed), ["10.0.0.1:5000/taddy:latest", "taddy:latest"])
+
+    def test_the_disk_change_is_measured_not_summed(self):
+        """Image sizes include shared base layers, so their sum overstates."""
+        gf = make(LOCAL_COPIES + "\nAVAIL 1000000")
+        replay = gf.ssh.execute
+
+        def execute(command, **kwargs):
+            if command.startswith("df -B1"):       # the measurement after
+                return SimpleNamespace(returncode=0, stdout="1004000\n", stderr="")
+            return replay(command, **kwargs)
+        gf.ssh.execute = execute
+        report = gf.clear(apply=True, share=False, images=False, local_copies=True)
+        self.assertEqual(report.freed_bytes, 9000)
+        self.assertEqual(report.disk_freed_bytes, 4000)
+
+    def test_a_dry_run_measures_nothing(self):
+        report = make(LOCAL_COPIES + "\nAVAIL 1000000").clear(apply=False, local_copies=True)
+        self.assertIsNone(report.disk_freed_bytes)
 
 
 class ADryRunRemovesNothing(unittest.TestCase):

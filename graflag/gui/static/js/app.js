@@ -203,8 +203,11 @@ createApp({
 
                 // Only send notifications if enabled and ready (after initial sync)
                 if (shouldNotify && prevState) {
-                    // Check for status transitions from running
-                    if (prevState.status === 'running' && exp.status !== 'running') {
+                    // Notify on reaching a terminal state from any other one:
+                    // a run that fails while queued or building never was
+                    // "running", and was never reported.
+                    const ENDED = ['completed', 'failed', 'stopped'];
+                    if (!ENDED.includes(prevState.status) && ENDED.includes(exp.status)) {
                         if (exp.status === 'completed') {
                             sendNotification(
                                 '[OK] Experiment Completed',

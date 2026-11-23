@@ -461,7 +461,10 @@ class LogFollowerDiesWithParent(unittest.TestCase):
         from graflag import docker_ops
         source = inspect.getsource(docker_ops)
         popens = source.count("subprocess.Popen(")
-        guarded = source.count("preexec_fn=_die_with_parent")
+        # The guard is applied through _child_options(), which hands POSIX
+        # children _die_with_parent and Windows none (preexec_fn does not
+        # exist there; see tests/test_platform.py).
+        guarded = source.count("**_child_options()")
         self.assertEqual(
             guarded, popens,
             f"{popens} Popen call(s) in docker_ops but {guarded} guarded: an "
@@ -638,7 +641,7 @@ class CoreOffset(unittest.TestCase):
         g.docker.list_services.return_value = []
         rows = "".join(
             f"EXP:exp__m__d__2026010{i}_000000\nRESULTS:1\nEVAL:0\n"
-            f"BUILD_LOG:0\nSTATUS_B64:\n" for i in range(1, 8))
+            f"BUILD_DONE:0\nSTATUS_B64:\n" for i in range(1, 8))
         g.ssh.execute.return_value = m.MagicMock(
             returncode=0, stdout="TOTAL:7\n" + rows)
         first = g.list_experiments(limit=3, offset=0)

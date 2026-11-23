@@ -4,16 +4,18 @@ import inspect
 import base64
 import binascii
 import json
+import re
 import shlex
 import subprocess
 import textwrap
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 import logging
 
 from .config import GraflagConfig
+from .errors import GraFlagError, ManagerUnreachable  # noqa: F401 (re-exported)
 from .ssh import SSHManager, remote_path
 from .docker_ops import BuildFailed, DockerManager
 from .utils import load_method_env, parse_env_line
@@ -26,9 +28,6 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-class GraFlagError(Exception):
-    """Custom exception for GraFlag errors."""
-    pass
 
 
 class GraFlag:
@@ -61,6 +60,8 @@ class GraFlag:
             ssh_port=self.config.ssh_port,
             ssh_key=self.config.ssh_key,
             batch_mode=not interactive,
+            user=self.config.ssh_user,
+            proxy_jump=self.config.ssh_proxy_jump,
         )
         self.docker = DockerManager(self.ssh, self.config, hosts_file=self.config.hosts_file)
 
@@ -140,6 +141,40 @@ class GraFlag:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"exp__{method_name.lower()}__{dataset.lower()}__{timestamp}"
 
+    #: How many fresh names run() tries before giving up on a collision.
+    NAME_ATTEMPTS = 5
+
+    def _claim_experiment_dir(self, exp_name: str, method_name: str,
+                              dataset: str, name_supplied: bool) -> str:
+        """Create ``experiments/<exp_name>``, which must not exist yet.
+
+        Names resolve to the second, so two runs of one method on one
+        dataset started within the same second used to get the same name:
+        ``mkdir -p`` accepted the existing directory, both runs wrote the
+        same status.json, and the second failed on the duplicate service
+        name -- after the first had already been overwritten. A generated
+        name that is taken is regenerated a second later; a name the caller
+        chose is theirs, so a collision is an error rather than a rename.
+        """
+        shared = self.config.remote_shared_dir
+        for _ in range(self.NAME_ATTEMPTS):
+            try:
+                created = self.ssh.claim_dir(shared, f"experiments/{exp_name}")
+            except RuntimeError as e:
+                raise GraFlagError(str(e))
+            if created:
+                return exp_name
+            if name_supplied:
+                raise GraFlagError(
+                    f"Experiment {exp_name} already exists in {shared}/experiments; "
+                    f"choose another name, or leave it out to get a fresh one")
+            logger.info(f"[INFO] {exp_name} is taken; trying the next second")
+            time.sleep(1.0)
+            exp_name = self.make_experiment_name(method_name, dataset)
+        raise GraFlagError(
+            f"No free experiment name for {method_name} on {dataset} after "
+            f"{self.NAME_ATTEMPTS} attempts")
+
     def run(
         self, method_name: str, dataset: str, tag: str = "latest",
         build: bool = False, gpu: bool = True, method_params: dict = None,
@@ -174,6 +209,7 @@ class GraFlag:
         tag = tag.lower()
         method_params = method_params or {}
 
+        name_supplied = exp_name is not None
         exp_name = exp_name or self.make_experiment_name(method_name, dataset)
 
         logger.info(f"[RUN] Starting run: {exp_name}")
@@ -194,9 +230,9 @@ class GraFlag:
         # No-op for datasets without metadata.json or marked as derived.
         self._ensure_dataset(dataset)
 
-        # Create experiment directory
+        exp_name = self._claim_experiment_dir(
+            exp_name, method_name, dataset, name_supplied)
         exp_dir = f"experiments/{exp_name}"
-        self.ssh.mkdir(self.config.remote_shared_dir, exp_dir)
         logger.info(f"[INFO] Experiment directory: {self.config.remote_shared_dir}/{exp_dir}")
 
         # Build image if requested
@@ -204,7 +240,8 @@ class GraFlag:
             self._write_status(exp_dir, "building")
             try:
                 build_log = self.docker.build_method_image(
-                    method_name, tag, force_rm=force_rm)
+                    method_name, tag, force_rm=force_rm,
+                    live_log=f"{self.config.remote_shared_dir.rstrip('/')}/{exp_dir}/build.log")
             except Exception as e:
                 error = f"Build failed: {e}"
                 # The failed build is the one whose log matters: docker's
@@ -215,16 +252,32 @@ class GraFlag:
                     error += f"\nThe build output is in {exp_dir}/build.log."
                 self._write_status(exp_dir, "failed", error=error)
                 raise GraFlagError(error)
-            self._write_build_log(exp_dir, build_log)
 
-        # Create service
-        self.docker.create_service(exp_name, method_name, dataset, tag, gpu, method_params)
+        # Create service. A failure here is recorded: nothing else would, since
+        # no runner starts, and the experiment would otherwise read as
+        # "building" (after a build) or "unknown" forever.
+        try:
+            self.docker.create_service(exp_name, method_name, dataset, tag, gpu, method_params)
+        except Exception as e:
+            if build:
+                self._write_build_log(exp_dir, build_log)
+            self._write_status(exp_dir, "failed", error=f"Could not create the service: {e}")
+            raise
+        # The complete log, push included, replaces the live one only now that
+        # the service exists: its "=== PUSH:" section is what tells the status
+        # probe the build is over, so writing it before create_service opened
+        # a window in which a finished build with no service yet read "failed".
+        if build:
+            self._write_build_log(exp_dir, build_log)
 
         if follow:
             # Stream the logs to stdout until the task ends.
             self.docker.follow_service_logs(exp_name)
         else:
             self.wait_for_experiment(exp_name)
+
+        # Where the task ran, read while its service still exists.
+        self.docker.record_placement(exp_name)
 
         # Remove the finished service. Without this every run leaves one behind
         # forever, since restart_policy=none services are never reaped.
@@ -272,15 +325,38 @@ class GraFlag:
         Returns the last ExperimentInfo, or None when the experiment does not
         exist. With `timeout`, returns the current state once it has passed,
         terminal or not.
+
+        The run goes on on the cluster whether or not this client can see it,
+        so losing the manager does not end the wait: the probe is retried for
+        up to WAIT_UNREACHABLE_S of consecutive ManagerUnreachable, and only
+        then is the last one raised.
         """
         deadline = None if timeout is None else time.monotonic() + timeout
         misses = 0
+        unreachable_since = None
         while True:
-            info = self._get_experiment_info(experiment_name)
+            try:
+                info = self._get_experiment_info(experiment_name)
+            except ManagerUnreachable:
+                # A 9-hour CPU run on a three-node GPU cluster lost its waiting
+                # client to one dropped ssh connection (2026-11-17) and was
+                # reported as a failed run while it was still going.
+                now = time.monotonic()
+                if unreachable_since is None:
+                    unreachable_since = now
+                    logger.warning(f"[WARN] Lost the manager while waiting for "
+                                   f"{experiment_name}; retrying")
+                if now - unreachable_since >= self.WAIT_UNREACHABLE_S or (
+                        deadline is not None and now >= deadline):
+                    raise
+                time.sleep(poll)
+                continue
+            unreachable_since = None
             if info is None:
-                # A failed ssh reads exactly like a missing directory. One
-                # dropped connection must not end the wait of a run that is
-                # still going, so only a repeated miss counts as "not there".
+                # The probe ran and found no such directory (a failed ssh
+                # raises instead). Still, only a repeated miss counts as "not
+                # there", so a probe that failed for another reason does not
+                # end the wait of a run that is still going.
                 misses += 1
                 if misses >= self.WAIT_MISSES:
                     return None
@@ -676,7 +752,10 @@ class GraFlag:
             f'  echo "EXP:$d"; '
             f'  echo "RESULTS:$( [ -f "$d/results.json" ] && echo 1 || echo 0 )"; '
             f'  echo "EVAL:$( [ -f "$d/eval/evaluation.json" ] && echo 1 || echo 0 )"; '
-            f'  echo "BUILD_LOG:$( [ -f "$d/build.log" ] && echo 1 || echo 0 )"; '
+            # Whether a build is over -- read only while status.json still says
+            # "building", so the GUI's poll does not read every build log.
+            f'  echo "BUILD_DONE:$( grep -qs \'"building"\' "$d/status.json" && '
+            f'grep -qs \'^=== PUSH: \' "$d/build.log" && echo 1 || echo 0 )"; '
             f'  echo "STATUS_B64:$(base64 < "$d/status.json" 2>/dev/null | tr -d \'\\n\')"; '
             f'done'
         )
@@ -864,6 +943,8 @@ class GraFlag:
             logger.info(f"[OK] Service {experiment_name} stopped")
         except ValueError:
             logger.info(f"[INFO] No running service for {experiment_name}")
+        else:
+            self._record_stop(experiment_name)
 
         if remove:
             exp_path = f"{self.config.remote_shared_dir}/experiments/{experiment_name}"
@@ -882,6 +963,10 @@ class GraFlag:
     #: Consecutive failed probes after which wait_for_experiment() concludes
     #: that the experiment is gone rather than that ssh blinked.
     WAIT_MISSES = 3
+
+    #: How long, in seconds, wait_for_experiment() keeps retrying a manager it
+    #: cannot reach before raising ManagerUnreachable.
+    WAIT_UNREACHABLE_S = 900
 
     def cleanup_services(
         self, experiment: str = None, dry_run: bool = False
@@ -962,7 +1047,8 @@ class GraFlag:
     OWNED_DIRS = ("datasets", "experiments", "images", "libs", "methods")
 
     def clear(self, apply: bool = False, share: bool = True,
-              images: bool = True, collect: bool = False) -> ClearReport:
+              images: bool = True, collect: bool = False,
+              local_copies: bool = False) -> ClearReport:
         """Remove what is on the cluster but no longer belongs to anything.
 
         ``graflag cleanup`` sweeps finished *services*; this sweeps the
@@ -1001,6 +1087,11 @@ class GraFlag:
             share: Consider experiments, datasets and strays.
             images: Consider local images and registry repositories.
             collect: Garbage-collect registry blobs (implies ``images``).
+            local_copies: Also remove the manager's local copy of a method
+                image that the registry serves byte for byte (see
+                :meth:`_clear_local_copy_items`). Opt-in: the next ``--build``
+                of that method then starts from the build cache rather than
+                from the image.
 
         Returns:
             A ClearReport. Failures to remove an individual item are
@@ -1008,13 +1099,17 @@ class GraFlag:
             housekeeping and must not fail the caller.
         """
         report = ClearReport(applied=apply)
-        facts = self._clear_survey(share=share, images=images or collect)
+        facts = self._clear_survey(share=share, images=images or collect or local_copies)
 
         items: List[ClearItem] = []
         if share:
             items.extend(self._clear_share_items(facts))
         if images or collect:
             items.extend(self._clear_image_items(facts))
+        if local_copies:
+            already = {i.name for i in items if i.kind == "image"}
+            items.extend(i for i in self._clear_local_copy_items(facts)
+                         if i.name not in already)
         report.items = items
 
         if not apply:
@@ -1023,6 +1118,15 @@ class GraFlag:
         self._clear_apply(report, facts)
         if collect:
             self._clear_collect_registry(report, facts)
+        before = facts.get("avail_bytes") or 0
+        try:
+            after = int((self.ssh.execute(
+                "df -B1 --output=avail /var/lib/docker 2>/dev/null | tail -1"
+            ).stdout or "").strip())
+        except (ValueError, GraFlagError):
+            after = 0
+        if before and after:
+            report.disk_freed_bytes = after - before
         return report
 
     def _clear_survey(self, share: bool, images: bool) -> dict:
@@ -1060,6 +1164,12 @@ class GraFlag:
                 case "$e" in
                     datasets|experiments|images|libs|methods) continue ;;
                 esac
+                # The quickstart clones graflag-shared into the share, which
+                # puts its tests/ at the root: tracked by the checkout, so
+                # part of it, not a stray -- and `clear --apply` deleted it.
+                if git -C "$SHARED" ls-files --error-unmatch -- "$e" >/dev/null 2>&1; then
+                    echo "T $e"; continue
+                fi
                 echo "S $e"
             done
             du -sbL experiments/* datasets/* 2>/dev/null | sed 's|^|SZ |'
@@ -1068,6 +1178,10 @@ class GraFlag:
                 ids=$(docker image ls -q --no-trunc 2>/dev/null | sort -u | tr '\n' ' ')
                 [ -n "$ids" ] && docker image inspect $ids \
                     --format 'IS {{{{.Id}}}} {{{{.Size}}}}' 2>/dev/null
+                [ -n "$ids" ] && docker image inspect $ids \
+                    --format 'ID {{{{.Id}}}} {{{{range .RepoDigests}}}}{{{{.}}}} {{{{end}}}}' 2>/dev/null
+                docker ps -a --no-trunc --format 'U {{{{.Image}}}}' 2>/dev/null
+                ps -eo args 2>/dev/null | grep -E '^docker (build|push|buildx)' | sed 's|^|B |'
                 c=$(docker ps --filter name=registry --format '{{{{.ID}}}}' 2>/dev/null | head -1)
                 if [ -n "$c" ]; then
                     echo "RC $c"
@@ -1075,6 +1189,9 @@ class GraFlag:
                         2>/dev/null | sed 's|^|R |'
                     docker exec "$c" du -sb /var/lib/registry 2>/dev/null \
                         | awk '{{print "RSZ", $1}}'
+                    docker exec "$c" sh -c 'cd /var/lib/registry/docker/registry/v2/repositories \
+                        && for t in */_manifests/tags/*; do [ -f "$t/current/link" ] \
+                        && echo "RT ${{t%%/*}} ${{t##*/}} $(cat "$t/current/link")"; done' 2>/dev/null
                 fi
                 docker inspect "$c" \
                     --format 'RV {{{{range .Mounts}}}}{{{{.Name}}}}{{{{end}}}}' 2>/dev/null
@@ -1088,6 +1205,8 @@ class GraFlag:
             "strays": [], "sizes": {}, "images": [], "image_sizes": {},
             "registry_repos": [], "registry_container": "", "registry_volume": "",
             "registry_bytes": 0, "avail_bytes": 0,
+            "repo_digests": {}, "container_images": set(), "busy": [],
+            "registry_tags": {},
         }
         for line in (result.stdout or "").splitlines():
             tag, _, rest = line.strip().partition(" ")
@@ -1124,6 +1243,17 @@ class GraFlag:
                     facts["image_sizes"][image_id] = int(size)
                 except ValueError:
                     pass
+            elif tag == "ID":
+                image_id, _, digests = rest.partition(" ")
+                facts["repo_digests"][image_id] = set(digests.split())
+            elif tag == "U":
+                facts["container_images"].add(rest)
+            elif tag == "B":
+                facts["busy"].append(rest)
+            elif tag == "RT":
+                parts = rest.split()
+                if len(parts) == 3:
+                    facts["registry_tags"][(parts[0], parts[1])] = parts[2]
             elif tag == "R":
                 facts["registry_repos"].append(rest)
             elif tag == "RC":
@@ -1263,6 +1393,57 @@ class GraFlag:
                 items.append(ClearItem(
                     kind="registry", name=repo,
                     reason="built for a method that no longer exists"))
+        return items
+
+    def _clear_local_copy_items(self, facts: dict) -> List[ClearItem]:
+        """The manager's local copies of method images the registry also holds.
+
+        Every build leaves the image on the manager after pushing it, and
+        tasks -- the manager's included -- pull from the registry, so the
+        local copy is only ever read again by a rebuild's cache. At ~10-16 GB
+        an image, it was the manager's disk, not the registry's, that filled
+        during a full-catalogue campaign.
+
+        A copy is collected only when all of these hold:
+
+        - its repository is a method's image (never the evaluator, which
+          GraFlag looks for locally, and never a base image);
+        - the registry's tag for it points at **this image's digest**, so the
+          registry serves exactly what would be deleted -- a tag alone is not
+          enough, since a push that failed leaves the registry one build
+          behind;
+        - no container, running or stopped, was created from it;
+        - no ``docker build`` or ``docker push`` naming it is running.
+        """
+        registry = f"{self.config.manager_ip}:5000"
+        owners = {self._image_owner(o) for o in facts["owners"]}
+        in_use = {ref.split("@", 1)[0] for ref in facts["container_images"]}
+        busy = "\n".join(facts["busy"])
+        items, counted = [], set()
+        for repo, tag, image_id in facts["images"]:
+            if repo == "<none>":
+                continue
+            base = self._image_owner(repo)
+            name = repo.rsplit("/", 1)[-1]
+            if base not in owners or base == "graflag_evaluator":
+                continue
+            digest = facts["registry_tags"].get((name, tag))
+            if not digest or f"{registry}/{name}@{digest}" not in \
+                    facts["repo_digests"].get(image_id, set()):
+                continue
+            refs = {f"{repo}:{tag}", f"{registry}/{name}:{tag}", f"{name}:{tag}"}
+            if refs & in_use or image_id in in_use:
+                continue
+            if re.search(rf"(^|[\s/=]){re.escape(name)}(:|\s|$)", busy):
+                continue
+            # One image is often tagged twice (`taddy` and `<registry>/taddy`);
+            # its bytes are freed once, when the last tag goes.
+            size = 0 if image_id in counted else facts["image_sizes"].get(image_id, 0)
+            counted.add(image_id)
+            items.append(ClearItem(
+                kind="image", name=f"{repo}:{tag}",
+                reason="local copy; the registry serves the same digest",
+                size_bytes=size))
         return items
 
     def _clear_guard(self, path: str) -> str:
@@ -1634,12 +1815,34 @@ class GraFlag:
 
     def _write_status(self, exp_dir: str, status: str, error: str = None):
         """Write status.json to an experiment directory on the remote."""
-        data = {"status": status, "timestamp": datetime.now().isoformat()}
+        # UTC, like the runner's entries: the build phase is written here, on
+        # the client's clock and zone, and the run phase in the container, so
+        # a naive local time made one status.json history mix two zones.
+        data = {"status": status, "timestamp": datetime.now(timezone.utc).isoformat()}
         if error:
             data["error"] = error
         status_data = json.dumps(data)
         status_path = remote_path(self.config.remote_shared_dir, exp_dir, "status.json")
         self.ssh.execute(f"cat > {status_path} << 'STATUSEOF'\n{status_data}\nSTATUSEOF")
+
+    def _record_stop(self, experiment_name: str):
+        """Write "stopped" for a run whose runner never wrote a status.
+
+        A run stopped while queued -- waiting for a GPU, or starting -- has no
+        runner status: status.json says "building" or does not exist, and with
+        its service gone that read as "failed" or "unknown". Only that case is
+        written. A runner that started has its own record ("running" reads as
+        stopped once the service is gone), and the service is removed before
+        this runs, so no runner can start and race the write.
+        """
+        status_path = remote_path(self.config.remote_shared_dir, "experiments",
+                                  experiment_name, "status.json")
+        data = json.dumps({"status": "stopped",
+                           "timestamp": datetime.now(timezone.utc).isoformat(),
+                           "error": "Stopped before the method started"})
+        self.ssh.execute(
+            f"if ! grep -qsE '\"status\": *\"(running|completed|failed)\"' {status_path}; "
+            f"then cat > {status_path} << 'STATUSEOF'\n{data}\nSTATUSEOF\nfi")
 
     def _decode_status(self, encoded: str, exp_name: str) -> Optional[dict]:
         """Decode one base64'd status.json payload, tolerating a bad file."""
@@ -1676,7 +1879,7 @@ class GraFlag:
         full_exp_path = f"{self.config.remote_shared_dir}/experiments/{exp_name}"
         has_results = entry.get("RESULTS", False)
         has_evaluation = entry.get("EVAL", False)
-        has_build_log = entry.get("BUILD_LOG", False)
+        build_done = entry.get("BUILD_DONE", False)
 
         status_data = entry.get("status_json") or {}
         runner_status = status_data.get("status")
@@ -1693,21 +1896,27 @@ class GraFlag:
 
         service_failed = service_exists and self.docker.is_service_failed(exp_name)
 
-        if runner_status in ("completed", "failed"):
+        if runner_status in ("completed", "failed", "stopped"):
             status = runner_status
         elif service_failed:
             status = "failed"
-        elif runner_status == "building":
-            if service_exists:
-                status = "building"
-            elif has_build_log:
-                status = "failed"  # build finished but service never created
-            else:
-                status = "building"
         elif runner_status == "running":
             status = "running" if service_exists else "stopped"
         elif service_exists:
-            status = "running"
+            # The service exists and the runner has not said "running": the
+            # task is waiting for a node -- for a GPU, on a busy cluster -- or
+            # its container is starting. A "building" status.json means the
+            # same here, since the service is created only after the push.
+            # This read "building" for as long as a GPU was busy, or "running"
+            # for a run without --build.
+            status = "queued"
+        elif runner_status == "building":
+            # build.log is written live from the build's first line, so its
+            # presence says nothing. The complete log, whose PUSH section
+            # appears only once the service exists, says the build is over:
+            # over, with no service and no failure recorded, means the
+            # service is gone or was never created.
+            status = "failed" if build_done else "building"
         elif has_results or has_evaluation:
             status = "completed"
         else:
@@ -1746,7 +1955,8 @@ class GraFlag:
             f'echo "EXISTS:$(test -d {quoted_path} && echo 1 || echo 0)"\n'
             f'echo "RESULTS:$(test -f {quoted_path}/results.json && echo 1 || echo 0)"\n'
             f'echo "EVAL:$(test -f {quoted_path}/eval/evaluation.json && echo 1 || echo 0)"\n'
-            f'echo "BUILD_LOG:$(test -f {quoted_path}/build.log && echo 1 || echo 0)"\n'
+            f'echo "BUILD_DONE:$(grep -qs \'"building"\' {quoted_path}/status.json && '
+            f'grep -qs \'^=== PUSH: \' {quoted_path}/build.log && echo 1 || echo 0)"\n'
             f'echo "STATUS_B64:$(base64 < {quoted_path}/status.json 2>/dev/null'
             f' | tr -d \'\\n\')"'
         )

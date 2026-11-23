@@ -336,7 +336,7 @@ def build_server(factory: Callable[[], Any], guard_stdout: bool = False) -> Fast
         status: Optional[str] = None,
     ) -> dict:
         """The most recent experiments, newest first, optionally filtered by
-        method, dataset or status (building, running, completed, failed,
+        method, dataset or status (building, queued, running, completed, failed,
         stopped, unknown)."""
         for value, what in ((method, "method"), (dataset, "dataset")):
             if value is not None:

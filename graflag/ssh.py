@@ -1,10 +1,13 @@
 """SSH operations for GraFlag."""
 
 import shlex
+import shutil
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import List
 import logging
+
+from .errors import ManagerUnreachable
 
 logger = logging.getLogger(__name__)
 
@@ -38,29 +41,67 @@ def remote_path(*parts: str) -> str:
 #: keyboard -- the MCP server, whose stdin and stdout are the protocol -- must
 #: not wait on a password or passphrase prompt: the tool call would hang until
 #: the client gave up, with nothing saying why.
+#: The exit status ssh uses for its own errors, as opposed to the remote command's.
+SSH_FAILED = 255
+
 NON_INTERACTIVE_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15"]
+
+
+def require_rsync() -> None:
+    """Raise a usable error when there is no local rsync.
+
+    Every copy and sync goes through rsync. Without it -- native Windows ships
+    OpenSSH but not rsync -- the first copy died in subprocess with a bare
+    FileNotFoundError that named neither the program nor a way out.
+    """
+    if shutil.which("rsync") is None:
+        raise RuntimeError(
+            "rsync was not found on this machine; graflag copy and graflag "
+            "sync need it. Install rsync, or on Windows run graflag inside "
+            "WSL, where it is one package away (apt install rsync).")
 
 
 class SSHManager:
     """Handle SSH operations to remote manager."""
 
     def __init__(self, manager_ip: str, ssh_port: str = "22", ssh_key: str = None,
-                 batch_mode: bool = False):
+                 batch_mode: bool = False, user: str = "root",
+                 proxy_jump: str = None):
         """Initialize SSH manager.
 
         Args:
             batch_mode: Never prompt (see :data:`NON_INTERACTIVE_OPTS`). Off by
                 default, so a CLI user whose key needs a passphrase still gets
                 asked for it.
+            user: The account on the manager (``SSH_USER``). ``root`` unless
+                configured; another account needs to be in the ``docker``
+                group and able to write ``SHARED_DIR``.
+            proxy_jump: A jump host for every connection (``SSH_PROXY_JUMP``,
+                ssh's ``-o ProxyJump=``), for a manager that is only
+                reachable through a bastion.
         """
         self.manager_ip = manager_ip
         self.ssh_port = ssh_port
         self.ssh_key = ssh_key
         self.batch_mode = batch_mode
+        self.user = user or "root"
+        self.proxy_jump = proxy_jump or None
+
+    @property
+    def destination(self) -> str:
+        """``user@manager`` -- the one place every ssh and rsync target is built.
+
+        It was ``root@{manager_ip}`` spelled out at five call sites, so a
+        cluster whose manager takes another account, or sits behind a jump
+        host, needed a hand-written ~/.ssh/config block to be usable at all.
+        """
+        return f"{self.user}@{self.manager_ip}"
 
     def _option_args(self) -> List[str]:
         """The -o options every ssh this manager starts carries."""
         opts = ["-o", "StrictHostKeyChecking=no"]
+        if self.proxy_jump:
+            opts.extend(["-o", f"ProxyJump={self.proxy_jump}"])
         if self.batch_mode:
             opts.extend(NON_INTERACTIVE_OPTS)
         return opts
@@ -72,7 +113,7 @@ class SSHManager:
             args.extend(["-i", str(Path(self.ssh_key).expanduser())])
         args.extend(["-p", str(self.ssh_port)])
         args.extend(self._option_args())
-        args.append(f"root@{self.manager_ip}")
+        args.append(self.destination)
         return args
 
     def execute(self, command: str, capture_output: bool = True) -> subprocess.CompletedProcess:
@@ -94,10 +135,24 @@ class SSHManager:
         # inherited stdin could do is be consumed: the rest of a shell loop's
         # input (`while read m; do graflag run -m "$m" ...; done < list`), or,
         # under the MCP server, the client's next requests.
-        return subprocess.run(
+        result = subprocess.run(
             ssh_args, capture_output=capture_output, text=True,
             stdin=subprocess.DEVNULL,
         )
+        # 255 is ssh's own failure -- unresolvable name, refused key, jump
+        # host down, timeout -- and no remote command here exits with it.
+        # Returned as an ordinary failure, it read as an answer: `graflag list
+        # methods` printed "No methods found" for a manager it never reached,
+        # and path_exists() turned an outage into "Method not found".
+        if result.returncode == SSH_FAILED:
+            detail = (result.stderr or "").strip() if capture_output else ""
+            raise ManagerUnreachable(
+                f"Cannot reach the manager as {self.destination}"
+                + (f" via {self.proxy_jump}" if self.proxy_jump else "")
+                + (f": {detail}" if detail else "")
+                + ". Check MANAGER_IP, SSH_USER, SSH_KEY and SSH_PROXY_JUMP "
+                  "in the GraFlag config.")
+        return result
 
     def path_exists(self, remote_shared_dir: str, path: str) -> bool:
         """Check if path exists on remote manager."""
@@ -115,6 +170,31 @@ class SSHManager:
         """Create directory on remote manager."""
         result = self.execute(f"mkdir -p {remote_path(remote_shared_dir, path)}")
         return result.returncode == 0
+
+    def claim_dir(self, remote_shared_dir: str, path: str) -> bool:
+        """Create a directory that must not exist yet, atomically.
+
+        Returns True if this call created it and False if it was already
+        there; raises on any other failure. ``mkdir`` without ``-p`` is the
+        atomic step: of two clients racing for the same name exactly one
+        succeeds, which a ``test -e`` followed by ``mkdir -p`` cannot promise.
+        """
+        full = remote_path(remote_shared_dir, path)
+        parent = remote_path(remote_shared_dir, str(PurePosixPath(path).parent))
+        result = self.execute(
+            f"mkdir -p {parent} && "
+            f"if mkdir {full} 2>/dev/null; then echo created; "
+            f"elif [ -d {full} ]; then echo exists; "
+            f"else mkdir {full}; fi"
+        )
+        reply = (result.stdout or "").strip().splitlines()
+        if result.returncode == 0 and reply and reply[-1] == "created":
+            return True
+        if result.returncode == 0 and reply and reply[-1] == "exists":
+            return False
+        raise RuntimeError(
+            f"could not create {remote_shared_dir}/{path} on the manager: "
+            f"{(result.stderr or '').strip() or f'exit {result.returncode}'}")
 
     def list_dir(self, remote_shared_dir: str, path: str) -> List[str]:
         """List directory contents on remote manager."""
@@ -145,7 +225,9 @@ class SSHManager:
         # Handle single string or list of paths
         if isinstance(source_paths, str):
             source_paths = [source_paths]
-        
+
+        require_rsync()
+
         if from_remote:
             # Copy from remote to local
             return self._copy_from_remote(source_paths, dest_path, recursive)
@@ -187,7 +269,7 @@ class SSHManager:
         
         ssh_opts.extend(["-p", self.ssh_port])
         
-        rsync_parts.extend(["-e", f"ssh {' '.join(ssh_opts)}"])
+        rsync_parts.extend(["-e", "ssh " + shlex.join(ssh_opts)])
         
         # Add all source paths. rsync's trailing slash is load-bearing:
         # "src/" copies the *contents* of src into dest, "src" copies src
@@ -200,7 +282,7 @@ class SSHManager:
             rsync_parts.append(str(local_path_obj) + trailing)
         
         # Add destination
-        rsync_parts.append(f"root@{self.manager_ip}:{remote_dest}")
+        rsync_parts.append(f"{self.destination}:{remote_dest}")
         
         logger.debug(f"Executing rsync command: {' '.join(rsync_parts)}")
         
@@ -235,11 +317,11 @@ class SSHManager:
         
         ssh_opts.extend(["-p", self.ssh_port])
         
-        rsync_parts.extend(["-e", f"ssh {' '.join(ssh_opts)}"])
+        rsync_parts.extend(["-e", "ssh " + shlex.join(ssh_opts)])
         
         # Add all source paths (remote)
         for remote_path in remote_paths:
-            rsync_parts.append(f"root@{self.manager_ip}:{remote_path}")
+            rsync_parts.append(f"{self.destination}:{remote_path}")
         
         # Add destination (local)
         rsync_parts.append(str(local_dest_obj))

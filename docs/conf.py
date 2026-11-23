@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 project = 'GraFlag'
 author = 'gbay7'
-version = '1.2'
-release = '1.2.0'
+version = '1.3'
+release = '1.3.0'
 
 extensions = [
     'sphinx.ext.autodoc',

@@ -93,6 +93,44 @@ class TheFailureCarriesTheBuildOutput(unittest.TestCase):
         self.assertIsInstance(self.failed_build(), RuntimeError)
 
 
+class ManagerWhosePushFails(ManagerWhoseBuildFails):
+    """The build succeeds; `docker push` does not."""
+
+    def execute(self, command, **kwargs):
+        if command.startswith("docker build"):
+            return SimpleNamespace(returncode=0, stdout="Successfully built\n", stderr="")
+        if command.startswith("docker push"):
+            return SimpleNamespace(returncode=1, stdout="",
+                                   stderr="connection refused\n")
+        return super().execute(command, **kwargs)
+
+
+class AFailedPushIsAFailedBuild(unittest.TestCase):
+    """Tasks pull from the registry, so an unpushed build never runs.
+
+    The push failure was a warning, the build returned "[OK]", and the run
+    went on with the registry's previous image.
+    """
+
+    def test_it_raises(self):
+        config = SimpleNamespace(remote_shared_dir="/shared", manager_ip="10.0.0.1")
+        with self.assertRaises(BuildFailed) as caught:
+            DockerManager(ManagerWhosePushFails(), config).build_method_image("rare")
+        self.assertIn("could not push", str(caught.exception))
+        self.assertIn("connection refused", str(caught.exception))
+        self.assertIn("=== BUILD:", caught.exception.log)
+
+    def test_the_evaluator_too(self):
+        config = SimpleNamespace(remote_shared_dir="/shared", manager_ip="10.0.0.1")
+        mgr = DockerManager(ManagerWhosePushFails(), config)
+        # The double answers `docker manifest inspect` with no "exists", so
+        # the registry lacks this tag and the evaluator is built and pushed.
+        with mock.patch.object(mgr, "_evaluator_source_tag", return_value="abc"):
+            with self.assertRaises(RuntimeError) as caught:
+                mgr.build_evaluator_image()
+        self.assertIn("could not push", str(caught.exception))
+
+
 class ShareOnLocalDisk:
     """A manager whose share is a local directory; commands run through sh."""
 
@@ -104,6 +142,11 @@ class ShareOnLocalDisk:
 
     def mkdir(self, shared, rel):
         Path(shared, rel).mkdir(parents=True, exist_ok=True)
+
+    # The real one, so its remote command runs through sh like execute's.
+    from graflag.ssh import SSHManager as _SSH
+    claim_dir = _SSH.claim_dir
+    del _SSH
 
     def execute(self, command, **kwargs):
         self.commands.append(command)
@@ -136,6 +179,14 @@ class RunKeepsTheLogOfAFailedBuild(unittest.TestCase):
         self.run_with(BuildFailed("Failed to build image rare:latest: " + VERDICT, log))
         self.assertIn(REASON, (self.exp_dir / "build.log").read_text())
 
+    def test_the_status_timestamp_is_utc(self):
+        """The runner writes UTC; the build phase used the client's local time."""
+        from datetime import datetime, timedelta
+        log = "=== BUILD: rare:latest ===\n" + STEP_OUTPUT + VERDICT
+        self.run_with(BuildFailed("Failed to build image rare:latest: " + VERDICT, log))
+        stamp = json.loads((self.exp_dir / "status.json").read_text())["timestamp"]
+        self.assertEqual(datetime.fromisoformat(stamp).utcoffset(), timedelta(0))
+
     def test_status_says_failed_and_where_the_output_is(self):
         log = "=== BUILD: rare:latest ===\n" + STEP_OUTPUT + VERDICT
         raised = self.run_with(
@@ -153,6 +204,45 @@ class RunKeepsTheLogOfAFailedBuild(unittest.TestCase):
         self.assertNotIn("build.log", str(raised))
         status = json.loads((self.exp_dir / "status.json").read_text())
         self.assertEqual(status["status"], "failed")
+
+
+class TheServiceIsCreatedBeforeTheBuildIsDeclaredOver(unittest.TestCase):
+    """The complete build.log is what says "build over" to the status probe.
+
+    Written before create_service, a listing in between saw a finished build
+    with no service, which reads as failed; a create_service that raised left
+    "building" behind for good.
+    """
+
+    def setUp(self):
+        self.share = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.share, ignore_errors=True)
+        self.exp_dir = Path(self.share, "experiments", EXP)
+        self.gf = GraFlag.__new__(GraFlag)
+        self.gf.config = SimpleNamespace(remote_shared_dir=self.share)
+        self.gf.ssh = ShareOnLocalDisk()
+        self.gf.docker = mock.Mock()
+        self.gf.docker.build_method_image.return_value = (
+            "=== BUILD: rare:latest ===\nok\n\n=== PUSH: r/rare:latest ===\ndigest\n")
+
+    def test_the_log_is_written_after_the_service_exists(self):
+        seen = {}
+        self.gf.docker.create_service.side_effect = lambda *a, **k: seen.setdefault(
+            "log_at_create", (self.exp_dir / "build.log").exists())
+        self.gf.docker.follow_service_logs.side_effect = RuntimeError("stop here")
+        with mock.patch.object(self.gf, "_ensure_dataset"), self.assertRaises(RuntimeError):
+            self.gf.run("rare", "bond_inj_cora", build=True, exp_name=EXP)
+        self.assertFalse(seen["log_at_create"])
+        self.assertIn("=== PUSH:", (self.exp_dir / "build.log").read_text())
+
+    def test_a_service_that_cannot_be_created_is_recorded(self):
+        self.gf.docker.create_service.side_effect = RuntimeError("no such image")
+        with mock.patch.object(self.gf, "_ensure_dataset"), self.assertRaises(RuntimeError):
+            self.gf.run("rare", "bond_inj_cora", build=True, exp_name=EXP)
+        status = json.loads((self.exp_dir / "status.json").read_text())
+        self.assertEqual(status["status"], "failed")
+        self.assertIn("no such image", status["error"])
+        self.assertIn("=== PUSH:", (self.exp_dir / "build.log").read_text())
 
 
 if __name__ == "__main__":

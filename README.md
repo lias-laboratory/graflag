@@ -8,6 +8,9 @@ Distributed benchmarking framework for Graph Anomaly Detection (GAD). Orchestrat
 pip install graflag
 ```
 
+The client needs Python 3.8+, OpenSSH and rsync. It runs natively on Linux and
+macOS; on Windows, use WSL (native Windows ships no rsync).
+
 Or from source:
 
 ```bash
@@ -60,6 +63,8 @@ SSH_PORT=22
 SSH_KEY=~/.ssh/id_ed25519
 SHARED_DIR=/shared
 HOSTS_FILE=hosts.yml
+# SSH_USER=root                 # account on the manager
+# SSH_PROXY_JUMP=user@bastion   # when the manager is only reachable through one
 ```
 
 ### 3. Run an experiment

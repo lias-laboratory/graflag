@@ -62,7 +62,8 @@ until the run ends. Ctrl-C detaches and leaves the run going.
   even if the build fails. Without it a failed build leaves its last container,
   and every layer under it, on the manager
 - ``--no-gpu`` -- schedule without reserving a GPU; a method that declares
-  ``_GPU`` gets ``-1``, which means CPU
+  ``_GPU`` gets ``-1``, which means CPU, and the container cannot see the
+  node's GPU (``NVIDIA_VISIBLE_DEVICES=void``), which another task may hold
 - ``-p, --params KEY=VALUE ...`` -- override parameters, named without the
   leading underscore their ``.env`` uses
 - ``-t, --tag`` -- image tag (default: ``latest``, or the recorded one with
@@ -161,9 +162,11 @@ clear
 
 Reclaim storage that nothing owns any more: experiments whose method is gone,
 datasets used only by those experiments, images and registry repositories no
-method owns, and stray files at the root of the share::
+method owns, and stray directories at the root of the share. A directory the
+share's own git checkout tracks (a clone of graflag-shared has ``tests/``) is
+part of the checkout, never a stray::
 
-    graflag clear [--apply] [--share] [--images] [--gc]
+    graflag clear [--apply] [--share] [--images] [--gc] [--local-copies]
 
 Without ``--apply`` it only reports; the report and the applied run list the
 same items.
@@ -176,6 +179,16 @@ same items.
   Deleting a repository alone frees no disk. The registry is stopped for the
   duration, because collecting from a live registry makes later pushes skip
   layers that no longer exist
+- ``--local-copies`` -- also remove the manager's own copy of a method image
+  when the registry serves the same digest and no container or running build
+  uses it. Every build leaves one behind, and tasks pull from the registry, so
+  on a full catalogue it is the manager's disk that fills first. Off by
+  default: the next ``--build`` of that method starts from the build cache
+  instead of the image. The evaluator image is always kept
+
+An applied run reports the change in free space measured on the manager, not
+the sum of the removed images' sizes, which counts base layers that images
+still on disk share.
 
 Files
 -----
